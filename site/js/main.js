@@ -230,32 +230,38 @@ if (styleNav) {
   document.querySelectorAll('.style').forEach((s) => spy.observe(s));
 }
 
-// Trouveur de tresse : 3 questions, un style recommandé, un message WhatsApp prêt
+// Trouveur de coiffure : 3 questions, une prestation recommandée, un message WhatsApp prêt
 const finder = document.getElementById('finder-card');
 if (finder) {
+  // Les prix viennent de la carte affichée sur la page (source unique)
+  const prixDe = (id) => document.getElementById(`${id}-prix`)?.dataset.price;
   const STYLES = {
-    knotless: { name: 'Knotless braids', img: 'img/maquette/coiffure-knotless.webp', text: 'Sans nœud à la racine, légères et sans tension : le choix idéal pour un rendu naturel qui dure.', facts: ['4 à 7 h', '6 à 8 semaines', 'Dès 90 €'] },
-    box: { name: 'Box braids', img: 'img/maquette/coiffure-box.webp', text: 'Des tresses emblématiques, pleines de volume, qui se coiffent de mille façons pendant des semaines.', facts: ['4 à 6 h', '6 à 8 semaines', 'Dès 80 €'] },
-    fulani: { name: 'Fulani braids', img: 'img/maquette/coiffure-fulani.webp', text: 'Un style graphique inspiré des coiffures peules, sublimé de perles ou d’anneaux dorés.', facts: ['3 à 5 h', '4 à 6 semaines', 'Dès 70 €'] },
-    cornrows: { name: 'Cornrows', img: 'img/maquette/coiffure-cornrows.webp', text: 'Des tresses plaquées nettes et pratiques, rapides à réaliser et parfaites au quotidien.', facts: ['2 à 3 h', '2 à 4 semaines', 'Dès 35 €'] },
+    knotless: { name: 'Knotless braids', img: 'img/nelly/style-knotless.webp', text: 'Sans nœud à la racine, légères et sans tension : le choix idéal pour un rendu naturel qui dure.', facts: ['4 à 6 h', '6 à 8 semaines'] },
+    'short-braids': { name: 'Short braids', img: 'img/nelly/finder-short.webp', text: 'Des tresses courtes au carré, faciles à coiffer et pleines de caractère.', facts: ['3 à 4 h', '4 à 6 semaines'] },
+    twists: { name: 'Twists', text: 'Des vanilles torsadées souples et légères, pour un style doux qui tient longtemps.', facts: ['3 à 5 h', '6 à 8 semaines'] },
+    locks: { name: 'Locks', img: 'img/nelly/finder-locks.webp', text: 'Des fausses locks longues pour un effet bohème, chaleureux et plein de volume.', facts: ['4 à 6 h', '6 à 8 semaines'] },
+    'tresses-couchees': { name: 'Tresses couchées', img: 'img/nelly/style-couchees.webp', text: 'Des tresses plaquées, droites ou en motifs, qui dégagent le visage avec élégance.', facts: ['2 à 4 h', '3 à 5 semaines'] },
+    'nattes-collees': { name: 'Nattes collées', img: 'img/nelly/style-nattes.webp', text: 'Quelques nattes plaquées, nettes et rapides : parfaites au quotidien comme pour le sport.', facts: ['1 à 2 h', '2 à 3 semaines'] },
+    tissage: { name: 'Tissage', text: 'Une pose de tissage pour un rendu lisse, ondulé ou bouclé, naturel et durable.', facts: ['2 à 3 h', '6 à 8 semaines'] },
   };
   const QUESTIONS = [
-    { q: 'Combien de temps voulez-vous garder vos tresses ?', opts: [
-      { t: '2 à 3 semaines', s: 'Pour un événement, les vacances', p: { cornrows: 3, fulani: 1 } },
-      { t: '1 mois environ', s: 'Un bon compromis', p: { fulani: 3, cornrows: 1, box: 1 } },
-      { t: '6 semaines et plus', s: 'Je veux être tranquille', p: { knotless: 3, box: 3 } },
-      { t: 'Je ne sais pas', s: 'Conseillez-moi', p: { knotless: 1, box: 1, fulani: 1 } },
+    { q: 'Combien de temps voulez-vous garder votre coiffure&nbsp;?', opts: [
+      { t: '2 à 3 semaines', s: 'Pour un événement, les vacances', p: { 'nattes-collees': 3, 'tresses-couchees': 2 } },
+      { t: '1 mois environ', s: 'Un bon compromis', p: { 'short-braids': 3, 'tresses-couchees': 2 } },
+      { t: '6 semaines et plus', s: 'Je veux être tranquille', p: { knotless: 3, locks: 3, twists: 2, tissage: 2 } },
+      { t: 'Je ne sais pas', s: 'Conseillez-moi', p: { knotless: 1, 'short-braids': 1, twists: 1 } },
     ] },
-    { q: 'Quel rendu recherchez-vous ?', opts: [
-      { t: 'Naturel et léger', s: 'Discret dès la racine', p: { knotless: 4 } },
-      { t: 'Volume et caractère', s: 'Des tresses qui se voient', p: { box: 4 } },
-      { t: 'Original, avec bijoux', s: 'Perles, anneaux, motifs', p: { fulani: 4 } },
-      { t: 'Net et structuré', s: 'Plaqué, graphique', p: { cornrows: 4 } },
+    { q: 'Quel rendu recherchez-vous&nbsp;?', opts: [
+      { t: 'Naturel et léger', s: 'Discret dès la racine', p: { knotless: 4, twists: 1 } },
+      { t: 'Bohème et volume', s: 'Locks, boucles, caractère', p: { locks: 4, twists: 2 } },
+      { t: 'Court et pratique', s: 'Au carré, facile à vivre', p: { 'short-braids': 4 } },
+      { t: 'Plaqué et graphique', s: 'Net, dessiné', p: { 'tresses-couchees': 3, 'nattes-collees': 3 } },
+      { t: 'Lisse ou ondulé', s: 'Sans tresses apparentes', p: { tissage: 6 } },
     ] },
-    { q: 'Combien de temps pouvez-vous rester assise ?', opts: [
-      { t: 'Moins de 3 heures', s: 'Je suis pressée', p: { cornrows: 3, fulani: 1 } },
-      { t: '3 à 5 heures', s: 'Une demi-journée', p: { fulani: 2, box: 1 } },
-      { t: 'Le temps qu’il faut', s: 'Je prends soin de moi', p: { knotless: 2, box: 2 } },
+    { q: 'Quel budget prévoyez-vous&nbsp;?', opts: [
+      { t: 'Moins de 40 €', s: 'Une coiffure simple', p: { 'nattes-collees': 4 } },
+      { t: 'Autour de 50 €', s: 'Le bon équilibre', p: { 'short-braids': 2, 'tresses-couchees': 2, tissage: 2 } },
+      { t: '60 € et plus', s: 'Je me fais plaisir', p: { knotless: 2, twists: 2, locks: 2 } },
     ] },
   ];
   let step = 0;
@@ -277,19 +283,21 @@ if (finder) {
       answers.forEach((a, i) => Object.entries(QUESTIONS[i].opts[a].p).forEach(([k, v]) => { score[k] = (score[k] || 0) + v; }));
       const key = Object.keys(STYLES).sort((a, b) => (score[b] || 0) - (score[a] || 0))[0];
       const S = STYLES[key];
+      const prix = prixDe(key);
       const recap = answers.map((a, i) => QUESTIONS[i].opts[a].t.toLowerCase()).join(', ');
+      const visuel = S.img ? `<img src="${S.img}" alt="${S.name}" width="170" height="210">` : `<div class="finder__ph" aria-hidden="true"><span>${S.name}</span></div>`;
       finder.innerHTML = `${bar}<div class="finder__panel finder__result">
-        <img src="${S.img}" alt="${S.name}" width="170" height="210">
+        ${visuel}
         <div>
-          <p class="finder__step">Votre style idéal</p>
+          <p class="finder__step">Votre coiffure idéale</p>
           <h3>${S.name}</h3>
           <p>${S.text}</p>
-          <ul class="finder__facts">${S.facts.map((f) => `<li>${f}</li>`).join('')}</ul>
+          <ul class="finder__facts">${[...S.facts, prix ? `${prix} €` : ''].filter(Boolean).map((f) => `<li>${f}</li>`).join('')}</ul>
           <a class="btn btn--light btn--shine" id="finder-wa"><svg class="icon" aria-hidden="true"><use href="#i-whatsapp"/></svg> Demander ce style à Nelly</a>
           <button type="button" class="finder__back">Recommencer</button>
         </div>
       </div>`;
-      setWa(finder.querySelector('#finder-wa'), `Bonjour Nelly, j'ai fait le test sur votre site (${recap}) et il me recommande des ${S.name.toLowerCase()}. Pouvez-vous me donner un tarif et vos disponibilités ?`);
+      setWa(finder.querySelector('#finder-wa'), `Bonjour Nelly, j'ai fait le test sur votre site (${recap}) et il me recommande : ${S.name.toLowerCase()}. Pouvez-vous me donner vos disponibilités ?`);
     }
     requestAnimationFrame(paint);
   };
@@ -318,43 +326,33 @@ function countTo(el, to) {
   requestAnimationFrame(tick);
 }
 
-// Estimateur de tarif : lit les prix directement dans la grille de la page Tarifs
+// Estimateur de tarif : lit les prix directement dans la carte de la page Tarifs
 const estimator = document.getElementById('estimator');
 if (estimator) {
-  const priceCards = [...document.querySelectorAll('.price-card[data-name]')];
-  const optBox = estimator.querySelector('[data-est="opt"]');
+  const rows = [...document.querySelectorAll('.carte__row[data-price]')];
+  const styleBox = estimator.querySelector('[data-est="style"]');
   const total = estimator.querySelector('.estimator__total');
   const detail = estimator.querySelector('.estimator__detail');
   const wa = estimator.querySelector('#estimator-wa');
   const acc = estimator.querySelector('#est-acc');
-  const kid = estimator.querySelector('#est-kid');
-  const state = { style: 0, opt: 1, lieu: 0 };
   const lieux = [...estimator.querySelectorAll('[data-est="lieu"] .chip')];
+  const state = { style: 0, lieu: 0 };
+  const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 
-  const rows = () => [...priceCards[state.style].querySelectorAll('[data-price]')];
-  const buildOpts = () => {
-    optBox.innerHTML = rows().map((r, i) => `<button type="button" class="chip" aria-pressed="${i === state.opt}">${r.dataset.label}</button>`).join('');
-    chipGroup(optBox, (i) => { state.opt = i; update(); });
-  };
+  styleBox.innerHTML = rows.map((r, i) => `<button type="button" class="chip" aria-pressed="${i === 0}">${r.dataset.name}</button>`).join('');
   const update = () => {
-    const row = rows()[state.opt];
+    const row = rows[state.style];
     const lieu = lieux[state.lieu];
-    let sum = Number(row.dataset.price) + Number(lieu.dataset.price) + (acc.checked ? 5 : 0);
-    if (kid.checked) sum = Math.round(sum * 0.8);
+    const sum = Number(row.dataset.price) + Number(lieu.dataset.price) + (acc.checked ? 5 : 0);
     countTo(total, sum);
-    const name = priceCards[state.style].dataset.name;
-    const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
-    const parts = [name, lower(row.dataset.label), lower(lieu.textContent.trim())];
+    const parts = [row.dataset.name, lower(lieu.textContent.trim())];
     if (acc.checked) parts.push('avec perles et anneaux');
-    if (kid.checked) parts.push('pour un enfant');
     detail.textContent = parts.join(' · ');
     setWa(wa, `Bonjour Nelly, j'ai fait une estimation sur votre site : ${parts.join(', ')}, environ ${sum} €. Quelles sont vos disponibilités ?`);
   };
-  chipGroup(estimator.querySelector('[data-est="style"]'), (i) => { state.style = i; state.opt = Math.min(state.opt, rows().length - 1); buildOpts(); update(); });
+  chipGroup(styleBox, (i) => { state.style = i; update(); });
   chipGroup(estimator.querySelector('[data-est="lieu"]'), (i) => { state.lieu = i; update(); });
   acc.addEventListener('change', update);
-  kid.addEventListener('change', update);
-  buildOpts();
   update();
 }
 
@@ -367,9 +365,9 @@ if (chat) {
   const send = chat.querySelector('.chat__send');
   const TICKS = '<svg class="msg__ticks" viewBox="0 0 16 10"><path d="M1 5.5 3.8 8.2 9.5 1.5M6.5 8.2 7 8.6 12.8 1.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const SCRIPT = [
-    { me: 'Bonjour Nelly ! J’aimerais ce style, en mi-dos 😍', img: 'img/maquette/coiffure-knotless.webp' },
+    { me: 'Bonjour Nelly ! J’aimerais ce style 😍', img: 'img/nelly/card-knotless.webp' },
     { her: 'Bonjour ! Très beau choix, ce sont des knotless braids.' },
-    { her: 'Pour cette longueur, comptez environ 110 €, mèches incluses.' },
+    { her: 'Elles sont à 60 €, je vous confirme selon la longueur souhaitée.' },
     { me: 'Parfait ! Vous êtes disponible samedi ?' },
     { her: 'Samedi 9 h, chez moi ou chez vous, comme vous préférez.' },
     { me: 'Chez moi, c’est noté. Merci beaucoup !' },

@@ -1,0 +1,86 @@
+[
+  {
+    "src": "img/realisations/knotless-braids-1.webp",
+    "sm": "img/realisations/knotless-braids-1-sm.webp",
+    "cat": "knotless-braids",
+    "style": "Knotless braids",
+    "prix": 60
+  },
+  {
+    "src": "img/realisations/knotless-braids-2.webp",
+    "sm": "img/realisations/knotless-braids-2-sm.webp",
+    "cat": "knotless-braids",
+    "style": "Knotless braids",
+    "prix": 60
+  },
+  {
+    "src": "img/realisations/knotless-braids-3.webp",
+    "sm": "img/realisations/knotless-braids-3-sm.webp",
+    "cat": "knotless-braids",
+    "style": "Knotless braids",
+    "prix": 60
+  },
+  {
+    "src": "img/realisations/knotless-braids-4.webp",
+    "sm": "img/realisations/knotless-braids-4-sm.webp",
+    "cat": "knotless-braids",
+    "style": "Knotless braids",
+    "prix": 60
+  },
+  {
+    "src": "img/realisations/knotless-braids-5.webp",
+    "sm": "img/realisations/knotless-braids-5-sm.webp",
+    "cat": "knotless-braids",
+    "style": "Knotless braids",
+    "prix": 60
+  },
+  {
+    "src": "img/realisations/locks-1.webp",
+    "sm": "img/realisations/locks-1-sm.webp",
+    "cat": "locks",
+    "style": "Locks",
+    "prix": 80
+  },
+  {
+    "src": "img/realisations/locks-2.webp",
+    "sm": "img/realisations/locks-2-sm.webp",
+    "cat": "locks",
+    "style": "Locks",
+    "prix": 80
+  },
+  {
+    "src": "img/realisations/locks-3.webp",
+    "sm": "img/realisations/locks-3-sm.webp",
+    "cat": "locks",
+    "style": "Locks",
+    "prix": 80
+  },
+  {
+    "src": "img/realisations/locks-4.webp",
+    "sm": "img/realisations/locks-4-sm.webp",
+    "cat": "locks",
+    "style": "Locks",
+    "prix": 80
+  },
+  {
+    "src": "img/realisations/nattes-collees-1.webp",
+    "sm": "img/realisations/nattes-collees-1-sm.webp",
+    "cat": "nattes-collees",
+    "style": "Nattes collées",
+    "prix": 30
+  },
+  {
+    "src": "img/realisations/short-braids-1.webp",
+    "sm": "img/realisations/short-braids-1-sm.webp",
+    "cat": "short-braids",
+    "style": "Short braids",
+    "prix": 50
+  },
+  {
+    "src": "img/realisations/tresses-couchees-1.webp",
+    "sm": "img/realisations/tresses-couchees-1-sm.webp",
+    "cat": "tresses-couchees",
+    "style": "Tresses couchées",
+    "prix": 50
+  }
+]

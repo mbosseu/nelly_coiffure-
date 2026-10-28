@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 // Image d'aperçu (1200 x 630) affichée quand le lien du site est partagé sur WhatsApp, Facebook…
 const W = 1200, H = 630, OUT = '../site/img/marque/partage.jpg';
-const photo = await sharp('../site/img/maquette/hero.webp').resize(560, H, { fit: 'cover', position: 'top' }).toBuffer();
+const photo = await sharp('../site/img/nelly/hero.webp').resize(560, H, { fit: 'cover', position: 'top' }).toBuffer();
 const arch = Buffer.from(`<svg width="560" height="${H}"><path d="M0 ${H} V230 A280 230 0 0 1 560 230 V${H} Z" fill="#fff"/></svg>`);
 const photoArch = await sharp(photo).composite([{ input: arch, blend: 'dest-in' }]).png().toBuffer();
 const logo = await sharp('../site/img/marque/logo-clair.webp').resize({ width: 360 }).toBuffer();

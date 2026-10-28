@@ -1,7 +1,7 @@
 // Génère les pages intérieures (coiffures, tarifs, réalisations, à propos, contact, pages légales, 404)
 // à partir de l'en-tête et du pied de page d'index.html. Usage : node outils/construire-pages.mjs
 // Attention : écrase ces pages ; modifier leur contenu ici, pas directement dans le HTML.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const SITE = 'C:/Users/PC/Desktop/nelly_coiffe/site';
 const index = readFileSync(`${SITE}/index.html`, 'utf8');
@@ -111,26 +111,68 @@ function page(file, meta, body) {
   console.log('ok', file, html.length);
 }
 
+/* ------------------------------------------------------------------ CARTE DES PRESTATIONS */
+// Source unique des prestations et des prix (noms des dossiers de Nelly dans coiffure/).
+// L'estimateur de la page Tarifs lit ces prix directement dans la carte affichée.
+const CARTE = [
+  { groupe: 'Tresses', items: [
+    { id: 'knotless', nom: 'Knotless braids', prix: 60, desc: 'Sans nœud à la racine : légères, naturelles et sans tension.' },
+    { id: 'short-braids', nom: 'Short braids', prix: 50, desc: 'Tresses courtes au carré, faciles à vivre et pleines de style.' },
+    { id: 'tresses-couchees', nom: 'Tresses couchées', prix: 50, desc: 'Plaquées sur le cuir chevelu, droites ou en motifs.' },
+    { id: 'nattes-collees', nom: 'Nattes collées', prix: 30, desc: 'Quelques nattes plaquées, nettes et rapides à réaliser.' },
+  ] },
+  { groupe: 'Twists et locks', items: [
+    { id: 'twists', nom: 'Twists', prix: 60, desc: 'Vanilles torsadées, souples et légères à porter.' },
+    { id: 'locks', nom: 'Locks', prix: 80, desc: 'Fausses locks longues, pour un effet bohème.' },
+    { id: 'locks-courtes', nom: 'Locks courtes', prix: 50, desc: 'Locks au carré, bouclées et légères.' },
+  ] },
+  { groupe: 'Tissage', items: [
+    { id: 'tissage', nom: 'Tissage', prix: 50, desc: 'Pose de tissage pour un rendu lisse, ondulé ou bouclé.' },
+  ] },
+  { groupe: 'Homme', items: [
+    { id: 'tresses-homme', nom: 'Tresses collées homme', prix: 30, desc: 'Tresses plaquées, droites ou graphiques.' },
+    { id: 'twists-homme', nom: 'Twists homme', prix: 30, desc: 'Twists courts, nets et structurés.' },
+  ] },
+  { groupe: 'Enfant', items: [
+    { id: 'tresses-enfant', nom: 'Tresses couchées enfant', prix: 30, desc: 'Coiffures douces et adaptées aux petites têtes.' },
+  ] },
+];
+const PRESTATIONS = CARTE.flatMap((g) => g.items);
+const PRIX_MIN = Math.min(...PRESTATIONS.map((p) => p.prix));
+const PRIX_MAX = Math.max(...PRESTATIONS.map((p) => p.prix));
+const waStyle = (nom) => `Bonjour Nelly, je suis intéressée par : ${nom}. Pouvez-vous me donner vos disponibilités ?`;
+
+const carteHtml = () => `        <div class="carte" data-stagger>
+${CARTE.map((g, gi) => `          <div class="carte__groupe reveal">
+            <h3 class="carte__titre"><span>0${gi + 1}</span>${g.groupe}</h3>
+            <ul>
+${g.items.map((p) => `              <li class="carte__row" id="${p.id}-prix" data-name="${p.nom}" data-price="${p.prix}">
+                <div class="carte__info"><b>${p.nom}</b><span>${p.desc}</span></div>
+                <span class="carte__prix">${p.prix} €</span>
+                <a class="carte__wa" data-wa="${waStyle(p.nom.toLowerCase())}" href="contact.html" aria-label="Demander ${p.nom} sur WhatsApp"><svg aria-hidden="true"><use href="#i-whatsapp"/></svg></a>
+              </li>`).join('\n')}
+            </ul>
+          </div>`).join('\n')}
+        </div>`;
+
 /* ------------------------------------------------------------------ COIFFURES */
+// Styles mis en avant : seulement ceux pour lesquels une photo correspond vraiment
 const STYLES = [
-  { id: 'knotless', name: 'Knotless Braids', tag: 'Légèreté et élégance', img: 'coiffure-knotless', w: 648, h: 652,
+  { id: 'knotless', name: 'Knotless Braids', tag: 'Légèreté et élégance', img: 'style-knotless', w: 700, h: 756, prix: 60,
     body: 'Des tresses sans nœud à la racine : la mèche est ajoutée progressivement pour un départ plat, naturel et sans tension. Plus légères à porter, elles respectent votre cuir chevelu dès le premier jour.',
-    meta: ['4 à 7 h', '6 à 8 sem.', 'Dès 90 €'], ideal: ['Vous avez le cuir chevelu sensible', 'Vous voulez un rendu naturel dès la racine', 'Vous aimez les coiffures hautes, sans douleur'] },
-  { id: 'box-braids', name: 'Box Braids', tag: 'Un intemporel moderne', img: 'coiffure-box', w: 644, h: 652,
-    body: 'Les tresses emblématiques, réparties en sections carrées bien nettes. Fines, moyennes ou épaisses, courtes ou très longues : elles se portent lâchées, en chignon ou en queue haute.',
-    meta: ['4 à 6 h', '6 à 8 sem.', 'Dès 80 €'], ideal: ['Vous cherchez une coiffure protectrice durable', 'Vous aimez le volume et la tenue', 'Vous aimez changer de coiffage chaque semaine'] },
-  { id: 'fulani', name: 'Fulani Braids', tag: 'Tradition et modernité', img: 'coiffure-fulani', w: 644, h: 652,
-    body: 'Inspirées des coiffures peules, elles associent des tresses plaquées sur le dessus et des tresses libres, souvent ornées de perles ou d’anneaux dorés. Un style graphique qui ne passe pas inaperçu.',
-    meta: ['3 à 5 h', '4 à 6 sem.', 'Dès 70 €'], ideal: ['Vous aimez les bijoux et les détails', 'Vous voulez un style original', 'Vous préparez un événement'] },
-  { id: 'cornrows', name: 'Cornrows', tag: 'Un style structuré', img: 'coiffure-cornrows', w: 604, h: 652,
-    body: 'Des tresses plaquées au plus près du cuir chevelu, droites ou en motifs. Rapides, pratiques et élégantes, elles conviennent aussi aux enfants et aux hommes.',
-    meta: ['2 à 3 h', '2 à 4 sem.', 'Dès 35 €'], ideal: ['Vous voulez une coiffure rapide', 'Vous faites du sport', 'Vous cherchez un style net pour toute la famille'] },
+    meta: ['4 à 6 h', '6 à 8 sem.'], ideal: ['Vous avez le cuir chevelu sensible', 'Vous voulez un rendu naturel dès la racine', 'Vous aimez les coiffures hautes, sans douleur'] },
+  { id: 'tresses-couchees', name: 'Tresses couchées', tag: 'Un style graphique', img: 'style-couchees', w: 700, h: 756, prix: 50,
+    body: 'Des tresses plaquées au plus près du cuir chevelu, droites, en diagonale ou en motifs. Elles dégagent le visage et se personnalisent avec des perles ou des anneaux.',
+    meta: ['2 à 4 h', '3 à 5 sem.'], ideal: ['Vous aimez les coiffures nettes et dessinées', 'Vous voulez un style original', 'Vous préparez un événement'] },
+  { id: 'nattes-collees', name: 'Nattes collées', tag: 'Simple et efficace', img: 'style-nattes', w: 700, h: 756, prix: 30,
+    body: 'Quelques nattes plaquées, bien tirées et régulières. Rapides à réaliser, pratiques au quotidien, elles conviennent aussi bien pour le sport que pour les vacances.',
+    meta: ['1 à 2 h', '2 à 3 sem.'], ideal: ['Vous voulez une coiffure rapide', 'Vous faites du sport', 'Vous cherchez un petit budget'] },
 ];
 const styleRow = (s, i) => `        <article class="style" id="${s.id}">
           <div class="style__media reveal">
             <span class="style__num" aria-hidden="true">0${i + 1}</span>
             <span class="style__frame" aria-hidden="true"></span>
-            <div class="style__img"><img src="img/maquette/${s.img}.webp" width="${s.w}" height="${s.h}" loading="lazy" alt="${s.name}"></div>
+            <div class="style__img"><img src="img/nelly/${s.img}.webp" width="${s.w}" height="${s.h}" loading="lazy" alt="${s.name}"></div>
           </div>
           <div class="style__text">
             <h2 class="title reveal">${s.name}</h2>
@@ -139,11 +181,11 @@ const styleRow = (s, i) => `        <article class="style" id="${s.id}">
             <dl class="style__meta reveal">
               <div><dt>Durée</dt><dd>${s.meta[0]}</dd></div>
               <div><dt>Tenue</dt><dd>${s.meta[1]}</dd></div>
-              <div><dt>Tarif</dt><dd>${s.meta[2]}</dd></div>
+              <div><dt>Tarif</dt><dd>${s.prix} €</dd></div>
             </dl>
             <ul class="check-list reveal">${s.ideal.map((x) => `<li>${x}</li>`).join('')}</ul>
             <div class="style__actions reveal">
-              <a class="btn btn--dark btn--shine" data-wa="Bonjour Nelly, je suis intéressée par des ${s.name.toLowerCase()}. Pouvez-vous me donner un tarif et vos disponibilités ?" href="contact.html">${WA} Demander ce style ${ARROW}</a>
+              <a class="btn btn--dark btn--shine" data-wa="${waStyle(s.name.toLowerCase())}" href="contact.html">${WA} Demander ce style ${ARROW}</a>
               <a class="btn btn--outline" href="tarifs.html">Voir les tarifs</a>
             </div>
           </div>
@@ -151,23 +193,34 @@ const styleRow = (s, i) => `        <article class="style" id="${s.id}">
 `;
 
 page('coiffures.html', {
-  title: 'Coiffures : knotless, box braids, fulani, cornrows à Marseille — Nelly Coiffure',
-  desc: 'Knotless braids, box braids, fulani braids et cornrows à Marseille : durée, tenue, tarifs. Trouvez votre style et réservez sur WhatsApp, chez Nelly ou à domicile.',
-  preload: 'img/maquette/univers.webp',
+  title: 'Coiffures : knotless, twists, locks, tissage à Marseille — Nelly Coiffure',
+  desc: `Knotless braids, short braids, tresses couchées, nattes collées, twists, locks, tissage, coiffures homme et enfant à Marseille, dès ${PRIX_MIN} €. Réservez sur WhatsApp.`,
+  preload: 'img/nelly/arch-coiffures.webp',
 }, pageHero({
   crumb: 'Coiffures', eyebrow: 'Nos coiffures',
   lines: ['Des tresses', 'pensées pour', 'votre style.'],
-  lead: 'Knotless, box braids, fulani ou cornrows : découvrez chaque coiffure en détail, sa durée, sa tenue et son tarif. Vous hésitez ? Faites le test, je vous guide.',
-  actions: `<a class="btn btn--dark btn--shine" href="#trouver">Trouver ma tresse ${ARROW}</a><a class="btn btn--outline" href="tarifs.html">Voir les tarifs</a>`,
-  media: archMedia({ src: 'img/maquette/univers.webp', pos: '68% 40%', script: ['Chaque tresse', 'a son histoire'], w: 1524, h: 1168 }),
+  lead: 'Tresses, twists, locks ou tissage, pour femme, homme et enfant : découvrez chaque prestation et son tarif. Vous hésitez ? Faites le test, je vous guide.',
+  actions: `<a class="btn btn--dark btn--shine" href="#trouver">Trouver ma coiffure ${ARROW}</a><a class="btn btn--outline" href="#carte">Toutes les prestations</a>`,
+  media: archMedia({ src: 'img/nelly/arch-coiffures.webp', pos: '50% 30%', script: ['Chaque tresse', 'a son histoire'], w: 800, h: 1000 }),
 }) + `
     <section class="section section--tight">
       <div class="container">
         <nav class="style-nav" aria-label="Les coiffures">
           ${STYLES.map((s) => `<a class="chip" href="#${s.id}">${s.name}</a>`).join('\n          ')}
-          <a class="chip" href="#autres">Autres prestations</a>
+          <a class="chip" href="#carte">Toutes les prestations</a>
         </nav>
 ${STYLES.map(styleRow).join('')}      </div>
+    </section>
+
+    <section class="section" id="carte">
+      <div class="container">
+        <div class="section-intro">
+          <p class="eyebrow reveal">La carte</p>
+          <h2 class="title reveal">Toutes les prestations</h2>
+          <p class="body reveal">Femme, homme et enfant, chez moi ou à votre domicile. Un doute sur le style ou la longueur ? Écrivez-moi, on en parle ensemble.</p>
+        </div>
+${carteHtml()}
+      </div>
     </section>
 
     <section class="finder" id="trouver">
@@ -176,9 +229,9 @@ ${STYLES.map(styleRow).join('')}      </div>
       </svg>
       <div class="container finder__inner">
         <div class="finder__intro">
-          <p class="eyebrow eyebrow--copper reveal">Trouver ma tresse</p>
+          <p class="eyebrow eyebrow--copper reveal">Trouver ma coiffure</p>
           <h2 class="title title--light reveal">Trois questions, <br>votre style idéal.</h2>
-          <p class="body body--light reveal">Répondez en quelques secondes : je vous recommande la coiffure la plus adaptée à votre rythme et à vos envies, avec un message prêt à m’envoyer.</p>
+          <p class="body body--light reveal">Répondez en quelques secondes : je vous recommande la coiffure la plus adaptée à votre rythme, à vos envies et à votre budget, avec un message prêt à m’envoyer.</p>
         </div>
         <div class="finder__card reveal" id="finder-card" aria-live="polite">
           <noscript><a class="btn btn--light" href="contact.html">Me contacter pour un conseil</a></noscript>
@@ -186,46 +239,17 @@ ${STYLES.map(styleRow).join('')}      </div>
       </div>
     </section>
 
-    <section class="section" id="autres">
-      <div class="container">
-        <div class="section-intro">
-          <p class="eyebrow reveal">Et aussi</p>
-          <h2 class="title reveal">Autres prestations</h2>
-        </div>
-        <div class="extras-grid" data-stagger>
-          <div class="extra reveal"><span class="option__icon"><svg aria-hidden="true"><use href="#i-child"/></svg></span><h3>Tresses enfants</h3><p>Des coiffures douces et adaptées aux petites têtes, avec patience et bonne humeur, dès 4 ans.</p><span class="extra__price">−20 % pour les moins de 12 ans</span></div>
-          <div class="extra reveal"><span class="option__icon"><svg aria-hidden="true"><use href="#i-scissors"/></svg></span><h3>Défaire vos tresses</h3><p>Retrait délicat des tresses, démêlage et soin hydratant pour préparer votre prochaine coiffure.</p><span class="extra__price">Dès 20 €</span></div>
-          <div class="extra reveal"><span class="option__icon"><svg aria-hidden="true"><use href="#i-sparkle"/></svg></span><h3>Coiffage événement</h3><p>Chignon, queue haute ou demi-attaché sur vos tresses pour un mariage, un baptême ou une soirée.</p><span class="extra__price">Dès 15 €</span></div>
-        </div>
-      </div>
-    </section>
-
 ` + CTA());
 
 /* ------------------------------------------------------------------ TARIFS */
-const PRICES = [
-  { name: 'Knotless braids', img: 'coiffure-knotless', time: '4 à 7 h', featured: true, rows: [['Épaules', 90], ['Mi-dos', 110], ['Bas du dos', 140]] },
-  { name: 'Box braids', img: 'coiffure-box', time: '4 à 6 h', rows: [['Épaules', 80], ['Mi-dos', 100], ['Bas du dos', 130]] },
-  { name: 'Fulani braids', img: 'coiffure-fulani', time: '3 à 5 h', rows: [['Épaules', 70], ['Mi-dos', 90], ['Bas du dos', 110]] },
-  { name: 'Cornrows', img: 'coiffure-cornrows', time: '2 à 3 h', rows: [['Sans mèches', 35], ['Avec mèches', 50], ['Motifs libres', 65]] },
-];
-const priceCard = (p) => `          <article class="price-card${p.featured ? ' price-card--featured' : ''} reveal" data-name="${p.name}">
-            ${p.featured ? '<span class="price-card__badge">La plus demandée</span>' : ''}
-            <div class="price-card__thumb"><img src="img/maquette/${p.img}.webp" width="74" height="88" loading="lazy" alt=""></div>
-            <h3>${p.name}</h3>
-            <p class="price-card__time"><svg aria-hidden="true"><use href="#i-clock"/></svg> ${p.time}</p>
-            <ul class="price-rows">${p.rows.map(([l, v]) => `<li data-label="${l}" data-price="${v}">${l}<b>${v} €</b></li>`).join('')}</ul>
-            <a class="btn ${p.featured ? 'btn--light' : 'btn--dark'} btn--shine" data-wa="Bonjour Nelly, je souhaite réserver des ${p.name.toLowerCase()}. Quelles sont vos disponibilités ?" href="contact.html">${WA} Réserver</a>
-          </article>
-`;
 const FAQ = [
-  ['Les mèches sont-elles comprises dans le prix ?', 'Oui, les mèches sont incluses dans tous les tarifs pour les couleurs classiques (noir, brun, châtain). Pour une couleur particulière, précisez-le dans votre message : je vous indique le petit supplément éventuel.'],
-  ['Comment préparer mes cheveux avant le rendez-vous ?', 'Venez avec des cheveux lavés, bien démêlés et secs, sans huile ni produit gras. Si vous portez encore des tresses, je peux les défaire avant la séance (à partir de 20 €).'],
-  ['Combien de temps tiennent les tresses ?', 'Comptez 6 à 8 semaines pour des knotless ou des box braids, 4 à 6 semaines pour des fulani et 2 à 4 semaines pour des cornrows. Je vous donne mes conseils d’entretien à la fin de chaque séance.'],
-  ['Faut-il verser un acompte ?', 'Pour les coiffures de plus de 4 heures, un acompte de 20 € peut être demandé pour bloquer le créneau. Il est bien sûr déduit du prix final.'],
+  ['Les mèches sont-elles comprises dans le prix ?', 'Cela dépend de la coiffure et de la longueur souhaitée. Envoyez-moi le style qui vous plaît sur WhatsApp : je vous dis tout de suite quelles mèches prévoir, ou si je peux les fournir.'],
+  ['Comment préparer mes cheveux avant le rendez-vous ?', 'Venez avec des cheveux lavés, bien démêlés et secs, sans huile ni produit gras. Si vous portez encore des tresses, prévenez-moi : je peux les défaire avant la séance.'],
+  ['Combien de temps tiennent les coiffures ?', 'Comptez 6 à 8 semaines pour des knotless, des twists ou des locks, 3 à 5 semaines pour des tresses couchées et 2 à 3 semaines pour des nattes collées. Je vous donne mes conseils d’entretien à la fin de chaque séance.'],
+  ['Faut-il verser un acompte ?', 'Pour les coiffures les plus longues, un acompte peut être demandé pour bloquer le créneau. Il est bien sûr déduit du prix final.'],
   ['Et si je dois annuler ou décaler ?', 'Prévenez-moi au moins 24 heures à l’avance sur WhatsApp, on trouve un autre créneau sans souci.'],
   ['Quels moyens de paiement acceptez-vous ?', 'Espèces ou virement instantané, le jour du rendez-vous.'],
-  ['Coiffez-vous les enfants ?', 'Oui, dès 4 ans, avec des coiffures adaptées et une remise de 20 % pour les moins de 12 ans.'],
+  ['Coiffez-vous les hommes et les enfants ?', 'Oui : tresses collées et twists pour homme dès 30 €, tresses couchées pour enfant dès 30 €.'],
 ];
 const faqLd = `  <script type="application/ld+json">
   ${JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) })}
@@ -233,32 +257,29 @@ const faqLd = `  <script type="application/ld+json">
 `;
 
 page('tarifs.html', {
-  title: 'Tarifs tresses africaines à Marseille — Nelly Coiffure',
-  desc: 'Tarifs des knotless braids, box braids, fulani braids et cornrows à Marseille, mèches incluses. Estimez votre prix en ligne et réservez sur WhatsApp.',
-  preload: 'img/maquette/coiffure-box.webp', ld: faqLd,
+  title: 'Tarifs tresses, twists, locks et tissage à Marseille — Nelly Coiffure',
+  desc: `Tarifs de Nelly Coiffure à Marseille : knotless braids ${CARTE[0].items[0].prix} €, twists, locks, tissage, nattes collées dès ${PRIX_MIN} €. Estimez votre prix et réservez sur WhatsApp.`,
+  preload: 'img/nelly/arch-tarifs.webp', ld: faqLd,
 }, pageHero({
   crumb: 'Tarifs', eyebrow: 'Tarifs',
-  lines: ['Des prix clairs,', 'mèches', 'incluses.'],
-  lead: 'Pas de mauvaise surprise : chaque tarif comprend les mèches et les conseils d’entretien. Estimez votre prix en quelques clics, puis confirmez avec moi sur WhatsApp.',
-  actions: `<a class="btn btn--dark btn--shine" href="#estimer">Estimer mon tarif ${ARROW}</a><a class="btn btn--outline" href="#grille">Voir la grille</a>`,
-  media: archMedia({ src: 'img/maquette/coiffure-box.webp', pos: '50% 30%', script: ['Transparence', 'et douceur'], w: 644, h: 652 }),
+  lines: ['Des prix clairs,', 'sans', 'surprise.'],
+  lead: `De ${PRIX_MIN} à ${PRIX_MAX} €, pour femme, homme et enfant. Estimez votre prix en quelques clics, puis confirmez avec moi sur WhatsApp selon la longueur et le volume souhaités.`,
+  actions: `<a class="btn btn--dark btn--shine" href="#grille">Voir la carte ${ARROW}</a><a class="btn btn--outline" href="#estimer">Estimer mon tarif</a>`,
+  media: archMedia({ src: 'img/nelly/arch-tarifs.webp', pos: '50% 30%', script: ['Transparence', 'et douceur'], w: 800, h: 1000 }),
 }) + `
     <section class="section section--tight" id="grille">
       <div class="container">
         <div class="section-intro">
-          <p class="eyebrow reveal">La grille</p>
-          <h2 class="title reveal">Tarifs selon la longueur</h2>
-          <p class="body reveal">Prix « à partir de », pour une épaisseur moyenne. Le tarif exact dépend de la finesse des tresses et du volume de vos cheveux.</p>
+          <p class="eyebrow reveal">La carte</p>
+          <h2 class="title reveal">Mes tarifs</h2>
+          <p class="body reveal">Tarifs de base. Pour une longueur ou un volume particulier, je vous confirme le prix exact sur WhatsApp avant le rendez-vous.</p>
         </div>
-        <div class="price-grid" data-stagger>
-${PRICES.map(priceCard).join('')}        </div>
+${carteHtml()}
         <div class="addons" data-stagger>
           <div class="addon reveal"><svg aria-hidden="true"><use href="#i-home"/></svg><h3>Chez Nelly</h3><p>Offert</p></div>
           <div class="addon reveal"><svg aria-hidden="true"><use href="#i-car"/></svg><h3>Domicile Marseille</h3><p>+10 €</p></div>
           <div class="addon reveal"><svg aria-hidden="true"><use href="#i-pin"/></svg><h3>Communes voisines</h3><p>+20 €</p></div>
           <div class="addon reveal"><svg aria-hidden="true"><use href="#i-ring"/></svg><h3>Perles et anneaux</h3><p>+5 €</p></div>
-          <div class="addon reveal"><svg aria-hidden="true"><use href="#i-child"/></svg><h3>Moins de 12 ans</h3><p>−20 %</p></div>
-          <div class="addon reveal"><svg aria-hidden="true"><use href="#i-scissors"/></svg><h3>Défaire les tresses</h3><p>Dès 20 €</p></div>
         </div>
       </div>
     </section>
@@ -271,14 +292,13 @@ ${PRICES.map(priceCard).join('')}        </div>
               <p class="eyebrow">Estimateur</p>
               <h2 class="title">Combien va coûter ma coiffure&nbsp;?</h2>
             </div>
-            <div><span class="field-label" id="lbl-style">Le style</span><div class="chips" data-est="style" role="group" aria-labelledby="lbl-style">${PRICES.map((p, i) => `<button type="button" class="chip" aria-pressed="${i === 0}">${p.name}</button>`).join('')}</div></div>
-            <div><span class="field-label" id="lbl-opt">Longueur ou option</span><div class="chips" data-est="opt" role="group" aria-labelledby="lbl-opt"></div></div>
+            <div><span class="field-label" id="lbl-style">La prestation</span><div class="chips" data-est="style" role="group" aria-labelledby="lbl-style"></div></div>
             <div><span class="field-label" id="lbl-lieu">Le lieu</span><div class="chips" data-est="lieu" role="group" aria-labelledby="lbl-lieu"><button type="button" class="chip" aria-pressed="true" data-price="0">Chez Nelly</button><button type="button" class="chip" aria-pressed="false" data-price="10">À domicile, Marseille</button><button type="button" class="chip" aria-pressed="false" data-price="20">À domicile, communes voisines</button></div></div>
-            <div class="chips"><label class="toggle"><input type="checkbox" id="est-acc"> Perles et anneaux</label><label class="toggle"><input type="checkbox" id="est-kid"> Pour un enfant (−12 ans)</label></div>
+            <div class="chips"><label class="toggle"><input type="checkbox" id="est-acc"> Perles et anneaux</label></div>
           </div>
           <div class="estimator__result" aria-live="polite">
             <p class="estimator__label">Votre estimation</p>
-            <p class="estimator__total">110 €</p>
+            <p class="estimator__total">${PRESTATIONS[0].prix} €</p>
             <p class="estimator__detail"></p>
             <a class="btn btn--light btn--shine" id="estimator-wa" href="contact.html">${WA} Réserver ce tarif</a>
             <p class="note">Estimation indicative, confirmée par Nelly sur WhatsApp selon vos cheveux.</p>
@@ -294,50 +314,57 @@ ${PRICES.map(priceCard).join('')}        </div>
           <h2 class="title reveal">Bon à savoir</h2>
         </div>
         <div class="faq reveal">
-${FAQ.map(([q, a], i) => `          <details${i === 0 ? ' open' : ''}><summary>${q}</summary><p>${a}</p></details>`).join('\n')}
+${FAQ.map(([q, a], i) => `          <details${i === 0 ? ' open' : ''}><summary>${q.replace(' ?', '&nbsp;?')}</summary><p>${a}</p></details>`).join('\n')}
         </div>
       </div>
     </section>
 
-` + CTA('Une question <br>sur un tarif ?', 'Envoyez-moi une photo du style qui vous plaît : je vous réponds avec un prix précis et mes prochaines disponibilités.'));
+` + CTA('Une question <br>sur un tarif&nbsp;?', 'Envoyez-moi une photo du style qui vous plaît : je vous réponds avec un prix précis et mes prochaines disponibilités.'));
 
 /* ------------------------------------------------------------------ RÉALISATIONS */
 const GALLERY = [
   ['real-a', 'knotless', 'Knotless braids longues', 512, 688],
-  ['coiffure-box', 'box', 'Box braids en chignon', 644, 652],
+  ['coiffure-box', 'tresses', 'Tresses en chignon', 644, 652],
   ['real-c', 'details', 'Tresses cuivrées', 620, 308],
-  ['coiffure-fulani', 'fulani', 'Fulani braids et anneaux', 644, 652],
-  ['real-b', 'box', 'Tresses fines, vue de dos', 440, 500],
+  ['coiffure-fulani', 'couchees', 'Tresses couchées et anneaux', 644, 652],
+  ['real-b', 'tresses', 'Tresses fines, vue de dos', 440, 500],
   ['hero-sm', 'knotless', 'Knotless braids, mi-dos', 624, 768],
-  ['coiffure-cornrows', 'cornrows', 'Cornrows de profil', 604, 652],
+  ['coiffure-cornrows', 'nattes', 'Nattes collées de profil', 604, 652],
   ['real-e', 'knotless', 'Knotless braids fines', 620, 552],
-  ['real-d', 'fulani', 'Fulani braids de profil', 440, 356],
-  ['univers-sm', 'box', 'Tresses fines aux fils cuivrés', 762, 584],
+  ['real-d', 'couchees', 'Tresses couchées de profil', 440, 356],
+  ['univers-sm', 'tresses', 'Tresses fines aux fils cuivrés', 762, 584],
   ['coiffure-knotless', 'knotless', 'Knotless braids lâchées', 648, 652],
   ['cta-tresses-sm', 'details', 'Le détail des tresses', 392, 364],
   ['real-f', 'details', 'Finitions soignées', 512, 168],
 ];
-const CATS = { knotless: 'Knotless', box: 'Box braids', fulani: 'Fulani', cornrows: 'Cornrows', details: 'Détails' };
+const CATS = { knotless: 'Knotless', tresses: 'Tresses', couchees: 'Tresses couchées', nattes: 'Nattes collées', details: 'Détails' };
+// Vraies réalisations (outils/preparer-realisations.mjs) : remplacent les visuels de la maquette dès qu'il y en a
+const REELLES_FILE = new URL('./realisations.json', import.meta.url);
+const REELLES = existsSync(REELLES_FILE) ? JSON.parse(readFileSync(REELLES_FILE, 'utf8')) : [];
+const ITEMS = REELLES.length
+  ? REELLES.map((r) => ({ src: r.src, srcset: `${r.sm} 500w, ${r.src} 1000w`, cat: r.cat, label: r.style, sub: r.prix ? `${r.prix} €` : '', w: 1000, h: 1250 }))
+  : GALLERY.map(([src, cat, label, w, h]) => ({ src: `img/maquette/${src}.webp`, cat, label, sub: CATS[cat], w, h }));
+const FILTRES = REELLES.length ? Object.fromEntries(REELLES.map((r) => [r.cat, r.style])) : CATS;
 
 page('realisations.html', {
   title: 'Réalisations : tresses africaines à Marseille — Nelly Coiffure',
-  desc: 'Galerie des réalisations de Nelly Coiffure : knotless braids, box braids, fulani braids et cornrows à Marseille. Trouvez l’inspiration et demandez le même style sur WhatsApp.',
-  preload: 'img/maquette/real-a.webp',
+  desc: 'Galerie des réalisations de Nelly Coiffure : knotless braids, tresses couchées, nattes collées et plus encore à Marseille. Trouvez l’inspiration et demandez le même style sur WhatsApp.',
+  preload: 'img/nelly/arch-realisations.webp',
 }, pageHero({
   crumb: 'Réalisations', eyebrow: 'Réalisations',
   lines: ['Des coiffures', 'qui racontent', 'une histoire.'],
   lead: 'Parcourez mes réalisations, filtrez par style et agrandissez une photo pour la demander en un clic sur WhatsApp.',
   actions: `<a class="btn btn--dark btn--shine" href="#galerie">Voir la galerie ${ARROW}</a><a class="btn btn--outline" href="#" aria-label="Suivre Nelly Coiffure sur Instagram">Suivre sur Instagram</a>`,
-  media: archMedia({ src: 'img/maquette/real-a.webp', pos: '50% 30%', script: ['Laissez-vous', 'inspirer'], w: 512, h: 688 }),
+  media: archMedia({ src: 'img/nelly/arch-realisations.webp', pos: '50% 20%', script: ['Laissez-vous', 'inspirer'], w: 736, h: 920 }),
 }) + `
     <section class="section section--tight" id="galerie">
       <div class="container">
         <div class="filters reveal" role="group" aria-label="Filtrer par style">
-          <button type="button" class="chip" aria-pressed="true" data-filter="tout">Tout <small>${GALLERY.length}</small></button>
-${Object.entries(CATS).map(([k, v]) => `          <button type="button" class="chip" aria-pressed="false" data-filter="${k}">${v} <small>${GALLERY.filter((g) => g[1] === k).length}</small></button>`).join('\n')}
+          <button type="button" class="chip" aria-pressed="true" data-filter="tout">Tout <small>${ITEMS.length}</small></button>
+${Object.entries(FILTRES).map(([k, v]) => `          <button type="button" class="chip" aria-pressed="false" data-filter="${k}">${v} <small>${ITEMS.filter((it) => it.cat === k).length}</small></button>`).join('\n')}
         </div>
         <div class="gallery" id="gallery">
-${GALLERY.map(([src, cat, label, w, h]) => `          <button type="button" class="gallery__item reveal" data-cat="${cat}" data-label="${label}"><img src="img/maquette/${src}.webp" width="${w}" height="${h}" loading="lazy" alt="${label}"><span class="gallery__cap"><b>${label}</b><span>${CATS[cat]}</span></span></button>`).join('\n')}
+${ITEMS.map((it) => `          <button type="button" class="gallery__item reveal" data-cat="${it.cat}" data-label="${it.label}${it.sub.endsWith('€') ? ` (${it.sub})` : ''}"><img src="${it.src}"${it.srcset ? ` srcset="${it.srcset}" sizes="(min-width: 1025px) 33vw, 50vw"` : ''} width="${it.w}" height="${it.h}" loading="lazy" alt="${it.label}"><span class="gallery__cap"><b>${it.label}</b><span>${it.sub}</span></span></button>`).join('\n')}
         </div>
         <div class="insta-band reveal">
           <div>
@@ -368,7 +395,7 @@ page('a-propos.html', {
         <p class="story__quote reveal">Une belle tresse, c’est d’abord une cliente qui se sent écoutée.<span class="story__sign">Nelly</span></p>
         <div class="story__text">
           <p class="reveal">Tout a commencé dans la cuisine familiale, entre les mains de ma mère et de mes tantes. Très tôt, j’ai appris que tresser, c’est prendre le temps : écouter, démêler, rassurer, et transmettre un savoir-faire qui traverse les générations.</p>
-          <p class="reveal">Aujourd’hui installée à Marseille, j’ai fait de cette passion mon métier. Knotless, box braids, fulani ou cornrows : chaque coiffure est pensée pour votre visage, votre rythme de vie et la santé de vos cheveux.</p>
+          <p class="reveal">Aujourd’hui installée à Marseille, j’ai fait de cette passion mon métier. Tresses, twists, locks ou tissage : chaque coiffure est pensée pour votre visage, votre rythme de vie et la santé de vos cheveux.</p>
           <p class="reveal">Je vous reçois chez moi, dans un espace calme et chaleureux, ou je me déplace chez vous. Dans les deux cas, ma priorité reste la même : que vous vous sentiez bien, du premier message jusqu’à la dernière tresse.</p>
           <a class="btn btn--dark btn--shine reveal" data-wa="Bonjour Nelly, j'ai lu votre histoire sur votre site et j'aimerais prendre rendez-vous." href="contact.html">${WA} Faire connaissance ${ARROW}</a>
         </div>
@@ -409,7 +436,7 @@ page('contact.html', {
   title: 'Contact — Discutez avec Nelly sur WhatsApp | Nelly Coiffure, Marseille',
   desc: 'Une envie de tresses ? Discutez directement avec Nelly sur WhatsApp : conseils, tarif et rendez-vous, chez elle ou à domicile à Marseille.',
   bodyClass: 'page page--contact',
-  ld: "  <script type=\"application/ld+json\">\n  {\"@context\": \"https://schema.org\", \"@type\": \"HairSalon\", \"name\": \"Nelly Coiffure\", \"description\": \"Tresses africaines à Marseille, chez la coiffeuse ou à domicile.\", \"image\": \"img/marque/partage.jpg\", \"priceRange\": \"35 € – 140 €\", \"address\": {\"@type\": \"PostalAddress\", \"addressLocality\": \"Marseille\", \"addressRegion\": \"Provence-Alpes-Côte d'Azur\", \"addressCountry\": \"FR\"}, \"areaServed\": [\"Marseille\", \"Aubagne\", \"Allauch\", \"Plan-de-Cuques\", \"Cassis\"], \"openingHoursSpecification\": [{\"@type\": \"OpeningHoursSpecification\", \"dayOfWeek\": [\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\"], \"opens\": \"09:00\", \"closes\": \"19:00\"}, {\"@type\": \"OpeningHoursSpecification\", \"dayOfWeek\": \"Saturday\", \"opens\": \"08:00\", \"closes\": \"18:00\"}]}\n  </script>\n",
+  ld: "  <script type=\"application/ld+json\">\n  {\"@context\": \"https://schema.org\", \"@type\": \"HairSalon\", \"name\": \"Nelly Coiffure\", \"description\": \"Tresses africaines à Marseille, chez la coiffeuse ou à domicile.\", \"image\": \"img/marque/partage.jpg\", \"priceRange\": \"30 € – 80 €\", \"address\": {\"@type\": \"PostalAddress\", \"addressLocality\": \"Marseille\", \"addressRegion\": \"Provence-Alpes-Côte d'Azur\", \"addressCountry\": \"FR\"}, \"areaServed\": [\"Marseille\", \"Aubagne\", \"Allauch\", \"Plan-de-Cuques\", \"Cassis\"], \"openingHoursSpecification\": [{\"@type\": \"OpeningHoursSpecification\", \"dayOfWeek\": [\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\"], \"opens\": \"09:00\", \"closes\": \"19:00\"}, {\"@type\": \"OpeningHoursSpecification\", \"dayOfWeek\": \"Saturday\", \"opens\": \"08:00\", \"closes\": \"18:00\"}]}\n  </script>\n",
 }, `    <section class="page-hero contact-hero">
       <div class="container page-hero__inner">
         <div class="page-hero__text">

@@ -2,7 +2,9 @@ import http from 'node:http';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
-const ROOT = path.resolve(import.meta.dirname, '../site');
+// Usage : node outils/serveur.mjs [dossier racine, par défaut site] [port, par défaut 5173]
+const ROOT = path.resolve(import.meta.dirname, process.argv[2] || '../site');
+const PORT = Number(process.argv[3] || 5173);
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8' };
 
 http.createServer(async (req, res) => {
@@ -16,4 +18,4 @@ http.createServer(async (req, res) => {
     const page = await readFile(path.join(ROOT, '404.html')).catch(() => 'Not found');
     res.writeHead(404, { 'Content-Type': TYPES['.html'] }).end(page);
   }
-}).listen(5173, () => console.log('http://localhost:5173'));
+}).listen(PORT, () => console.log(`http://localhost:${PORT}`));

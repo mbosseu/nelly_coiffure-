@@ -13,3 +13,8 @@ outils/tmp-maquette/
 .claude/
 Thumbs.db
 .DS_Store
+
+# Photos sources des réalisations : seules les photos validées sont publiées (via outils/preparer-realisations.mjs)
+coiffure/*
+!coiffure/VALIDEES.txt
+outils/apercu/

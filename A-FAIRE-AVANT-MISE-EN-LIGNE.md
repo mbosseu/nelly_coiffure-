@@ -6,14 +6,14 @@ Plusieurs contenus sont **fictifs, prévus pour le lancement**. Ils sont listés
 ## Bloquant
 - [ ] **Numéro WhatsApp** → `site/js/main.js`, ligne 2 (`WHATSAPP_NUMBER`, format 336XXXXXXXX). Tant qu'il reste `33600000000`, aucun bouton WhatsApp ne fonctionne.
 - [ ] **Avis clientes** (accueil et À propos) : à ne publier que s'il s'agit de **vrais avis de vraies clientes**, avec leur accord. Publier de faux avis est interdit en France (pratique commerciale trompeuse, art. L121-4 du Code de la consommation) et se repère facilement. Idéalement, chaque avis doit être retrouvable sur la fiche Google de Nelly.
-- [ ] **Photos** : toutes les images de `img/maquette/` viennent de la maquette (modèles), pas du travail de Nelly. La page Réalisations doit montrer **ses vraies réalisations** avant la mise en ligne. Les photos d’autres créatrices de la v1 ont été sorties du site (`outils/archives-v1/`) : elles ne doivent jamais être publiées.
+- [ ] **Photos de Nelly** (`coiffure/`, présentées comme ses réalisations, avec autorisation selon le propriétaire du site) : 12 photos sont utilisées, dans `site/img/nelly/` (design, via `outils/integrer-photos.mjs`) et `site/img/realisations/` (galerie, via `coiffure/VALIDEES.txt` et `outils/preparer-realisations.mjs`). Vérifier l’accord des personnes reconnaissables (droit à l’image), en particulier pour les enfants (accord des parents). Les photos portant la signature d’un autre compte, une interface d’application, des captures de boutiques ou des retouches IA ne sont pas publiées.
+- [ ] Les images restantes de `img/maquette/` (pièce de l’expérience, texture du bloc rendez-vous, aperçu d’enfant du trouveur) sont des visuels de la maquette. Les photos d’autres créatrices de la v1 ont été sorties du site (`outils/archives-v1/`) : elles ne doivent jamais être publiées.
 
 ## Données fictives à valider
-- [ ] **Tarifs** → `tarifs.html` (grille, options et estimateur, qui lit directement la grille) et mentions « Dès … € » dans `coiffures.html` et dans `js/main.js` (bloc `STYLES` du trouveur).
-  - Knotless 90 / 110 / 140 €, box braids 80 / 100 / 130 €, fulani 70 / 90 / 110 €, cornrows 35 / 50 / 65 €.
-  - Domicile Marseille +10 €, communes voisines +20 €, perles +5 €, moins de 12 ans −20 %, défaire dès 20 €, coiffage événement dès 15 €.
-- [ ] **Durées et tenues** de chaque coiffure → `coiffures.html` et `tarifs.html`.
-- [ ] **FAQ** → `tarifs.html` : acompte de 20 €, annulation 24 h avant, paiement en espèces ou virement, enfants dès 4 ans. Le même texte se trouve dans le bloc JSON-LD en haut de la page.
+- [x] **Tarifs des prestations** : vrais prix de Nelly (noms des dossiers de `coiffure/`), regroupés dans le bloc `CARTE` de `outils/construire-pages.mjs`. Pour changer un prix : le modifier là, lancer `node outils/construire-pages.mjs`, puis mettre à jour les cartes de l'accueil (`index.html`) et la conversation d'exemple (`js/main.js`, bloc `SCRIPT`).
+- [ ] **À confirmer avec Nelly** : « Tresses couchées enfant » à 30 € (déduit des photos du dossier `tresse coucher_30euro`), mèches comprises ou non, suppléments (domicile +10 / +20 €, perles +5 €, encore fictifs).
+- [ ] **Durées et tenues** (fictives) → bloc `STYLES` du générateur et bloc `STYLES` du trouveur dans `js/main.js`.
+- [ ] **FAQ** → `tarifs.html` (bloc `FAQ` du générateur) : acompte, annulation 24 h avant, paiement en espèces ou virement. Le même texte se trouve dans le bloc JSON-LD en haut de la page.
 - [ ] **Zone et suppléments de déplacement** → `tarifs.html` (options et estimateur) et bloc « Où ? » de `contact.html`.
 - [ ] **Horaires** → bloc « Disponibilités » de `contact.html`, et mention « Du lundi au samedi » dans le pied de page de chaque page.
 - [ ] **Mentions légales** → `mentions-legales.html` : compléter les éléments entre crochets (nom, SIRET, adresse, hébergeur), puis retirer l’encadré d’avertissement.
