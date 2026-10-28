@@ -1,0 +1,15 @@
+# Photos d'autres créatrices : ne jamais les publier
+image et video/
+photos_traitees/
+outils/archives-v1/
+
+# Dépendances et outils lourds (réinstallables)
+node_modules/
+outils/realesrgan/
+
+# Fichiers de travail
+outils/captures/
+outils/tmp-maquette/
+.claude/
+Thumbs.db
+.DS_Store
