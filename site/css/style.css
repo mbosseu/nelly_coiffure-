@@ -1238,3 +1238,10 @@ h2.eyebrow { font-weight: 400; }
 @media (max-width: 600px) { .service-card__type { font-size: .68rem; } .univers__list li { font-size: .72rem; } }
 @media (max-width: 1024px) { .hero__media::before { background: linear-gradient(180deg, rgba(26, 13, 6, .25) 0%, transparent 20%, rgba(26, 13, 6, .62) 44%, rgba(26, 13, 6, .9) 64%, var(--espresso) 88%); } }
 @media (max-width: 1024px) { .hero .hero__eyebrow { color: #F3D9C0; } }
+/* Très petits écrans (iPhone SE, anciens Android) */
+@media (max-width: 380px) {
+  .btn, .btn--light { letter-spacing: .07em; padding-inline: 16px; }
+  .service-card { grid-template-columns: 100px minmax(0, 1fr); }
+  .service-card__footer { flex-direction: column; align-items: stretch; }
+  .service-card__book { white-space: normal; text-align: center; }
+}

@@ -8,7 +8,7 @@ const EDGE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
 const BASE = 'http://localhost:5173/';
 const OUT = new URL('./captures/mobile/', import.meta.url).pathname.replace(/^\/(\w:)/, '$1');
 const PAGES = process.argv.slice(2).length ? process.argv.slice(2) : ['index', 'coiffures', 'realisations', 'a-propos', 'contact', 'mentions-legales', '404'];
-const W = 390, H = 844;
+const W = Number(process.env.AUDIT_W || 390), H = 844;
 mkdirSync(OUT, { recursive: true });
 
 const browser = await puppeteer.launch({ executablePath: EDGE, headless: true, args: ['--hide-scrollbars'] });
@@ -51,13 +51,13 @@ for (const p of PAGES) {
     for (let j = 0; j < parPlanche; j++) {
       const i = k * parPlanche + j; if (i >= nb) break;
       const top = i * ecran, h = Math.min(ecran, height - top);
-      tuiles.push({ input: await sharp(fichier).extract({ left: 0, top, width: W * 2, height: h }).resize({ width: 390 }).toBuffer(), left: j * 400, top: 0 });
+      tuiles.push({ input: await sharp(fichier).extract({ left: 0, top, width: W * 2, height: h }).resize({ width: W }).toBuffer(), left: j * 400, top: 0 });
     }
     await sharp({ create: { width: parPlanche * 400, height: H, channels: 3, background: '#888' } }).composite(tuiles).png().toFile(`${OUT}${p}-${k + 1}.png`);
   }
   rapport[p].ecrans = nb;
   await page.close();
 }
-await browser.close();
 writeFileSync(`${OUT}rapport.json`, JSON.stringify(rapport, null, 2));
+await browser.close().catch(() => {});
 console.log(JSON.stringify(rapport, null, 1));

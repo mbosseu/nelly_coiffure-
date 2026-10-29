@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 // Référencement : met à jour les balises de toutes les pages à partir d'une seule configuration.
@@ -162,6 +163,17 @@ for (const [fichier, P] of Object.entries(PAGES)) {
     '<!-- seo:fin -->',
   ].filter(Boolean).map((l) => `  ${l}`).join(NL);
   h = h.replace(/([ \t]*<meta name="description"[^>]*>\r?\n)/, `$1${bloc}${NL}`);
+  writeFileSync(f, h);
+}
+
+// 6 bis. Version du CSS et du JS dans leurs adresses : chaque modification force les téléphones à recharger
+// la nouvelle version au lieu d'afficher celle gardée en cache
+const empreinte = (fichier) => createHash('sha1').update(readFileSync(path.join(SITE, fichier))).digest('hex').slice(0, 10);
+const VERSIONS = { 'css/style.css': empreinte('css/style.css'), 'js/main.js': empreinte('js/main.js') };
+for (const fichier of [...Object.keys(PAGES), 'tarifs.html']) {
+  const f = path.join(SITE, fichier);
+  let h = readFileSync(f, 'utf8');
+  for (const [res, v] of Object.entries(VERSIONS)) h = h.replace(new RegExp(`(["'])${res.replace('.', '\\.')}(\\?v=[0-9a-f]+)?\\1`, 'g'), `$1${res}?v=${v}$1`);
   writeFileSync(f, h);
 }
 
