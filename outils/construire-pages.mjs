@@ -155,7 +155,7 @@ ${g.items.map((p) => `              <li class="carte__row" id="${p.id}-prix" dat
           </div>`).join('\n')}
         </div>`;
 
-/* ------------------------------------------------------------------ COIFFURES */
+/* ------------------------------------------------------------------ COIFFURES ET TARIFS */
 // Styles mis en avant : seulement ceux pour lesquels une photo correspond vraiment
 const STYLES = [
   { id: 'knotless', name: 'Knotless Braids', tag: 'Légèreté et élégance', img: 'style-knotless', w: 700, h: 756, prix: 60,
@@ -186,28 +186,40 @@ const styleRow = (s, i) => `        <article class="style" id="${s.id}">
             <ul class="check-list reveal">${s.ideal.map((x) => `<li>${x}</li>`).join('')}</ul>
             <div class="style__actions reveal">
               <a class="btn btn--dark btn--shine" data-wa="${waStyle(s.name.toLowerCase())}" href="contact.html">${WA} Demander ce style ${ARROW}</a>
-              <a class="btn btn--outline" href="tarifs.html">Voir les tarifs</a>
+              <a class="btn btn--outline" href="#carte">Tous les tarifs</a>
             </div>
           </div>
         </article>
 `;
 
+// Coiffures et tarifs réunis sur une seule page : les styles, la carte des prix, l'essentiel à savoir
+const FAQ = [
+  ['Les mèches sont-elles comprises dans le prix ?', 'Cela dépend de la coiffure et de la longueur souhaitée. Envoyez-moi le style qui vous plaît sur WhatsApp : je vous dis tout de suite quelles mèches prévoir, ou si je peux les fournir.'],
+  ['Comment préparer mes cheveux avant le rendez-vous ?', 'Venez avec des cheveux lavés, bien démêlés et secs, sans huile ni produit gras. Si vous portez encore des tresses, prévenez-moi : je peux les défaire avant la séance.'],
+  ['Et si je dois annuler ou décaler ?', 'Prévenez-moi au moins 24 heures à l’avance sur WhatsApp, on trouve un autre créneau sans souci.'],
+  ['Quels moyens de paiement acceptez-vous ?', 'Espèces ou virement instantané, le jour du rendez-vous.'],
+];
+const faqLd = `  <script type="application/ld+json">
+  ${JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) })}
+  </script>
+`;
+
 page('coiffures.html', {
-  title: 'Coiffures : knotless, twists, locks, tissage à Marseille — Nelly Coiffure',
-  desc: `Knotless braids, short braids, tresses couchées, nattes collées, twists, locks, tissage, coiffures homme et enfant à Marseille, dès ${PRIX_MIN} €. Réservez sur WhatsApp.`,
-  preload: 'img/nelly/arch-coiffures.webp',
+  title: 'Coiffures et tarifs : tresses, twists, locks, tissage à Marseille — Nelly Coiffure',
+  desc: `Coiffures et tarifs de Nelly Coiffure à Marseille : knotless braids ${CARTE[0].items[0].prix} €, short braids, tresses couchées, nattes collées, twists, locks, tissage, homme et enfant, dès ${PRIX_MIN} €. Réservez sur WhatsApp.`,
+  preload: 'img/nelly/arch-coiffures.webp', ld: faqLd,
 }, pageHero({
-  crumb: 'Coiffures', eyebrow: 'Nos coiffures',
+  crumb: 'Coiffures et tarifs', eyebrow: 'Coiffures et tarifs',
   lines: ['Des tresses', 'pensées pour', 'votre style.'],
-  lead: 'Tresses, twists, locks ou tissage, pour femme, homme et enfant : découvrez chaque prestation et son tarif. Vous hésitez ? Faites le test, je vous guide.',
-  actions: `<a class="btn btn--dark btn--shine" href="#trouver">Trouver ma coiffure ${ARROW}</a><a class="btn btn--outline" href="#carte">Toutes les prestations</a>`,
+  lead: `Tresses, twists, locks ou tissage, pour femme, homme et enfant, de ${PRIX_MIN} à ${PRIX_MAX} €. Choisissez votre coiffure, puis écrivez-moi sur WhatsApp : je vous confirme le prix et mes disponibilités.`,
+  actions: `<a class="btn btn--dark btn--shine" href="#carte">Voir les tarifs ${ARROW}</a><a class="btn btn--outline" href="realisations.html">Mes réalisations</a>`,
   media: archMedia({ src: 'img/nelly/arch-coiffures.webp', pos: '50% 30%', script: ['Chaque tresse', 'a son histoire'], w: 800, h: 1000 }),
 }) + `
     <section class="section section--tight">
       <div class="container">
         <nav class="style-nav" aria-label="Les coiffures">
           ${STYLES.map((s) => `<a class="chip" href="#${s.id}">${s.name}</a>`).join('\n          ')}
-          <a class="chip" href="#carte">Toutes les prestations</a>
+          <a class="chip" href="#carte">Tous les tarifs</a>
         </nav>
 ${STYLES.map(styleRow).join('')}      </div>
     </section>
@@ -216,110 +228,42 @@ ${STYLES.map(styleRow).join('')}      </div>
       <div class="container">
         <div class="section-intro">
           <p class="eyebrow reveal">La carte</p>
-          <h2 class="title reveal">Toutes les prestations</h2>
-          <p class="body reveal">Femme, homme et enfant, chez moi ou à votre domicile. Un doute sur le style ou la longueur ? Écrivez-moi, on en parle ensemble.</p>
+          <h2 class="title reveal">Prestations et tarifs</h2>
+          <p class="body reveal">Tarifs de base, chez moi ou à votre domicile. Pour une longueur ou un volume particulier, je vous confirme le prix exact sur WhatsApp avant le rendez-vous.</p>
         </div>
 ${carteHtml()}
       </div>
     </section>
 
-    <section class="finder" id="trouver">
-      <svg class="cta__curve" viewBox="0 0 1440 110" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M0 0 L1440 0 L1440 34 C 1260 96, 1060 108, 860 96 C 760 90, 720 40, 600 26 C 380 4, 160 30, 0 22 Z" fill="var(--cream)"/>
-      </svg>
-      <div class="container finder__inner">
-        <div class="finder__intro">
-          <p class="eyebrow eyebrow--copper reveal">Trouver ma coiffure</p>
-          <h2 class="title title--light reveal">Trois questions, <br>votre style idéal.</h2>
-          <p class="body body--light reveal">Répondez en quelques secondes : je vous recommande la coiffure la plus adaptée à votre rythme, à vos envies et à votre budget, avec un message prêt à m’envoyer.</p>
+    <section class="section section--tight" id="faq">
+      <div class="container">
+        <div class="section-intro">
+          <p class="eyebrow reveal">Bon à savoir</p>
+          <h2 class="title reveal">Questions fréquentes</h2>
         </div>
-        <div class="finder__card reveal" id="finder-card" aria-live="polite">
-          <noscript><a class="btn btn--light" href="contact.html">Me contacter pour un conseil</a></noscript>
+        <div class="faq reveal">
+${FAQ.map(([q, a]) => `          <details><summary>${q.replace(' ?', '&nbsp;?')}</summary><p>${a}</p></details>`).join('\n')}
         </div>
       </div>
     </section>
 
 ` + CTA());
 
-/* ------------------------------------------------------------------ TARIFS */
-const FAQ = [
-  ['Les mèches sont-elles comprises dans le prix ?', 'Cela dépend de la coiffure et de la longueur souhaitée. Envoyez-moi le style qui vous plaît sur WhatsApp : je vous dis tout de suite quelles mèches prévoir, ou si je peux les fournir.'],
-  ['Comment préparer mes cheveux avant le rendez-vous ?', 'Venez avec des cheveux lavés, bien démêlés et secs, sans huile ni produit gras. Si vous portez encore des tresses, prévenez-moi : je peux les défaire avant la séance.'],
-  ['Combien de temps tiennent les coiffures ?', 'Comptez 6 à 8 semaines pour des knotless, des twists ou des locks, 3 à 5 semaines pour des tresses couchées et 2 à 3 semaines pour des nattes collées. Je vous donne mes conseils d’entretien à la fin de chaque séance.'],
-  ['Faut-il verser un acompte ?', 'Pour les coiffures les plus longues, un acompte peut être demandé pour bloquer le créneau. Il est bien sûr déduit du prix final.'],
-  ['Et si je dois annuler ou décaler ?', 'Prévenez-moi au moins 24 heures à l’avance sur WhatsApp, on trouve un autre créneau sans souci.'],
-  ['Quels moyens de paiement acceptez-vous ?', 'Espèces ou virement instantané, le jour du rendez-vous.'],
-  ['Coiffez-vous les hommes et les enfants ?', 'Oui : tresses collées et twists pour homme dès 30 €, tresses couchées pour enfant dès 30 €.'],
-];
-const faqLd = `  <script type="application/ld+json">
-  ${JSON.stringify({ '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: FAQ.map(([q, a]) => ({ '@type': 'Question', name: q, acceptedAnswer: { '@type': 'Answer', text: a } })) })}
-  </script>
-`;
-
-page('tarifs.html', {
-  title: 'Tarifs tresses, twists, locks et tissage à Marseille — Nelly Coiffure',
-  desc: `Tarifs de Nelly Coiffure à Marseille : knotless braids ${CARTE[0].items[0].prix} €, twists, locks, tissage, nattes collées dès ${PRIX_MIN} €. Estimez votre prix et réservez sur WhatsApp.`,
-  preload: 'img/nelly/arch-tarifs.webp', ld: faqLd,
-}, pageHero({
-  crumb: 'Tarifs', eyebrow: 'Tarifs',
-  lines: ['Des prix clairs,', 'sans', 'surprise.'],
-  lead: `De ${PRIX_MIN} à ${PRIX_MAX} €, pour femme, homme et enfant. Estimez votre prix en quelques clics, puis confirmez avec moi sur WhatsApp selon la longueur et le volume souhaités.`,
-  actions: `<a class="btn btn--dark btn--shine" href="#grille">Voir la carte ${ARROW}</a><a class="btn btn--outline" href="#estimer">Estimer mon tarif</a>`,
-  media: archMedia({ src: 'img/nelly/arch-tarifs.webp', pos: '50% 30%', script: ['Transparence', 'et douceur'], w: 800, h: 1000 }),
-}) + `
-    <section class="section section--tight" id="grille">
-      <div class="container">
-        <div class="section-intro">
-          <p class="eyebrow reveal">La carte</p>
-          <h2 class="title reveal">Mes tarifs</h2>
-          <p class="body reveal">Tarifs de base. Pour une longueur ou un volume particulier, je vous confirme le prix exact sur WhatsApp avant le rendez-vous.</p>
-        </div>
-${carteHtml()}
-        <div class="addons" data-stagger>
-          <div class="addon reveal"><svg aria-hidden="true"><use href="#i-home"/></svg><h3>Chez Nelly</h3><p>Offert</p></div>
-          <div class="addon reveal"><svg aria-hidden="true"><use href="#i-car"/></svg><h3>Domicile Marseille</h3><p>+10 €</p></div>
-          <div class="addon reveal"><svg aria-hidden="true"><use href="#i-pin"/></svg><h3>Communes voisines</h3><p>+20 €</p></div>
-          <div class="addon reveal"><svg aria-hidden="true"><use href="#i-ring"/></svg><h3>Perles et anneaux</h3><p>+5 €</p></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section section--tight" id="estimer">
-      <div class="container">
-        <div class="estimator__box reveal" id="estimator">
-          <div class="estimator__form">
-            <div>
-              <p class="eyebrow">Estimateur</p>
-              <h2 class="title">Combien va coûter ma coiffure&nbsp;?</h2>
-            </div>
-            <div><span class="field-label" id="lbl-style">La prestation</span><div class="chips" data-est="style" role="group" aria-labelledby="lbl-style"></div></div>
-            <div><span class="field-label" id="lbl-lieu">Le lieu</span><div class="chips" data-est="lieu" role="group" aria-labelledby="lbl-lieu"><button type="button" class="chip" aria-pressed="true" data-price="0">Chez Nelly</button><button type="button" class="chip" aria-pressed="false" data-price="10">À domicile, Marseille</button><button type="button" class="chip" aria-pressed="false" data-price="20">À domicile, communes voisines</button></div></div>
-            <div class="chips"><label class="toggle"><input type="checkbox" id="est-acc"> Perles et anneaux</label></div>
-          </div>
-          <div class="estimator__result" aria-live="polite">
-            <p class="estimator__label">Votre estimation</p>
-            <p class="estimator__total">${PRESTATIONS[0].prix} €</p>
-            <p class="estimator__detail"></p>
-            <a class="btn btn--light btn--shine" id="estimator-wa" href="contact.html">${WA} Réserver ce tarif</a>
-            <p class="note">Estimation indicative, confirmée par Nelly sur WhatsApp selon vos cheveux.</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="section" id="faq">
-      <div class="container">
-        <div class="section-intro">
-          <p class="eyebrow reveal">Questions fréquentes</p>
-          <h2 class="title reveal">Bon à savoir</h2>
-        </div>
-        <div class="faq reveal">
-${FAQ.map(([q, a], i) => `          <details${i === 0 ? ' open' : ''}><summary>${q.replace(' ?', '&nbsp;?')}</summary><p>${a}</p></details>`).join('\n')}
-        </div>
-      </div>
-    </section>
-
-` + CTA('Une question <br>sur un tarif&nbsp;?', 'Envoyez-moi une photo du style qui vous plaît : je vous réponds avec un prix précis et mes prochaines disponibilités.'));
+// Ancienne page Tarifs : redirection vers la carte (Vercel redirige aussi, voir site/vercel.json)
+writeFileSync(`${SITE}/tarifs.html`, `<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Tarifs — Nelly Coiffure</title>
+  <meta name="robots" content="noindex">
+  <link rel="canonical" href="coiffures.html">
+  <meta http-equiv="refresh" content="0; url=coiffures.html#carte">
+</head>
+<body>
+  <p>Les tarifs se trouvent désormais sur la page <a href="coiffures.html#carte">Coiffures et tarifs</a>.</p>
+</body>
+</html>
+`);
 
 /* ------------------------------------------------------------------ RÉALISATIONS */
 const GALLERY = [

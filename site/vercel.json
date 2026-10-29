@@ -1,0 +1,6 @@
+{
+  "redirects": [
+    { "source": "/tarifs.html", "destination": "/coiffures.html#carte", "permanent": true },
+    { "source": "/tarifs", "destination": "/coiffures.html#carte", "permanent": true }
+  ]
+}
