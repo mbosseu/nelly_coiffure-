@@ -1,6 +1,6 @@
 # Nelly Coiffure : à faire avant la mise en ligne
 
-Le site compte 8 pages : `index.html`, `coiffures.html`, `realisations.html`, `a-propos.html`, `tarifs.html`, `contact.html`, `mentions-legales.html`, `confidentialite.html`.
+Le site compte 7 pages : `index.html`, `coiffures.html` (coiffures et tarifs), `realisations.html`, `a-propos.html`, `contact.html`, `mentions-legales.html`, `confidentialite.html`. `tarifs.html` redirige vers la carte de `coiffures.html`.
 Plusieurs contenus sont **fictifs, prévus pour le lancement**. Ils sont listés ci-dessous et doivent être validés ou remplacés par Nelly.
 
 ## Bloquant
@@ -11,10 +11,10 @@ Plusieurs contenus sont **fictifs, prévus pour le lancement**. Ils sont listés
 
 ## Données fictives à valider
 - [x] **Tarifs des prestations** : vrais prix de Nelly (noms des dossiers de `coiffure/`), regroupés dans le bloc `CARTE` de `outils/construire-pages.mjs`. Pour changer un prix : le modifier là, lancer `node outils/construire-pages.mjs`, puis mettre à jour les cartes de l'accueil (`index.html`) et la conversation d'exemple (`js/main.js`, bloc `SCRIPT`).
-- [ ] **À confirmer avec Nelly** : « Tresses couchées enfant » à 30 € (déduit des photos du dossier `tresse coucher_30euro`), mèches comprises ou non, suppléments (domicile +10 / +20 €, perles +5 €, encore fictifs).
-- [ ] **Durées et tenues** (fictives) → bloc `STYLES` du générateur et bloc `STYLES` du trouveur dans `js/main.js`.
-- [ ] **FAQ** → `tarifs.html` (bloc `FAQ` du générateur) : acompte, annulation 24 h avant, paiement en espèces ou virement. Le même texte se trouve dans le bloc JSON-LD en haut de la page.
-- [ ] **Zone et suppléments de déplacement** → `tarifs.html` (options et estimateur) et bloc « Où ? » de `contact.html`.
+- [ ] **À confirmer avec Nelly** : mèches comprises ou non, supplément éventuel pour le déplacement à domicile (non affiché sur le site, à préciser sur WhatsApp).
+- [ ] **Durées et tenues** (fictives) des trois styles mis en avant → bloc `STYLES` de `outils/construire-pages.mjs`.
+- [ ] **Questions fréquentes** → bloc `FAQ` de `outils/construire-pages.mjs` (page Coiffures et tarifs) : mèches, préparation, annulation 24 h avant, paiement en espèces ou virement.
+- [ ] **Zone de déplacement** → bloc « Où ? » de `contact.html` (bloc CONTACT du générateur).
 - [ ] **Horaires** → bloc « Disponibilités » de `contact.html`, et mention « Du lundi au samedi » dans le pied de page de chaque page.
 - [ ] **Mentions légales** → `mentions-legales.html` : compléter les éléments entre crochets (nom, SIRET, adresse, hébergeur), puis retirer l’encadré d’avertissement.
 - [ ] **Conversation d’exemple** de la page Contact (prix, horaires) → bloc `SCRIPT` dans `js/main.js`, à garder cohérent avec les tarifs.
