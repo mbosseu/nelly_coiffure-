@@ -428,7 +428,7 @@ page('contact.html', {
             </dl>
           </div>
           <div class="info-band__item reveal">
-            <h2 class="eyebrow">Où<p class="eyebrow">Où&nbsp;?</p>nbsp;?</h2>
+            <h2 class="eyebrow">Où&nbsp;?</h2>
             <p class="info-band__big">Marseille <span>et alentours</span></p>
             <p>Chez moi, dans un espace calme et dédié, ou directement chez vous, du 1er au 16e arrondissement et dans les communes voisines (Aubagne, Allauch, Plan-de-Cuques, Les Pennes-Mirabeau, Septèmes-les-Vallons, Cassis). Le lieu se décide ensemble sur WhatsApp&nbsp;; l’adresse exacte vous est envoyée à la confirmation.</p>
           </div>

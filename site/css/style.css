@@ -1190,3 +1190,51 @@ main:has(.cta) + .site-footer .site-footer__grid { border-top: 1px solid rgba(22
 /* Référencement : le surtitre porte le H1 de la page, il garde son apparence de surtitre */
 h1.eyebrow { font-weight: 400; }
 h2.eyebrow { font-weight: 400; }
+
+/* =====================================================================
+   Audit mobile : corrections
+   ===================================================================== */
+/* Texte manuscrit de l'accueil : chaque ligne garde toute sa largeur (plus de « votre histoi… » coupé) */
+.hero__script span { width: max-content; }
+
+@media (max-width: 1024px) {
+  /* Accueil : la photo reste dans son cadre (plus de bande cuivrée sur le 2e bouton) et le texte posé dessus reste lisible */
+  .hero__media { overflow: hidden; }
+  .hero__media::before { background: linear-gradient(180deg, rgba(26, 13, 6, .25) 0%, transparent 22%, rgba(26, 13, 6, .5) 48%, rgba(26, 13, 6, .88) 70%, var(--espresso) 92%); }
+  .hero__eyebrow { text-shadow: 0 1px 12px rgba(20, 10, 5, .85); }
+
+  /* Cartes de l'accueil : la pastille WhatsApp se pose sur la photo, plus sur le nom de la coiffure */
+  .card__wa { top: 12px; bottom: auto; left: 12px; transform: none; height: 36px; padding: 0 14px 0 10px; font-size: .74rem; }
+  .card__body { padding: 18px 18px 20px; }
+
+  /* Univers : pastilles lisibles */
+  .univers__list li { font-size: .7rem; padding: 7px 13px; }
+
+  /* Pied de page : la colonne Contact prend toute la largeur, liens assez hauts pour le doigt */
+  .site-footer__grid > .site-footer__col:last-child { grid-column: 1 / -1; }
+  .site-footer__col ul { gap: 2px; }
+  .site-footer__col a, .site-footer__bottom a { display: inline-block; padding: 9px 0; }
+  .site-footer__col li { padding: 2px 0; }
+  .site-footer__bottom ul { gap: 22px; }
+}
+
+@media (max-width: 600px) {
+  .btn, .btn--light { font-size: .76rem; }
+
+  /* Coiffures et tarifs : une carte par ligne, photo à gauche, texte et prix lisibles à droite */
+  .services-grid { grid-template-columns: 1fr; gap: 14px; }
+  .service-card { display: grid; grid-template-columns: 118px minmax(0, 1fr); }
+  .service-card__media { aspect-ratio: auto; height: 100%; min-height: 168px; }
+  .service-card__body { min-height: 0; padding: 14px 16px 15px; }
+  .service-card__type { margin-bottom: 4px; font-size: .64rem; }
+  .service-card__body h3 { margin-bottom: 4px; font-size: 1.25rem; }
+  .service-card__desc { min-height: 0; font-size: .82rem; line-height: 1.5; }
+  .service-card__footer { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding-top: 10px; }
+  .service-card__price { font-size: 1.35rem; }
+  .service-card__book { flex: 1 1 auto; padding: 10px 12px; font-size: .72rem; white-space: nowrap; }
+  .service-card__more { margin-top: 10px; font-size: .76rem; }
+}
+@media (max-width: 1024px) { .hero__eyebrow { color: #F3D9C0; } .hero__eyebrow::before { background: linear-gradient(90deg, transparent, #F3D9C0); } }
+@media (max-width: 600px) { .service-card__type { font-size: .68rem; } .univers__list li { font-size: .72rem; } }
+@media (max-width: 1024px) { .hero__media::before { background: linear-gradient(180deg, rgba(26, 13, 6, .25) 0%, transparent 20%, rgba(26, 13, 6, .62) 44%, rgba(26, 13, 6, .9) 64%, var(--espresso) 88%); } }
+@media (max-width: 1024px) { .hero .hero__eyebrow { color: #F3D9C0; } }
