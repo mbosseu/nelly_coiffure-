@@ -156,7 +156,7 @@ document.getElementById('mosaic-next')?.addEventListener('click', () => rotate(1
 const gallery = document.getElementById('gallery');
 if (gallery) {
   const filters = document.querySelector('.filters');
-  chipGroup(filters, (i, chip) => {
+  const chips = chipGroup(filters, (i, chip) => {
     const f = chip.dataset.filter;
     let n = 0;
     gallery.querySelectorAll('.gallery__item').forEach((it) => {
@@ -170,6 +170,8 @@ if (gallery) {
       }
     });
   });
+  const requestedStyle = new URLSearchParams(window.location.search).get('style');
+  if (requestedStyle) chips.find((chip) => chip.dataset.filter === requestedStyle)?.click();
 }
 
 // Visionneuse, partagée par la mosaïque et la galerie
