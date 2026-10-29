@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.nellycoiffure.fr/sitemap.xml
+Sitemap: https://nelly-coiffure.vercel.app/sitemap.xml

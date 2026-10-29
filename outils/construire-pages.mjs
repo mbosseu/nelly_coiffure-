@@ -420,7 +420,7 @@ page('contact.html', {
       <div class="container">
         <div class="info-band" data-stagger>
           <div class="info-band__item reveal">
-            <p class="eyebrow">Disponibilités</p>
+            <h2 class="eyebrow">Disponibilités</h2>
             <dl class="hours">
               <div><dt>Lundi – vendredi</dt><dd>9 h – 19 h</dd></div>
               <div><dt>Samedi</dt><dd>8 h – 18 h</dd></div>
@@ -428,12 +428,12 @@ page('contact.html', {
             </dl>
           </div>
           <div class="info-band__item reveal">
-            <p class="eyebrow">Où&nbsp;?</p>
+            <h2 class="eyebrow">Où<p class="eyebrow">Où&nbsp;?</p>nbsp;?</h2>
             <p class="info-band__big">Marseille <span>et alentours</span></p>
-            <p>Chez moi, dans un espace calme et dédié, ou directement chez vous. Le lieu se décide ensemble sur WhatsApp&nbsp;; l’adresse exacte vous est envoyée à la confirmation.</p>
+            <p>Chez moi, dans un espace calme et dédié, ou directement chez vous, du 1er au 16e arrondissement et dans les communes voisines (Aubagne, Allauch, Plan-de-Cuques, Les Pennes-Mirabeau, Septèmes-les-Vallons, Cassis). Le lieu se décide ensemble sur WhatsApp&nbsp;; l’adresse exacte vous est envoyée à la confirmation.</p>
           </div>
           <div class="info-band__item reveal">
-            <p class="eyebrow">Me suivre</p>
+            <h2 class="eyebrow">Me suivre</h2>
             <ul class="social-links">
               <li><a href="#"><span>Instagram</span><small>@nellycoiffure</small><svg aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
               <li><a href="#"><span>TikTok</span><small>@nellycoiffure</small><svg aria-hidden="true"><use href="#i-arrow"/></svg></a></li>

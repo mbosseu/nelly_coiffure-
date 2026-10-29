@@ -1187,3 +1187,6 @@ main:has(.cta) + .site-footer .site-footer__grid { border-top: 1px solid rgba(22
   .service-note { align-items: flex-start; flex-direction: column; padding: 24px 20px; }
   .service-note .btn { width: 100%; }
 }
+/* Référencement : le surtitre porte le H1 de la page, il garde son apparence de surtitre */
+h1.eyebrow { font-weight: 400; }
+h2.eyebrow { font-weight: 400; }

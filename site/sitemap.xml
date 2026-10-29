@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.nellycoiffure.fr/</loc><priority>1.0</priority></url>
-  <url><loc>https://www.nellycoiffure.fr/coiffures.html</loc><priority>0.9</priority></url>
-  <url><loc>https://www.nellycoiffure.fr/realisations.html</loc><priority>0.8</priority></url>
-  <url><loc>https://www.nellycoiffure.fr/a-propos.html</loc><priority>0.7</priority></url>
-  <url><loc>https://www.nellycoiffure.fr/contact.html</loc><priority>0.9</priority></url>
-  <url><loc>https://www.nellycoiffure.fr/mentions-legales.html</loc><priority>0.3</priority></url>
-  <url><loc>https://www.nellycoiffure.fr/confidentialite.html</loc><priority>0.3</priority></url>
+  <url><loc>https://nelly-coiffure.vercel.app/</loc><lastmod>2026-10-29</lastmod><priority>1.0</priority></url>
+  <url><loc>https://nelly-coiffure.vercel.app/coiffures.html</loc><lastmod>2026-10-29</lastmod><priority>0.9</priority></url>
+  <url><loc>https://nelly-coiffure.vercel.app/realisations.html</loc><lastmod>2026-10-29</lastmod><priority>0.8</priority></url>
+  <url><loc>https://nelly-coiffure.vercel.app/a-propos.html</loc><lastmod>2026-10-29</lastmod><priority>0.6</priority></url>
+  <url><loc>https://nelly-coiffure.vercel.app/contact.html</loc><lastmod>2026-10-29</lastmod><priority>0.8</priority></url>
 </urlset>
