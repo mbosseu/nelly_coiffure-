@@ -158,7 +158,7 @@ ${g.items.map((p) => `              <li class="carte__row" id="${p.id}-prix" dat
 /* ------------------------------------------------------------------ COIFFURES ET TARIFS */
 // Styles mis en avant : seulement ceux pour lesquels une photo correspond vraiment
 const STYLES = [
-  { id: 'knotless', name: 'Knotless Braids', tag: 'Légèreté et élégance', img: 'style-knotless', w: 700, h: 756, prix: 60,
+  { id: 'knotless', name: 'Knotless braids', tag: 'Légèreté et élégance', img: 'style-knotless', w: 700, h: 756, prix: 60,
     body: 'Des tresses sans nœud à la racine : la mèche est ajoutée progressivement pour un départ plat, naturel et sans tension. Plus légères à porter, elles respectent votre cuir chevelu dès le premier jour.',
     meta: ['4 à 6 h', '6 à 8 sem.'], ideal: ['Vous avez le cuir chevelu sensible', 'Vous voulez un rendu naturel dès la racine', 'Vous aimez les coiffures hautes, sans douleur'] },
   { id: 'tresses-couchees', name: 'Tresses couchées', tag: 'Un style graphique', img: 'style-couchees', w: 700, h: 756, prix: 50,
@@ -326,13 +326,13 @@ ${ITEMS.map((it) => `          <button type="button" class="gallery__item reveal
 page('a-propos.html', {
   title: 'À propos de Nelly, coiffeuse tresses africaines à Marseille — Nelly Coiffure',
   desc: 'Nelly, coiffeuse spécialisée en tresses africaines à Marseille : son histoire, ses valeurs et les avis de ses clientes. Chez elle ou à domicile.',
-  preload: 'img/maquette/espace.webp',
+  preload: 'img/nelly/arch-apropos.webp',
 }, pageHero({
   crumb: 'À propos', eyebrow: 'À propos',
   lines: ['Des mains', 'qui tressent,', 'un cœur qui écoute.'],
   lead: 'Je m’appelle Nelly. Depuis toujours, je tresse avec patience et passion pour que chaque cliente reparte belle, à l’aise et fière de sa couronne.',
   actions: `<a class="btn btn--dark btn--shine" href="#histoire">Mon histoire ${ARROW}</a><a class="btn btn--outline" href="#avis">Les avis clientes</a>`,
-  media: archMedia({ src: 'img/maquette/espace.webp', pos: '22% 50%', script: ['Bienvenue', 'chez moi'], w: 1240, h: 868 }),
+  media: archMedia({ src: 'img/nelly/arch-apropos.webp', pos: '50% 25%', script: ['Bienvenue', 'chez moi'], w: 800, h: 1000 }),
 }) + `
     <section class="section" id="histoire">
       <div class="container story">
@@ -489,8 +489,8 @@ page('404.html', {
       <div class="container">
         <p class="error-hero__code intro" style="--d: 0s">404</p>
         <h1 class="page-hero__title"><span class="line"><span class="intro" style="--d: .15s">Cette page s’est <span class="accent">détressée.</span></span></span></h1>
-        <p class="page-hero__lead intro" style="--d: .35s">Le lien que vous avez suivi n’existe plus ou a été déplacé. Revenez à l’accueil, ou écrivez directement à Nelly.</p>
-        <div class="page-hero__actions intro" style="--d: .5s"><a class="btn btn--dark btn--shine" href="index.html">Retour à l’accueil ${ARROW}</a><a class="btn btn--outline" data-wa="Bonjour Nelly, j'aimerais un renseignement pour une coiffure." href="contact.html">Écrire à Nelly</a></div>
+        <p class="page-hero__lead intro" style="--d: .35s">Le lien que vous avez suivi n’existe plus ou a été déplacé. Revenez à l’accueil, ou écrivez-moi directement sur WhatsApp.</p>
+        <div class="page-hero__actions intro" style="--d: .5s"><a class="btn btn--dark btn--shine" href="index.html">Retour à l’accueil ${ARROW}</a><a class="btn btn--outline" data-wa="Bonjour Nelly, j'aimerais un renseignement pour une coiffure." href="contact.html">M’écrire</a></div>
       </div>
     </section>
 `);

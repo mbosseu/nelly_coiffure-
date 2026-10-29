@@ -39,6 +39,7 @@ const SORTIES = [
   ['arch-coiffures', 'A', 800, 1000, 'north'],
   ['arch-tarifs', 'L', 800, 1000, 'north'],
   ['arch-realisations', 'H', 736, 920, 'north'],
+  ['arch-apropos', 'E', 754, 940, 'north'],
   ['style-knotless', 'E', 700, 756, 'north'],
   ['style-couchees', 'L', 700, 756, 'north'],
   ['style-nattes', 'J', 700, 756, 'attention'],
