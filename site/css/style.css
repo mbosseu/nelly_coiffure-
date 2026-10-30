@@ -1248,3 +1248,46 @@ h2.eyebrow { font-weight: 400; }
   .service-card__footer { flex-direction: column; align-items: stretch; }
   .service-card__book { white-space: normal; text-align: center; }
 }
+
+/* À propos : médaillon animé du portrait de Nelly (halo, anneau cuivré, texte tournant, étiquettes flottantes, signature) */
+@property --medallion-angle { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+.medallion { width: min(100%, 470px); aspect-ratio: 1; margin-right: 3%; }
+.medallion__halo { position: absolute; inset: -10%; border-radius: 50%; background: radial-gradient(circle, rgba(214, 160, 116, .75) 0%, rgba(221, 174, 134, .28) 45%, transparent 70%); animation: medallion-halo 6s ease-in-out infinite; }
+.medallion__ring { position: absolute; inset: 0; width: 100%; height: 100%; animation: spin 46s linear infinite; }
+.medallion__ring text { font-family: var(--sans); font-size: 7.4px; letter-spacing: .32em; text-transform: uppercase; fill: var(--copper); }
+.medallion__photo { position: absolute; inset: 10%; border-radius: 50%; padding: 5px; background: conic-gradient(from var(--medallion-angle), #7C4A2E, #E9C7A2, #B57A50, #F7E3CC, #8E5634, #E9C7A2, #7C4A2E); box-shadow: 0 46px 80px -34px rgba(40, 20, 10, .75); animation: medallion-shine 7s linear infinite; }
+.medallion__photo img { width: 100%; height: 100%; display: block; border-radius: 50%; object-fit: cover; border: 5px solid var(--cream-card); }
+.medallion__tags { position: absolute; inset: 0; margin: 0; padding: 0; list-style: none; pointer-events: none; }
+.medallion__tags li { position: absolute; animation: medallion-float 6s ease-in-out infinite; }
+.medallion__tags li:nth-child(1) { left: -9%; top: 16%; }
+.medallion__tags li:nth-child(2) { right: -10%; top: 54%; animation-duration: 7s; animation-delay: -2s; }
+.medallion__tags li:nth-child(3) { left: 4%; bottom: 8%; animation-duration: 5.5s; animation-delay: -4s; }
+.medallion__tags span { display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: rgba(251, 245, 239, .92); backdrop-filter: blur(6px); box-shadow: 0 18px 34px -16px rgba(40, 20, 10, .45); font-size: .8rem; color: var(--ink); white-space: nowrap; }
+.medallion__tags svg { width: 16px; height: 16px; color: var(--copper); flex: none; }
+.medallion__sign { position: absolute; right: -3%; bottom: -10%; margin: 0; font-family: var(--script); font-size: clamp(3rem, 4.4vw, 4rem); line-height: 1; color: var(--copper); transform: rotate(-8deg); }
+@keyframes medallion-halo { 50% { transform: scale(1.07); opacity: .7; } }
+@keyframes medallion-shine { to { --medallion-angle: 360deg; } }
+@keyframes medallion-float { 50% { transform: translateY(-9px); } }
+
+/* Entrée : le portrait s'ouvre en cercle, puis les étiquettes et la signature apparaissent */
+html:not(.no-js) .medallion__photo { clip-path: circle(0% at 50% 50%); transition: clip-path 1.6s var(--ease) .4s; }
+html:not(.no-js) .medallion__photo img { transform: scale(1.18); transition: transform 2.8s var(--ease-out) .4s; }
+html:not(.no-js) .medallion__tags span { opacity: 0; transform: translateY(14px) scale(.92); transition: opacity .8s var(--ease), transform .8s var(--ease); }
+html:not(.no-js) .medallion__tags li:nth-child(1) span { transition-delay: 1.5s; }
+html:not(.no-js) .medallion__tags li:nth-child(2) span { transition-delay: 1.75s; }
+html:not(.no-js) .medallion__tags li:nth-child(3) span { transition-delay: 2s; }
+html:not(.no-js) .medallion__sign { clip-path: inset(0 100% 0 0); transition: clip-path 1.3s var(--ease) 2.2s; }
+html:not(.no-js) .is-loaded .medallion__photo { clip-path: circle(75% at 50% 50%); }
+html:not(.no-js) .is-loaded .medallion__photo img { transform: scale(1); }
+html:not(.no-js) .is-loaded .medallion__tags span { opacity: 1; transform: none; }
+html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -5%); }
+
+@media (max-width: 1024px) {
+  .medallion { width: min(84%, 400px); margin: 10px auto 20px; }
+  .medallion__tags span { padding: 8px 13px; font-size: .74rem; }
+  .medallion__tags li:nth-child(1) { left: -6%; }
+  .medallion__tags li:nth-child(2) { right: -7%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .medallion__halo, .medallion__ring, .medallion__photo, .medallion__tags li { animation: none; }
+}

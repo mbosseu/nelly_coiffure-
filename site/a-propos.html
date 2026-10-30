@@ -31,8 +31,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Poppins:wght@300;400;500;600&family=Sacramento&display=swap" rel="stylesheet">
-  <link rel="preload" as="image" href="img/nelly/portrait-nelly.webp">
-  <link rel="stylesheet" href="css/style.css?v=537d455955">
+  <link rel="preload" as="image" href="img/nelly/portrait-nelly-rond.webp">
+  <link rel="stylesheet" href="css/style.css?v=6cb8ca8cc8">
 </head>
 <body class="page">
   <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -76,11 +76,16 @@
           <p class="page-hero__lead intro" style="--d: .6s">Je m’appelle Nelly. Depuis toujours, je tresse avec patience et passion pour que chaque cliente reparte belle, à l’aise et fière de sa couronne.</p>
           <div class="page-hero__actions intro" style="--d: .72s"><a class="btn btn--dark btn--shine" href="#histoire">Mon histoire <svg class="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a><a class="btn btn--outline" href="#avis">Les avis clientes</a></div>
         </div>
-        <div class="page-hero__media intro" style="--d: .3s">
-          <svg class="arch-line" viewBox="0 0 100 125" aria-hidden="true"><path class="draw draw--slow" d="M1 124 V50 A49 49 0 0 1 99 50 V124" fill="none" stroke="#B57A50" stroke-width="1.2" vector-effect="non-scaling-stroke" pathLength="1"/></svg>
-          <div class="arch"><div class="arch__img" data-parallax="0.08"><img src="img/nelly/portrait-nelly.webp" width="816" height="1020" alt="Portrait de Nelly, coiffeuse de Nelly Coiffure" style="object-position: 50% 20%" fetchpriority="high"></div></div>
-          <p class="page-hero__script" aria-hidden="true"><span>Bienvenue</span> <span>chez moi</span></p>
-          <div class="seal" aria-hidden="true"><svg viewBox="0 0 120 120"><defs><path id="seal-path" d="M60 60 m-47 0 a47 47 0 1 1 94 0 a47 47 0 1 1 -94 0"/></defs><text><textPath href="#seal-path" textLength="290" lengthAdjust="spacing">Tresses africaines ✦ Marseille ✦ </textPath></text></svg><span>N</span></div>
+        <div class="page-hero__media medallion intro" style="--d: .3s">
+          <span class="medallion__halo" aria-hidden="true"></span>
+          <svg class="medallion__ring" viewBox="0 0 200 200" aria-hidden="true"><defs><path id="medallion-path" d="M100 100 m-93 0 a93 93 0 1 1 186 0 a93 93 0 1 1 -186 0"/></defs><text><textPath href="#medallion-path" textLength="578" lengthAdjust="spacing">Nelly Coiffure ✦ Tresses africaines ✦ Marseille ✦ </textPath></text></svg>
+          <div class="medallion__photo"><img src="img/nelly/portrait-nelly-rond.webp" srcset="img/nelly/portrait-nelly-rond-sm.webp 440w, img/nelly/portrait-nelly-rond.webp 760w" sizes="(min-width: 1025px) 400px, 70vw" width="760" height="760" alt="Portrait de Nelly, coiffeuse de Nelly Coiffure" fetchpriority="high"></div>
+          <ul class="medallion__tags" aria-hidden="true">
+            <li><span><svg><use href="#i-sparkle"/></svg> Tresses, twists, locks</span></li>
+            <li><span><svg><use href="#i-home"/></svg> Chez moi ou chez vous</span></li>
+            <li><span><svg><use href="#i-pin"/></svg> Marseille</span></li>
+          </ul>
+          <p class="medallion__sign" aria-hidden="true">Nelly</p>
         </div>
       </div>
     </section>
