@@ -1008,6 +1008,12 @@ body::after {
 .info-band__item p:not(.eyebrow) { font-size: .92rem; font-weight: 300; line-height: 1.8; }
 .info-band__big { font-family: var(--serif); font-size: 2rem !important; font-weight: 400 !important; line-height: 1.1 !important; color: var(--ink); margin-bottom: 12px; }
 .info-band__big span { display: block; font-family: var(--script); font-size: 1.7rem; color: var(--accent); }
+.address-card { display: flex; align-items: center; gap: 14px; margin-top: 18px; padding: 14px 16px; border-radius: 16px; background: var(--cream-card); box-shadow: 0 16px 30px -20px rgba(40, 20, 10, .45); transition: transform .4s var(--ease), box-shadow .4s var(--ease); }
+.address-card > svg { width: 22px; height: 22px; flex: none; color: var(--copper); }
+.address-card span { font-size: .9rem; line-height: 1.5; color: var(--ink); }
+.address-card b { display: block; font-family: var(--serif); font-size: 1.1rem; font-weight: 400; }
+.address-card small { margin-left: auto; align-self: flex-end; font-size: .68rem; letter-spacing: .2em; text-transform: uppercase; color: var(--copper); white-space: nowrap; }
+.address-card:hover { transform: translateY(-3px); box-shadow: 0 22px 36px -20px rgba(40, 20, 10, .55); }
 .hours { margin: 0; display: grid; }
 .hours div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 12px 0; border-bottom: 1px dotted rgba(181, 122, 80, .45); }
 .hours div:first-child { padding-top: 0; }
