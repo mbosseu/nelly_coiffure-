@@ -1013,6 +1013,9 @@ body::after {
 .hours div:first-child { padding-top: 0; }
 .hours dt { font-size: .92rem; font-weight: 300; }
 .hours dd { margin: 0; font-family: var(--serif); font-size: 1.2rem; color: var(--ink); white-space: nowrap; }
+.hours dd a { transition: color .3s; }
+.hours dd a:hover { color: var(--copper); }
+.hours-title { margin-top: 36px; }
 .social-links { margin-bottom: 14px; }
 .social-links a { display: flex; align-items: baseline; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(181, 122, 80, .25); transition: color .3s, padding .4s var(--ease); }
 .social-links li:first-child a { padding-top: 0; }

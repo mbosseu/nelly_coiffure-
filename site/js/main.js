@@ -1,5 +1,5 @@
 // Numéro WhatsApp de Nelly au format international, sans "+", ni espaces, ni 0 initial (ex. 06 12 34 56 78 -> 33612345678)
-const WHATSAPP_NUMBER = '33600000000';
+const WHATSAPP_NUMBER = '33604023290';
 
 const root = document.documentElement;
 root.classList.remove('no-js');
