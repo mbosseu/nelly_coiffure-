@@ -72,9 +72,9 @@ ${media}
 `;
 }
 
-const archMedia = ({ src, pos = '50% 40%', script, w = 800, h = 1000 }) => `        <div class="page-hero__media intro" style="--d: .3s">
+const archMedia = ({ src, pos = '50% 40%', script, w = 800, h = 1000, alt = '' }) => `        <div class="page-hero__media intro" style="--d: .3s">
           <svg class="arch-line" viewBox="0 0 100 125" aria-hidden="true"><path class="draw draw--slow" d="M1 124 V50 A49 49 0 0 1 99 50 V124" fill="none" stroke="#B57A50" stroke-width="1.2" vector-effect="non-scaling-stroke" pathLength="1"/></svg>
-          <div class="arch"><div class="arch__img" data-parallax="0.08"><img src="${src}" width="${w}" height="${h}" alt="" style="object-position: ${pos}" fetchpriority="high"></div></div>
+          <div class="arch"><div class="arch__img" data-parallax="0.08"><img src="${src}" width="${w}" height="${h}" alt="${alt}" style="object-position: ${pos}" fetchpriority="high"></div></div>
           <p class="page-hero__script" aria-hidden="true">${script.map((s) => `<span>${s}</span>`).join(' ')}</p>
           <div class="seal" aria-hidden="true"><svg viewBox="0 0 120 120"><defs><path id="seal-path" d="M60 60 m-47 0 a47 47 0 1 1 94 0 a47 47 0 1 1 -94 0"/></defs><text><textPath href="#seal-path" textLength="290" lengthAdjust="spacing">Tresses africaines ✦ Marseille ✦ </textPath></text></svg><span>N</span></div>
         </div>`;
@@ -298,7 +298,7 @@ page('realisations.html', {
   crumb: 'Réalisations', eyebrow: 'Réalisations',
   lines: ['Des coiffures', 'qui racontent', 'une histoire.'],
   lead: 'Parcourez mes réalisations, filtrez par style et agrandissez une photo pour la demander en un clic sur WhatsApp.',
-  actions: `<a class="btn btn--dark btn--shine" href="#galerie">Voir la galerie ${ARROW}</a><a class="btn btn--outline" href="#" aria-label="Suivre Nelly Coiffure sur Instagram">Suivre sur Instagram</a>`,
+  actions: `<a class="btn btn--dark btn--shine" href="#galerie">Voir la galerie ${ARROW}</a><a class="btn btn--outline" href="https://www.instagram.com/nellycoiffure237/" target="_blank" rel="noopener" aria-label="Suivre Nelly Coiffure sur Instagram">Suivre sur Instagram</a>`,
   media: archMedia({ src: 'img/nelly/arch-realisations.webp', pos: '50% 20%', script: ['Laissez-vous', 'inspirer'], w: 736, h: 920 }),
 }) + `
     <section class="section section--tight" id="galerie">
@@ -315,7 +315,7 @@ ${ITEMS.map((it) => `          <button type="button" class="gallery__item reveal
             <h2>Encore plus d’inspiration</h2>
             <p>Mes dernières créations et coulisses, chaque semaine sur Instagram et TikTok.</p>
           </div>
-          <a class="btn btn--dark btn--shine" href="#"><svg class="icon" aria-hidden="true"><use href="#i-instagram"/></svg> Suivre @nellycoiffure</a>
+          <a class="btn btn--dark btn--shine" href="https://www.instagram.com/nellycoiffure237/" target="_blank" rel="noopener"><svg class="icon" aria-hidden="true"><use href="#i-instagram"/></svg> Suivre @nellycoiffure237</a>
         </div>
       </div>
     </section>
@@ -326,13 +326,13 @@ ${ITEMS.map((it) => `          <button type="button" class="gallery__item reveal
 page('a-propos.html', {
   title: 'À propos de Nelly, coiffeuse tresses africaines à Marseille — Nelly Coiffure',
   desc: 'Nelly, coiffeuse spécialisée en tresses africaines à Marseille : son histoire, ses valeurs et les avis de ses clientes. Chez elle ou à domicile.',
-  preload: 'img/nelly/arch-apropos.webp',
+  preload: 'img/nelly/portrait-nelly.webp',
 }, pageHero({
   crumb: 'À propos', eyebrow: 'À propos',
   lines: ['Des mains', 'qui tressent,', 'un cœur qui écoute.'],
   lead: 'Je m’appelle Nelly. Depuis toujours, je tresse avec patience et passion pour que chaque cliente reparte belle, à l’aise et fière de sa couronne.',
   actions: `<a class="btn btn--dark btn--shine" href="#histoire">Mon histoire ${ARROW}</a><a class="btn btn--outline" href="#avis">Les avis clientes</a>`,
-  media: archMedia({ src: 'img/nelly/arch-apropos.webp', pos: '50% 25%', script: ['Bienvenue', 'chez moi'], w: 800, h: 1000 }),
+  media: archMedia({ src: 'img/nelly/portrait-nelly.webp', pos: '50% 20%', script: ['Bienvenue', 'chez moi'], w: 816, h: 1020, alt: 'Portrait de Nelly, coiffeuse de Nelly Coiffure' }),
 }) + `
     <section class="section" id="histoire">
       <div class="container story">
@@ -435,8 +435,10 @@ page('contact.html', {
           <div class="info-band__item reveal">
             <h2 class="eyebrow">Me suivre</h2>
             <ul class="social-links">
-              <li><a href="#"><span>Instagram</span><small>@nellycoiffure</small><svg aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
-              <li><a href="#"><span>TikTok</span><small>@nellycoiffure</small><svg aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li><a href="https://www.instagram.com/nellycoiffure237/" target="_blank" rel="noopener"><span>Instagram</span><small>@nellycoiffure237</small><svg aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li><a href="https://www.tiktok.com/@nellycoiffure237" target="_blank" rel="noopener"><span>TikTok</span><small>@nellycoiffure237</small><svg aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li><a href="https://www.facebook.com/share/1CFM1XgV6n/" target="_blank" rel="noopener"><span>Facebook</span><small>Nelly Coiffure</small><svg aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
+              <li><a href="https://snapchat.com/t/rsEMEsWo" target="_blank" rel="noopener"><span>Snapchat</span><small>Nelly Coiffure</small><svg aria-hidden="true"><use href="#i-arrow"/></svg></a></li>
             </ul>
             <p class="note">Mes dernières créations et coulisses, chaque semaine.</p>
           </div>

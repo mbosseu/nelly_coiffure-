@@ -1039,7 +1039,7 @@ body:not(:has(.cta)) .site-footer__curve { display: block; }
 .site-footer__logo img { width: 190px; margin-bottom: 22px; transition: transform .6s var(--ease); }
 .site-footer__logo:hover img { transform: scale(1.03); }
 .site-footer__brand p { max-width: 21em; font-size: .9rem; font-weight: 300; line-height: 1.8; margin-bottom: 24px; }
-.site-footer__social { display: flex; gap: 10px; }
+.site-footer__social { display: flex; flex-wrap: wrap; gap: 10px; }
 .site-footer__social a { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--copper-light); border: 1px solid rgba(221, 174, 134, .3); transition: background-color .35s, color .35s, transform .35s var(--ease), border-color .35s; }
 .site-footer__social svg { width: 20px; height: 20px; }
 .site-footer__social a:hover { color: var(--ink); background: var(--copper-light); border-color: var(--copper-light); transform: translateY(-3px); }
@@ -1145,7 +1145,7 @@ main:has(.cta) + .site-footer .site-footer__grid { border-top: 1px solid rgba(22
 
 /* Photos de Nelly : lisibilité du texte manuscrit sur la grande photo d'accueil */
 .hero__media::after { content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none; background: radial-gradient(ellipse 30% 26% at 80% 30%, rgba(26, 13, 6, .55), transparent 75%); }
-.hero__img img { object-position: 45% 30%; }
+.hero__img img { object-position: 50% 6%; }
 @media (max-width: 1024px) { .hero__media::after { background: radial-gradient(ellipse 50% 22% at 75% 20%, rgba(26, 13, 6, .5), transparent 75%); } }
 .univers__media::after { background: radial-gradient(ellipse 40% 60% at 92% 24%, rgba(20, 10, 5, .85), transparent 75%); }
 /* Rideau de la galerie sur la photo et non sur la case observée (sinon l'apparition ne se déclenche jamais) */
