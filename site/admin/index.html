@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Gestion du site | Nelly Coiffure</title>
+  <meta name="theme-color" content="#1E140E">
+  <link rel="manifest" href="/admin/manifest.webmanifest">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="apple-touch-icon" href="/img/marque/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Gestion Nelly">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body>
+  <!-- Connexion -->
+  <main class="connexion" id="connexion" hidden>
+    <img src="/img/marque/logo.webp" alt="Nelly Coiffure" width="200" height="121">
+    <h1>Gestion du site</h1>
+    <form id="form-connexion">
+      <label for="mdp">Mot de passe</label>
+      <input id="mdp" type="password" autocomplete="current-password" required>
+      <button class="bouton bouton--plein" type="submit">Se connecter</button>
+      <p class="message message--erreur" id="erreur-connexion" role="alert" hidden></p>
+    </form>
+  </main>
+
+  <!-- Application -->
+  <div class="appli" id="appli" hidden>
+    <header class="barre">
+      <div>
+        <p class="barre__marque">Nelly Coiffure</p>
+        <h1 class="barre__titre" id="titre-onglet">Annonce</h1>
+      </div>
+      <div class="barre__actions">
+        <a class="bouton bouton--discret" href="/" target="_blank" rel="noopener">Voir le site</a>
+        <button class="bouton bouton--discret" id="deconnexion" type="button" aria-label="Se déconnecter">⎋</button>
+      </div>
+    </header>
+
+    <div class="contenu">
+      <!-- Annonce -->
+      <section class="onglet" data-onglet="annonce">
+        <p class="aide">Un message court affiché en haut de toutes les pages du site : congés, nouvelle prestation, promotion…</p>
+        <div class="carte">
+          <label class="interrupteur">
+            <input type="checkbox" id="annonce-active">
+            <span>Afficher l’annonce sur le site</span>
+          </label>
+          <label for="annonce-texte">Texte de l’annonce</label>
+          <textarea id="annonce-texte" maxlength="160" rows="3" placeholder="Ex. : Fermé du 20 au 27 décembre. Bonnes fêtes !"></textarea>
+          <p class="compteur"><span id="annonce-compte">0</span> / 160</p>
+          <p class="etiquette">Aperçu</p>
+          <div class="apercu-annonce" id="annonce-apercu"></div>
+        </div>
+      </section>
+
+      <!-- Coiffures et prix -->
+      <section class="onglet" data-onglet="coiffures" hidden>
+        <p class="aide">Touchez une coiffure pour changer son prix, son nom, sa description ou sa photo. Les flèches changent l’ordre d’affichage.</p>
+        <ul class="liste" id="liste-coiffures"></ul>
+        <button class="bouton bouton--contour bouton--large" id="ajouter-coiffure" type="button">＋ Ajouter une coiffure</button>
+      </section>
+
+      <!-- Photos -->
+      <section class="onglet" data-onglet="photos" hidden>
+        <p class="aide">Les photos de la page Réalisations. Ajoutez vos dernières créations : elles sont recadrées et allégées automatiquement.</p>
+        <div class="carte">
+          <label for="photo-style">Coiffure de la photo</label>
+          <select id="photo-style"></select>
+          <label class="bouton bouton--plein bouton--large bouton--fichier">
+            📷 Ajouter des photos
+            <input type="file" id="photo-fichiers" accept="image/*" multiple>
+          </label>
+          <p class="message" id="photo-message" hidden></p>
+        </div>
+        <label for="photo-filtre" class="etiquette">Afficher</label>
+        <select id="photo-filtre"></select>
+        <div class="grille" id="grille-photos"></div>
+      </section>
+
+      <!-- Horaires et téléphones -->
+      <section class="onglet" data-onglet="horaires" hidden>
+        <p class="aide">Les horaires de la page Contact et des informations données à Google.</p>
+        <div class="carte" id="liste-horaires"></div>
+        <div class="carte">
+          <label for="tel-principal">Téléphone WhatsApp et appels</label>
+          <input id="tel-principal" type="tel" inputmode="tel" placeholder="06 12 34 56 78">
+          <label for="tel-secondaire">Second téléphone</label>
+          <input id="tel-secondaire" type="tel" inputmode="tel" placeholder="06 12 34 56 78">
+        </div>
+      </section>
+
+      <!-- Historique -->
+      <section class="onglet" data-onglet="historique" hidden>
+        <p class="aide">Les dernières publications. En cas d’erreur, vous pouvez revenir à une version précédente puis la publier.</p>
+        <ul class="liste" id="liste-historique"></ul>
+      </section>
+    </div>
+
+    <!-- Barre de publication -->
+    <div class="publier" id="barre-publier" hidden>
+      <p><strong id="nb-modifs">1 modification</strong> pas encore en ligne</p>
+      <div>
+        <button class="bouton bouton--discret" id="annuler-tout" type="button">Annuler</button>
+        <button class="bouton bouton--plein" id="publier" type="button">Publier</button>
+      </div>
+    </div>
+
+    <nav class="onglets" aria-label="Sections">
+      <button type="button" data-cible="annonce" aria-current="page"><span>📣</span>Annonce</button>
+      <button type="button" data-cible="coiffures"><span>✂️</span>Coiffures</button>
+      <button type="button" data-cible="photos"><span>📷</span>Photos</button>
+      <button type="button" data-cible="horaires"><span>🕘</span>Horaires</button>
+      <button type="button" data-cible="historique"><span>↺</span>Historique</button>
+    </nav>
+  </div>
+
+  <!-- Fiche de modification d'une coiffure -->
+  <dialog class="fiche" id="fiche-coiffure">
+    <form method="dialog" id="form-coiffure">
+      <h2 id="fiche-titre">Modifier la coiffure</h2>
+      <label for="c-nom">Nom</label>
+      <input id="c-nom" maxlength="60" required>
+      <label for="c-prix">Prix de départ (€)</label>
+      <input id="c-prix" type="number" inputmode="numeric" min="1" max="2000" step="1" required>
+      <label for="c-categorie">Catégorie</label>
+      <input id="c-categorie" list="categories" maxlength="40" required>
+      <datalist id="categories"></datalist>
+      <label for="c-description">Description courte</label>
+      <textarea id="c-description" maxlength="160" rows="3"></textarea>
+      <p class="etiquette">Photo de la carte</p>
+      <div class="choix-photo" id="c-photos"></div>
+      <label class="bouton bouton--contour bouton--fichier">Nouvelle photo<input type="file" id="c-fichier" accept="image/*"></label>
+      <label class="interrupteur"><input type="checkbox" id="c-visible"><span>Visible sur le site</span></label>
+      <p class="message message--erreur" id="c-erreur" hidden></p>
+      <div class="fiche__actions">
+        <button class="bouton bouton--danger" id="c-supprimer" type="button">Supprimer</button>
+        <span></span>
+        <button class="bouton bouton--discret" value="annuler" formnovalidate>Fermer</button>
+        <button class="bouton bouton--plein" id="c-valider" value="valider">Valider</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Fiche d'une photo -->
+  <dialog class="fiche" id="fiche-photo">
+    <form method="dialog">
+      <img class="fiche__image" id="p-image" alt="">
+      <label for="p-style">Coiffure</label>
+      <select id="p-style"></select>
+      <div class="fiche__actions">
+        <button class="bouton bouton--danger" id="p-supprimer" type="button">Retirer du site</button>
+        <span></span>
+        <button class="bouton bouton--plein" value="valider">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Confirmation et résultat de publication -->
+  <dialog class="fiche" id="fiche-publier">
+    <div id="publier-contenu"></div>
+  </dialog>
+
+  <script src="/admin/admin.js" type="module"></script>
+</body>
+</html>

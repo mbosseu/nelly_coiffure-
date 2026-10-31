@@ -1,0 +1,303 @@
+{
+  "annonce": {
+    "active": false,
+    "texte": ""
+  },
+  "telephones": {
+    "principal": "06 04 02 32 90",
+    "secondaire": "06 11 67 01 47"
+  },
+  "horaires": [
+    {
+      "jour": "lundi",
+      "etat": "ouvert",
+      "debut": "09:00",
+      "fin": "19:00"
+    },
+    {
+      "jour": "mardi",
+      "etat": "ouvert",
+      "debut": "09:00",
+      "fin": "19:00"
+    },
+    {
+      "jour": "mercredi",
+      "etat": "ouvert",
+      "debut": "09:00",
+      "fin": "19:00"
+    },
+    {
+      "jour": "jeudi",
+      "etat": "ouvert",
+      "debut": "09:00",
+      "fin": "19:00"
+    },
+    {
+      "jour": "vendredi",
+      "etat": "ouvert",
+      "debut": "09:00",
+      "fin": "19:00"
+    },
+    {
+      "jour": "samedi",
+      "etat": "ouvert",
+      "debut": "08:00",
+      "fin": "18:00"
+    },
+    {
+      "jour": "dimanche",
+      "etat": "demande",
+      "debut": "",
+      "fin": ""
+    }
+  ],
+  "services": [
+    {
+      "cle": "knotless-braids",
+      "ancre": "knotless",
+      "nom": "Knotless braids",
+      "categorie": "Tresses",
+      "description": "Box braids légères et naturelles, sans nœud à la racine.",
+      "prix": 60,
+      "photo": "img/realisations/catalogue/knotless-braids-1",
+      "alt": "Knotless braids, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "tresses-couchees",
+      "ancre": "tresses-couchees",
+      "nom": "Tresses couchées",
+      "categorie": "Tresses",
+      "description": "Tresses plaquées, droites ou dessinées en motifs.",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/tresses-couchees-1",
+      "alt": "Tresses couchées, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "nattes-collees",
+      "ancre": "nattes-collees",
+      "nom": "Nattes collées",
+      "categorie": "Tresses",
+      "description": "Nattes plaquées, nettes et pratiques au quotidien.",
+      "prix": 30,
+      "photo": "img/realisations/catalogue/nattes-collees-1",
+      "alt": "Nattes collées, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "locks",
+      "ancre": "locks",
+      "nom": "Locks",
+      "categorie": "Twists et locks",
+      "description": "Locks longues au rendu bohème et généreux.",
+      "prix": 80,
+      "photo": "img/realisations/catalogue/locks-1",
+      "alt": "Locks, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "locks-courtes",
+      "ancre": "locks-courtes",
+      "nom": "Locks courtes",
+      "categorie": "Twists et locks",
+      "description": "Locks au carré, pour un style affirmé et léger.",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/locks-courtes-1",
+      "alt": "Locks courtes, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "twists",
+      "ancre": "twists",
+      "nom": "Twists",
+      "categorie": "Twists et locks",
+      "description": "Vanilles torsadées, souples et légères à porter.",
+      "prix": 60,
+      "photo": "img/realisations/catalogue/twists-1",
+      "alt": "Twists, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "short-braids",
+      "ancre": "short-braids",
+      "nom": "Short braids",
+      "categorie": "Tresses",
+      "description": "Box braids courtes au carré, faciles à porter.",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/short-braids-1",
+      "alt": "Short braids, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "tissage",
+      "ancre": "tissage",
+      "nom": "Tissage",
+      "categorie": "Tissage",
+      "description": "Pose lisse, ondulée ou bouclée selon le rendu souhaité.",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/tissage-1",
+      "alt": "Tissage, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "tresses-collees-homme",
+      "ancre": "tresses-homme-prix",
+      "nom": "Tresses collées homme",
+      "categorie": "Homme",
+      "description": "Tresses plaquées, droites ou graphiques.",
+      "prix": 30,
+      "photo": "img/realisations/catalogue/tresses-collees-homme-1",
+      "alt": "Tresses collées homme, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "twists-homme",
+      "ancre": "twists-homme-prix",
+      "nom": "Twists homme",
+      "categorie": "Homme",
+      "description": "Twists courts, nets et structurés.",
+      "prix": 30,
+      "photo": "img/realisations/catalogue/twists-homme-1",
+      "alt": "Twists homme, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "tresses-couchees-enfant",
+      "ancre": "tresses-enfant-prix",
+      "nom": "Tresses couchées enfant",
+      "categorie": "Enfant",
+      "description": "Des styles tressés pensés pour les enfants.",
+      "prix": 30,
+      "photo": "img/realisations/catalogue/tresses-couchees-enfant-1",
+      "alt": "Tresses couchées enfant, exemple de coiffure",
+      "visible": true
+    }
+  ],
+  "photos": [
+    {
+      "style": "knotless-braids",
+      "image": "img/realisations/catalogue/knotless-braids-3"
+    },
+    {
+      "style": "knotless-braids",
+      "image": "img/realisations/catalogue/knotless-braids-4"
+    },
+    {
+      "style": "knotless-braids",
+      "image": "img/realisations/catalogue/knotless-braids-5"
+    },
+    {
+      "style": "knotless-braids",
+      "image": "img/realisations/catalogue/knotless-braids-6"
+    },
+    {
+      "style": "knotless-braids",
+      "image": "img/realisations/catalogue/knotless-braids-7"
+    },
+    {
+      "style": "knotless-braids",
+      "image": "img/realisations/catalogue/knotless-braids-8"
+    },
+    {
+      "style": "locks",
+      "image": "img/realisations/catalogue/locks-2"
+    },
+    {
+      "style": "locks",
+      "image": "img/realisations/catalogue/locks-3"
+    },
+    {
+      "style": "locks",
+      "image": "img/realisations/catalogue/locks-4"
+    },
+    {
+      "style": "locks",
+      "image": "img/realisations/catalogue/locks-5"
+    },
+    {
+      "style": "locks",
+      "image": "img/realisations/catalogue/locks-6"
+    },
+    {
+      "style": "locks-courtes",
+      "image": "img/realisations/catalogue/locks-courtes-2"
+    },
+    {
+      "style": "nattes-collees",
+      "image": "img/realisations/catalogue/nattes-collees-2"
+    },
+    {
+      "style": "nattes-collees",
+      "image": "img/realisations/catalogue/nattes-collees-3"
+    },
+    {
+      "style": "short-braids",
+      "image": "img/realisations/catalogue/short-braids-2"
+    },
+    {
+      "style": "short-braids",
+      "image": "img/realisations/catalogue/short-braids-3"
+    },
+    {
+      "style": "short-braids",
+      "image": "img/realisations/catalogue/short-braids-4"
+    },
+    {
+      "style": "tissage",
+      "image": "img/realisations/catalogue/tissage-2"
+    },
+    {
+      "style": "tissage",
+      "image": "img/realisations/catalogue/tissage-3"
+    },
+    {
+      "style": "tissage",
+      "image": "img/realisations/catalogue/tissage-4"
+    },
+    {
+      "style": "tissage",
+      "image": "img/realisations/catalogue/tissage-5"
+    },
+    {
+      "style": "tissage",
+      "image": "img/realisations/catalogue/tissage-6"
+    },
+    {
+      "style": "tissage",
+      "image": "img/realisations/catalogue/tissage-7"
+    },
+    {
+      "style": "tresses-couchees-enfant",
+      "image": "img/realisations/catalogue/tresses-couchees-enfant-2"
+    },
+    {
+      "style": "tresses-couchees-enfant",
+      "image": "img/realisations/catalogue/tresses-couchees-enfant-3"
+    },
+    {
+      "style": "tresses-couchees",
+      "image": "img/realisations/catalogue/tresses-couchees-2"
+    },
+    {
+      "style": "tresses-collees-homme",
+      "image": "img/realisations/catalogue/tresses-collees-homme-2"
+    },
+    {
+      "style": "twists-homme",
+      "image": "img/realisations/catalogue/twists-homme-2"
+    },
+    {
+      "style": "twists-homme",
+      "image": "img/realisations/catalogue/twists-homme-3"
+    },
+    {
+      "style": "twists-homme",
+      "image": "img/realisations/catalogue/twists-homme-4"
+    },
+    {
+      "style": "twists-homme",
+      "image": "img/realisations/catalogue/twists-homme-5"
+    }
+  ]
+}

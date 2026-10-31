@@ -44,7 +44,7 @@ Délai réaliste : indexation en quelques jours ; premières positions locales e
 - Plan du site avec les photos de Nelly (Google Images) et textes alternatifs descriptifs sur toutes les photos de réalisations.
 - `favicon.ico` et icônes 48 px / 192 px + `site.webmanifest` : le logo de Nelly s'affiche à côté du site dans les résultats Google.
 
-L'outil `outils/seo.mjs` regroupe tous ces réglages. **Après toute modification des pages, relancer :**
+L'outil `outils/seo.mjs` regroupe tous ces réglages (la logique est dans `site/api/_lib/regenerer.mjs`, partagée avec l'espace de gestion de Nelly, voir `ESPACE-DE-GESTION.md`). **Après toute modification des pages, relancer :**
 
 ```
 node outils/seo.mjs

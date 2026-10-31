@@ -1,0 +1,16 @@
+{
+  "name": "Nelly Coiffure – Gestion du site",
+  "short_name": "Gestion Nelly",
+  "description": "Modifier les prix, photos, horaires et annonces du site Nelly Coiffure.",
+  "lang": "fr",
+  "start_url": "/admin/",
+  "scope": "/admin/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6ECE2",
+  "theme_color": "#1E140E",
+  "icons": [
+    { "src": "/img/marque/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/img/marque/favicon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

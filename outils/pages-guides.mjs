@@ -9,6 +9,9 @@ const SITE = path.resolve(import.meta.dirname, '../site');
 const modele = readFileSync(path.join(SITE, 'mentions-legales.html'), 'utf8');
 const NL = modele.includes('\r\n') ? '\r\n' : '\n';
 const WA = 'Bonjour Nelly, je souhaite prendre rendez-vous pour une coiffure.';
+// Prix lus dans contenu/site.json ; le générateur (site/api/_lib/regenerer.mjs) les tient à jour ensuite
+const CONTENU = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../contenu/site.json'), 'utf8'));
+const p = (...cles) => `<span data-prix="${cles.join(' ')}">${Math.min(...cles.map((c) => CONTENU.services.find((x) => x.cle === c).prix))}&nbsp;€</span>`;
 
 const faq = (questions) => `
     <section class="section section--tight" id="faq">
@@ -69,8 +72,8 @@ ${photos([['knotless-braids-1', 'Knotless braids longues blondes réalisées par
         <p>Les box braids classiques commencent par un petit nœud de mèche serré contre le cuir chevelu&nbsp;: c’est solide, mais plus lourd et parfois douloureux les premiers jours. Les knotless braids partent à plat, sans nœud&nbsp;: elles sont plus confortables, plus discrètes à la racine et plus douces pour les bords fragiles. C’est la technique que je privilégie.</p>
         <h2>Tarifs</h2>
         <ul>
-          <li><strong>Knotless braids</strong>&nbsp;: à partir de 60&nbsp;€</li>
-          <li><strong>Short braids</strong> (tresses courtes, au carré ou aux épaules)&nbsp;: à partir de 50&nbsp;€</li>
+          <li><strong>Knotless braids</strong>&nbsp;: à partir de ${p('knotless-braids')}</li>
+          <li><strong>Short braids</strong> (tresses courtes, au carré ou aux épaules)&nbsp;: à partir de ${p('short-braids')}</li>
         </ul>
         <p>Le prix final dépend de la longueur, de la taille des tresses et des finitions (pointes bouclées, perles, couleurs). Je vous le confirme toujours sur WhatsApp avant le rendez-vous, avec les mèches à prévoir. Toutes les autres coiffures sont sur la page <a href="coiffures.html">Coiffures et tarifs</a>.</p>
         <h2>Combien de temps durent les knotless braids&nbsp;?</h2>
@@ -95,8 +98,8 @@ ${photos([['knotless-braids-1', 'Knotless braids longues blondes réalisées par
 ${photos([['locks-2', 'Locks longues réalisées par Nelly à Marseille'], ['locks-4', 'Locks au rendu bohème, Nelly Coiffure Marseille'], ['locks-courtes-2', 'Locks courtes au carré réalisées par Nelly']])}
         <h2>Locks longues ou locks courtes</h2>
         <ul>
-          <li><strong>Locks longues</strong>&nbsp;: un rendu bohème et volumineux, qui descend dans le dos. À partir de 80&nbsp;€.</li>
-          <li><strong>Locks courtes</strong>&nbsp;: au carré ou aux épaules, plus légères et rapides à poser. À partir de 50&nbsp;€.</li>
+          <li><strong>Locks longues</strong>&nbsp;: un rendu bohème et volumineux, qui descend dans le dos. À partir de ${p('locks')}.</li>
+          <li><strong>Locks courtes</strong>&nbsp;: au carré ou aux épaules, plus légères et rapides à poser. À partir de ${p('locks-courtes')}.</li>
         </ul>
         <p>Le prix final dépend de la longueur, de l’épaisseur et des mèches choisies&nbsp;: je vous le confirme sur WhatsApp avant le rendez-vous. Toute la carte est sur la page <a href="coiffures.html">Coiffures et tarifs</a>.</p>
         <h2>Bien préparer et entretenir ses locks</h2>
@@ -121,8 +124,8 @@ ${photos([['locks-2', 'Locks longues réalisées par Nelly à Marseille'], ['loc
 ${photos([['tresses-couchees-enfant-2', 'Tresses couchées enfant réalisées par Nelly à Marseille'], ['tresses-couchees-enfant-3', 'Tresses pour enfant, Nelly Coiffure Marseille'], ['nattes-collees-2', 'Nattes collées réalisées par Nelly Coiffure']])}
         <h2>Les coiffures pour enfant</h2>
         <ul>
-          <li><strong>Tresses couchées enfant</strong>&nbsp;: des motifs tressés à plat, pratiques et jolis. À partir de 30&nbsp;€.</li>
-          <li><strong>Nattes collées</strong>&nbsp;: simples et nettes, idéales pour la rentrée ou le sport. À partir de 30&nbsp;€.</li>
+          <li><strong>Tresses couchées enfant</strong>&nbsp;: des motifs tressés à plat, pratiques et jolis. À partir de ${p('tresses-couchees-enfant')}.</li>
+          <li><strong>Nattes collées</strong>&nbsp;: simples et nettes, idéales pour la rentrée ou le sport. À partir de ${p('nattes-collees')}.</li>
         </ul>
         <p>Le prix final dépend de la longueur et du motif choisi&nbsp;: je le confirme sur WhatsApp avant le rendez-vous. Toute la carte est sur la page <a href="coiffures.html">Coiffures et tarifs</a>.</p>
         <h2>Mes conseils aux parents</h2>
@@ -162,11 +165,11 @@ ${photos([['tresses-couchees-enfant-2', 'Tresses couchées enfant réalisées pa
         <h2>Les coiffures possibles à domicile</h2>
         <p>Toutes mes prestations se font à domicile, aux mêmes tarifs indicatifs qu’au salon&nbsp;:</p>
         <ul>
-          <li><a href="coiffures.html#knotless">Knotless braids</a>&nbsp;: 60&nbsp;€, short braids&nbsp;: 50&nbsp;€</li>
-          <li><a href="coiffures.html#tresses-couchees">Tresses couchées</a>&nbsp;: 50&nbsp;€, <a href="coiffures.html#nattes-collees">nattes collées</a>&nbsp;: 30&nbsp;€</li>
-          <li>Twists&nbsp;: 60&nbsp;€, locks&nbsp;: 80&nbsp;€, locks courtes&nbsp;: 50&nbsp;€, tissage&nbsp;: 50&nbsp;€</li>
-          <li>Homme&nbsp;: tresses collées ou twists, 30&nbsp;€</li>
-          <li>Enfant&nbsp;: tresses couchées, 30&nbsp;€, avec une attention particulière à la douceur</li>
+          <li><a href="coiffures.html#knotless">Knotless braids</a>&nbsp;: ${p('knotless-braids')}, short braids&nbsp;: ${p('short-braids')}</li>
+          <li><a href="coiffures.html#tresses-couchees">Tresses couchées</a>&nbsp;: ${p('tresses-couchees')}, <a href="coiffures.html#nattes-collees">nattes collées</a>&nbsp;: ${p('nattes-collees')}</li>
+          <li>Twists&nbsp;: ${p('twists')}, locks&nbsp;: ${p('locks')}, locks courtes&nbsp;: ${p('locks-courtes')}, tissage&nbsp;: ${p('tissage')}</li>
+          <li>Homme&nbsp;: tresses collées ou twists, ${p('tresses-collees-homme', 'twists-homme')}</li>
+          <li>Enfant&nbsp;: tresses couchées, ${p('tresses-couchees-enfant')}, avec une attention particulière à la douceur</li>
         </ul>
         <p>Retrouvez le détail sur la page <a href="coiffures.html">Coiffures et tarifs</a> et des exemples en photo dans les <a href="realisations.html">réalisations</a>.</p>
         <h2>Ce qu’il faut prévoir</h2>

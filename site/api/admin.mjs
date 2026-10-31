@@ -1,0 +1,159 @@
+import { regenerer, verifierContenu, FICHIERS, PAGES, DOMAINE } from './_lib/regenerer.mjs';
+import { createHash } from 'node:crypto';
+import { lireTexte, listerDossier, publier, historique, ErreurGithub } from './_lib/github.mjs';
+import { motDePasseValide, ouvrirSession, fermerSession, sessionValide } from './_lib/session.mjs';
+
+// API de l'espace de gestion de Nelly (/admin). Une seule fonction, l'action est passée dans ?action=
+// connexion, deconnexion, contenu, historique, version, publier.
+// Une publication régénère les pages à partir du contenu (même générateur que outils/seo.mjs)
+// et envoie le tout en un seul commit sur GitHub ; Vercel remet ensuite le site en ligne (environ une minute).
+
+const CONTENU = 'contenu/site.json';
+const PHOTO = /^img\/realisations\/catalogue\/[a-z0-9-]+(-sm)?\.jpg$/;
+const MAX_PHOTO = 900 * 1024;
+const INDEXNOW_CLE = '9854d7068bfd3aafaa6ed978dd241645';
+
+// Limite les essais de mot de passe (par instance, au mieux)
+const essais = new Map();
+const pause = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const json = (res, statut, donnees) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow');
+  res.status(statut).json(donnees);
+};
+
+export default async function handler(req, res) {
+  const action = req.query.action;
+  try {
+    if (req.method === 'POST') {
+      // Protection contre les requêtes venues d'un autre site
+      if (req.headers['x-nelly-admin'] !== '1') return json(res, 403, { erreur: 'Requête refusée.' });
+    }
+
+    if (action === 'connexion' && req.method === 'POST') {
+      const ip = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'inconnue';
+      const e = essais.get(ip) || { n: 0, t: Date.now() };
+      if (Date.now() - e.t > 15 * 60 * 1000) { e.n = 0; e.t = Date.now(); }
+      if (e.n >= 8) return json(res, 429, { erreur: 'Trop d’essais. Réessayez dans 15 minutes.' });
+      if (!motDePasseValide(req.body?.motDePasse || '')) {
+        e.n += 1; essais.set(ip, e);
+        await pause(1200);
+        return json(res, 401, { erreur: 'Mot de passe incorrect.' });
+      }
+      essais.delete(ip);
+      ouvrirSession(res);
+      return json(res, 200, { ok: true });
+    }
+    if (action === 'deconnexion' && req.method === 'POST') {
+      fermerSession(res);
+      return json(res, 200, { ok: true });
+    }
+
+    if (!sessionValide(req)) return json(res, 401, { erreur: 'Session expirée, reconnectez-vous.' });
+
+    if (action === 'contenu' && req.method === 'GET') {
+      const { texte, sha } = await lireTexte(CONTENU);
+      return json(res, 200, { contenu: JSON.parse(texte), version: sha });
+    }
+    if (action === 'historique' && req.method === 'GET') {
+      return json(res, 200, { versions: await historique(CONTENU) });
+    }
+    if (action === 'version' && req.method === 'GET') {
+      if (!/^[0-9a-f]{40}$/.test(req.query.sha || '')) return json(res, 400, { erreur: 'Version inconnue.' });
+      const { texte } = await lireTexte(CONTENU, req.query.sha);
+      return json(res, 200, { contenu: JSON.parse(texte) });
+    }
+    if (action === 'publier' && req.method === 'POST') return await publierContenu(req, res);
+
+    return json(res, 404, { erreur: 'Action inconnue.' });
+  } catch (e) {
+    console.error(e);
+    const message = e instanceof ErreurGithub ? 'Le site n’a pas pu être mis à jour (GitHub). Réessayez dans un instant.' : 'Erreur inattendue. Réessayez dans un instant.';
+    return json(res, 500, { erreur: message });
+  }
+}
+
+async function publierContenu(req, res) {
+  const { contenu, photos = [], version, resume } = req.body || {};
+  const erreurs = verifierContenu(contenu);
+  if (erreurs.length) return json(res, 400, { erreur: erreurs.join(' ') });
+
+  // Nouvelles photos : chemins et tailles contrôlés
+  for (const p of photos) {
+    if (!PHOTO.test(p.chemin || '') || typeof p.base64 !== 'string' || p.base64.length * 0.75 > MAX_PHOTO) {
+      return json(res, 400, { erreur: 'Une photo est invalide ou trop lourde.' });
+    }
+  }
+
+  // Version de départ : si le contenu a été publié ailleurs entre-temps, on ne l'écrase pas
+  const actuel = await lireTexte(CONTENU);
+  if (version && version !== actuel.sha) {
+    return json(res, 409, { erreur: 'Le site a été modifié depuis un autre appareil. Rechargez la page pour récupérer la dernière version.' });
+  }
+  const ancien = JSON.parse(actuel.texte);
+
+  // Nouvelles photos dont le nom existe déjà sur le site : renommées pour ne jamais écraser une photo en ligne
+  const enLigne = await listerDossier('site/img/realisations/catalogue');
+  const base = (chemin) => chemin.replace(/(-sm)?\.jpg$/, '');
+  const nomsEnLigne = new Set([...enLigne].map((n) => n.replace(/(-sm)?\.jpg$/, '')));
+  const bases = [...new Set(photos.map((p) => base(p.chemin)))];
+  const reserves = new Set([...nomsEnLigne, ...bases.map((b) => b.split('/').pop())]);
+  const renommer = new Map();
+  for (const b of bases) {
+    const nom = b.split('/').pop();
+    if (!nomsEnLigne.has(nom)) continue;
+    const style = nom.replace(/-\d+$/, '');
+    let n = 1;
+    while (reserves.has(`${style}-${n}`)) n += 1;
+    reserves.add(`${style}-${n}`);
+    renommer.set(b, `img/realisations/catalogue/${style}-${n}`);
+  }
+  if (renommer.size) {
+    for (const p of photos) { const b = base(p.chemin); if (renommer.has(b)) p.chemin = p.chemin.replace(b, renommer.get(b)); }
+    for (const s of contenu.services) if (renommer.has(s.photo)) s.photo = renommer.get(s.photo);
+    for (const p of contenu.photos) if (renommer.has(p.image)) p.image = renommer.get(p.image);
+  }
+
+  // Toutes les photos utilisées doivent exister (déjà en ligne ou envoyées maintenant)
+  const envoyees = new Set(photos.map((p) => p.chemin));
+  const utilisees = new Set([...contenu.services.map((s) => s.photo), ...contenu.photos.map((p) => p.image)]);
+  for (const img of utilisees) {
+    const nom = img.split('/').pop();
+    const present = (envoyees.has(`${img}.jpg`) || enLigne.has(`${nom}.jpg`)) && (envoyees.has(`${img}-sm.jpg`) || enLigne.has(`${nom}-sm.jpg`));
+    if (!present) return json(res, 400, { erreur: 'Une photo utilisée est introuvable. Ajoutez-la de nouveau.' });
+  }
+
+  // Régénération des pages à partir de la dernière version en ligne
+  const fichiers = {};
+  await Promise.all(FICHIERS.map(async (f) => {
+    try { fichiers[f] = (await lireTexte(`site/${f}`)).texte; }
+    catch (e) { if (e.statut !== 404) throw e; }
+  }));
+  const modifies = regenerer(fichiers, contenu, { ancien });
+
+  // Les photos retirées disparaissent du site mais leurs fichiers restent dans le dépôt :
+  // l'historique peut ainsi toujours revenir à une version qui les affichait
+  const texteContenu = `${JSON.stringify(contenu, null, 2)}\n`;
+  const aPublier = [
+    { chemin: CONTENU, texte: texteContenu },
+    ...Object.entries(modifies).map(([f, texte]) => ({ chemin: `site/${f}`, texte })),
+    ...photos.map((p) => ({ chemin: `site/${p.chemin}`, base64: p.base64 })),
+  ];
+  const message = `Espace Nelly : ${String(resume || 'mise à jour du contenu').replace(/\s+/g, ' ').slice(0, 120)}`;
+  const commit = await publier(aPublier, message);
+
+  // Prévient Bing (IndexNow) que les pages ont changé ; sans effet sur le reste si cela échoue
+  const pages = Object.keys(modifies).filter((f) => PAGES[f] && !PAGES[f].robots).map((f) => `${DOMAINE}${PAGES[f].chemin}`);
+  if (pages.length) {
+    await fetch('https://api.indexnow.org/indexnow', {
+      method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, signal: AbortSignal.timeout(3000),
+      body: JSON.stringify({ host: new URL(DOMAINE).host, key: INDEXNOW_CLE, keyLocation: `${DOMAINE}/${INDEXNOW_CLE}.txt`, urlList: pages }),
+    }).catch(() => {});
+  }
+
+  // Nouvelle version du contenu (empreinte Git du fichier) : permet d'enchaîner une autre publication
+  const octets = Buffer.from(texteContenu, 'utf8');
+  const nouvelleVersion = createHash('sha1').update(`blob ${octets.length}\0`).update(octets).digest('hex');
+  return json(res, 200, { ok: true, commit, version: nouvelleVersion, contenu, renommees: Object.fromEntries(renommer) });
+}
