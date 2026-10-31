@@ -9,7 +9,7 @@ import path from 'node:path';
 // À relancer après chaque modification des pages : node outils/seo.mjs (sans danger, peut tourner plusieurs fois)
 
 // ⚠️ À changer le jour où le nom de domaine est choisi (ex. https://www.nellycoiffure.fr), puis relancer le script
-const DOMAINE = 'https://nelly-coiffure.vercel.app';
+const DOMAINE = 'https://www.nellycoiffure.fr';
 // Code de vérification Google Search Console (méthode « balise HTML »), à coller ici une fois obtenu
 const GOOGLE_VERIFICATION = '';
 // Liens officiels, à remplir dès qu'ils existent (fiche Google, Instagram, TikTok…) : ils renforcent l'identité du salon

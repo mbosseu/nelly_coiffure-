@@ -54,13 +54,12 @@ node outils/seo.mjs
 
 ---
 
-## Étape 1 — Le nom de domaine (≈ 10 € par an)
+## Étape 1 — Le nom de domaine ✅ Fait le 31/10/2026
 
-Une adresse comme `nellycoiffure.fr` inspire confiance, se retient et se partage mieux que `nelly-coiffure.vercel.app`.
-
-1. Acheter le domaine chez OVH, Gandi, Ionos ou directement dans Vercel (Settings > Domains > Buy).
-2. Dans Vercel : projet `nelly-coiffure` > Settings > Domains > ajouter `nellycoiffure.fr` et `www.nellycoiffure.fr`, puis suivre les instructions DNS.
-3. Me le dire : je remplace l'adresse dans `outils/seo.mjs` (ligne `DOMAINE`), je relance le script et je pousse. L'ancienne adresse Vercel redirigera vers la nouvelle.
+Le site est sur **https://www.nellycoiffure.fr** (domaine chez OVH, site hébergé chez Vercel).
+- Zone DNS OVH : `@` A `216.198.79.1` et `www` CNAME `6c989f4f1cfbea76.vercel-dns-017.com.` (valeurs données par Vercel, projet `nelly-coiffure` > Settings > Domains).
+- `nellycoiffure.fr` et l'ancienne adresse `nelly-coiffure.vercel.app` redirigent vers `www.nellycoiffure.fr` (Vercel et `site/vercel.json`).
+- Le domaine se renouvelle chaque année chez OVH : activer le renouvellement automatique, sinon le site disparaît à l'échéance.
 
 ## Étape 2 — Google Search Console (gratuit, 15 minutes)
 
@@ -68,8 +67,8 @@ C'est le tableau de bord de Google pour le site : indexation, erreurs, mots-clé
 
 1. Aller sur https://search.google.com/search-console avec le compte Google de Nelly.
 2. Ajouter une propriété :
-   - avec un domaine à soi : type « Domaine », validation par un enregistrement DNS ;
-   - en attendant : type « Préfixe d'URL » avec `https://nelly-coiffure.vercel.app/`, méthode « Balise HTML ».
+   - le plus simple : type « Préfixe d'URL » avec `https://www.nellycoiffure.fr/`, méthode « Balise HTML » ;
+   - ou type « Domaine » (`nellycoiffure.fr`), validation par un enregistrement TXT à ajouter dans la zone DNS OVH (je peux le faire).
 3. Pour la balise HTML : copier uniquement le code entre les guillemets de `content="…"`, me l'envoyer (ou le coller dans `outils/seo.mjs`, ligne `GOOGLE_VERIFICATION`), relancer le script, pousser, puis cliquer « Valider ».
 4. Menu « Sitemaps » : soumettre `sitemap.xml`.
 5. Menu « Inspection de l'URL » : inspecter l'accueil puis cliquer « Demander l'indexation ». Idem pour Coiffures et Réalisations.

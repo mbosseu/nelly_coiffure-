@@ -1,5 +1,6 @@
 {
   "redirects": [
+    { "source": "/:path*", "has": [{ "type": "host", "value": "nelly-coiffure.vercel.app" }], "destination": "https://www.nellycoiffure.fr/:path*", "permanent": true },
     { "source": "/tarifs.html", "destination": "/coiffures.html#carte", "permanent": true },
     { "source": "/tarifs", "destination": "/coiffures.html#carte", "permanent": true }
   ],
