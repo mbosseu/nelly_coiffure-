@@ -1297,3 +1297,14 @@ html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -
 @media (prefers-reduced-motion: reduce) {
   .medallion__halo, .medallion__ring, .medallion__photo, .medallion__tags li { animation: none; }
 }
+
+/* Pages guides (coiffure à domicile, conseils tresses) et liens internes dans les textes */
+.guide-hero .eyebrow { margin: 22px 0 14px; }
+.guide-hero .page-hero__title em { font-style: normal; color: var(--accent); }
+.guide ul, .guide ol { margin: 0 0 18px; padding-left: 1.3em; font-weight: 300; line-height: 1.8; }
+.guide li { margin-bottom: 8px; padding-left: 4px; }
+.guide li::marker { color: var(--copper); }
+.guide strong { font-weight: 500; color: var(--ink); }
+.faq details p a, .info-band__item p a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.guide ul { list-style: disc; }
+.guide ol { list-style: decimal; }

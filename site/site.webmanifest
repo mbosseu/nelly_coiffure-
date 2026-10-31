@@ -1,0 +1,13 @@
+{
+  "name": "Nelly Coiffure — Tresses africaines à Marseille",
+  "short_name": "Nelly Coiffure",
+  "lang": "fr",
+  "start_url": "/",
+  "display": "browser",
+  "background_color": "#F6ECE2",
+  "theme_color": "#F6ECE2",
+  "icons": [
+    { "src": "/img/marque/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/img/marque/favicon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

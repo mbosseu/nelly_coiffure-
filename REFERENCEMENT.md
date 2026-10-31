@@ -21,6 +21,13 @@ Délai réaliste : indexation en quelques jours ; premières positions locales e
 - Aperçus de partage complets (WhatsApp, Facebook, X) avec image.
 - Site statique, rapide, adapté au mobile, images légères, cache configuré sur Vercel.
 - Ancienne page Tarifs redirigée proprement (aucun lien cassé).
+- Données Google complètes : téléphone, code postal 13004, coordonnées, réseaux sociaux (Instagram, TikTok, Facebook, Snapchat) reliés au salon, Nelly présentée comme fondatrice.
+- Deux pages qui captent des recherches précises, reliées depuis le pied de page de chaque page et depuis l'accueil, Contact et Coiffures :
+  - `coiffure-afro-domicile-marseille.html` : « coiffeuse afro à domicile Marseille », avec les quartiers et communes desservis ;
+  - `conseils-tresses-africaines.html` : préparation, entretien, durée, knotless ou box braids (article signé Nelly, avec ses questions fréquentes).
+  Pour les réécrire : modifier `outils/pages-guides.mjs`, puis lancer `node outils/pages-guides.mjs` et `node outils/seo.mjs`.
+- Plan du site avec les photos de Nelly (Google Images) et textes alternatifs descriptifs sur toutes les photos de réalisations.
+- `favicon.ico` et icônes 48 px / 192 px + `site.webmanifest` : le logo de Nelly s'affiche à côté du site dans les résultats Google.
 
 L'outil `outils/seo.mjs` regroupe tous ces réglages. **Après toute modification des pages, relancer :**
 
@@ -78,7 +85,7 @@ C'est elle qui fait apparaître Nelly dans Google Maps et dans le bloc des 3 coi
 1. Dans la fiche : « Demander des avis » donne un lien court. L'envoyer sur WhatsApp à chaque cliente après le rendez-vous, avec un petit message : « Merci pour votre confiance ! Si vous êtes contente de vos tresses, un avis m'aiderait beaucoup : [lien] ».
 2. Objectif : 10 avis le premier mois, puis 3 à 5 par mois. La régularité compte plus que le nombre.
 3. Répondre à **chaque** avis, en citant naturellement la coiffure : « Merci Awa, ravie que vos knotless vous plaisent ! ».
-4. Ensuite, me donner le lien de la fiche : je l'ajoute au site (bouton « Voir les avis Google ») et dans les données structurées.
+4. Ensuite, me donner le lien de la fiche : je l'ajoute au site (bouton « Voir les avis Google ») et dans les données structurées (ligne `FICHE_GOOGLE` de `outils/seo.mjs`).
 
 ⚠️ Ne jamais acheter d'avis, en écrire soi-même ou en échanger : c'est interdit en France (jusqu'à 300 000 € d'amende) et Google supprime la fiche.
 
@@ -129,5 +136,5 @@ Google Images est une vraie source de visites pour la coiffure. Les photos doive
 
 ## Ce qui bloque encore le site lui-même
 
-- Le **numéro WhatsApp** est fictif (`site/js/main.js`, ligne 2) : sans lui, aucune visite ne devient cliente.
+- Les deux pages guides : à faire relire par Nelly (zone de déplacement, durées de tenue, conseils) pour qu'elles parlent avec ses mots.
 - Les contenus provisoires (histoire de Nelly, horaires, mentions légales) : Google valorise les informations précises et vérifiables.

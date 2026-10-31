@@ -13,7 +13,14 @@ const DOMAINE = 'https://nelly-coiffure.vercel.app';
 // Code de vérification Google Search Console (méthode « balise HTML »), à coller ici une fois obtenu
 const GOOGLE_VERIFICATION = '';
 // Liens officiels, à remplir dès qu'ils existent (fiche Google, Instagram, TikTok…) : ils renforcent l'identité du salon
-const RESEAUX = [];
+const RESEAUX = [
+  'https://www.instagram.com/nellycoiffure237/',
+  'https://www.tiktok.com/@nellycoiffure237',
+  'https://www.facebook.com/share/1CFM1XgV6n/',
+  'https://snapchat.com/t/rsEMEsWo',
+];
+// Lien de la fiche Google Business Profile, à coller ici dès qu'elle existe (ex. https://maps.app.goo.gl/…)
+const FICHE_GOOGLE = '';
 
 const SITE = path.resolve(import.meta.dirname, '../site');
 const NOM = 'Nelly Coiffure';
@@ -59,6 +66,12 @@ const PAGES = {
     description: 'Prenez rendez-vous pour vos tresses africaines à Marseille : écrivez à Nelly sur WhatsApp. Chez elle ou à domicile, Marseille et alentours.',
     h1: 'Rendez-vous coiffure afro à Marseille',
   },
+  'coiffure-afro-domicile-marseille.html': {
+    chemin: '/coiffure-afro-domicile-marseille.html', priorite: '0.8', ariane: 'Coiffure à domicile',
+  },
+  'conseils-tresses-africaines.html': {
+    chemin: '/conseils-tresses-africaines.html', priorite: '0.7', ariane: 'Conseils tresses', article: true,
+  },
   'mentions-legales.html': { chemin: '/mentions-legales.html', ariane: 'Mentions légales', robots: 'noindex, follow' },
   'confidentialite.html': { chemin: '/confidentialite.html', ariane: 'Confidentialité', robots: 'noindex, follow' },
   '404.html': { chemin: '/404.html', robots: 'noindex, follow' },
@@ -71,11 +84,18 @@ const salon = {
   description: 'Coiffeuse spécialisée en tresses africaines à Marseille : knotless braids, tresses couchées, nattes collées, twists, locks et tissage, chez elle ou à domicile.',
   url: `${DOMAINE}/`,
   logo: `${DOMAINE}/img/marque/logo.png`,
-  image: IMAGE,
+  image: [IMAGE, `${DOMAINE}/img/nelly/hero-bouclees.webp`, `${DOMAINE}/img/nelly/portrait-nelly-rond.webp`],
+  telephone: '+33604023290',
+  founder: { '@type': 'Person', name: 'Nelly', jobTitle: 'Coiffeuse afro, spécialiste des tresses africaines', image: `${DOMAINE}/img/nelly/portrait-nelly-rond.webp` },
+  knowsLanguage: 'fr',
+  slogan: 'Révèle votre beauté',
+  keywords: 'tresses africaines, knotless braids, box braids, nattes collées, tresses couchées, twists, locks, tissage, coiffure afro à domicile, Marseille',
+  geo: { '@type': 'GeoCoordinates', latitude: 43.3064, longitude: 5.4006 },
+  hasMap: FICHE_GOOGLE || 'https://www.google.com/maps/search/?api=1&query=13004%20Marseille',
   priceRange: '30 € – 80 €',
   currenciesAccepted: 'EUR',
   paymentAccepted: 'Espèces, virement instantané',
-  address: { '@type': 'PostalAddress', addressLocality: 'Marseille', addressRegion: 'Provence-Alpes-Côte d’Azur', postalCode: '13000', addressCountry: 'FR' },
+  address: { '@type': 'PostalAddress', addressLocality: 'Marseille', addressRegion: 'Provence-Alpes-Côte d’Azur', postalCode: '13004', addressCountry: 'FR' },
   areaServed: VILLES.map((v) => ({ '@type': 'City', name: v })),
   openingHoursSpecification: [
     { '@type': 'OpeningHoursSpecification', dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], opens: '09:00', closes: '19:00' },
@@ -89,7 +109,7 @@ const salon = {
       itemOffered: { '@type': 'Service', name: nom, serviceType: 'Coiffure afro', areaServed: 'Marseille' },
     })),
   },
-  ...(RESEAUX.length ? { sameAs: RESEAUX } : {}),
+  ...(RESEAUX.length || FICHE_GOOGLE ? { sameAs: [...RESEAUX, FICHE_GOOGLE].filter(Boolean) } : {}),
 };
 const siteWeb = { '@type': 'WebSite', '@id': `${DOMAINE}/#site`, url: `${DOMAINE}/`, name: NOM, inLanguage: 'fr-FR', publisher: { '@id': `${DOMAINE}/#salon` } };
 
@@ -105,7 +125,7 @@ for (const [fichier, P] of Object.entries(PAGES)) {
   // 1. Nettoyage des anciennes balises gérées par ce script
   h = h.replace(/[ \t]*<!-- seo:debut -->[\s\S]*?<!-- seo:fin -->\r?\n?/g, '')
     .replace(/[ \t]*<meta property="og:[^>]*>\r?\n/g, '')
-    .replace(/[ \t]*<meta name="(twitter:[^"]*|robots|google-site-verification)"[^>]*>\r?\n/g, '')
+    .replace(/[ \t]*<meta name="(twitter:[^"]*|robots|google-site-verification|geo\.[a-z]+)"[^>]*>\r?\n/g, '')
     .replace(/[ \t]*<link rel="canonical"[^>]*>\r?\n/g, '')
     .replace(/[ \t]*<script type="application\/ld\+json">[\s\S]*?<\/script>\r?\n/g, '');
 
@@ -132,6 +152,11 @@ for (const [fichier, P] of Object.entries(PAGES)) {
       { '@type': 'ListItem', position: 2, name: P.ariane, item: url },
     ] });
   }
+  if (P.article) {
+    graphe.push({ '@type': 'Article', '@id': `${url}#article`, headline: titre.split(' | ')[0], description, inLanguage: 'fr-FR', url,
+      image: IMAGE, datePublished: '2026-10-31', dateModified: AUJOURDHUI, mainEntityOfPage: { '@id': `${url}#page` },
+      author: { '@type': 'Person', name: 'Nelly', url: `${DOMAINE}/a-propos.html` }, publisher: { '@id': `${DOMAINE}/#salon` } });
+  }
   // Questions fréquentes lues directement dans la page (toujours à jour, même après une modification à la main)
   const faq = [...h.matchAll(/<details[^>]*>\s*<summary>([\s\S]*?)<\/summary>\s*<p>([\s\S]*?)<\/p>\s*<\/details>/g)];
   if (faq.length) {
@@ -145,7 +170,9 @@ for (const [fichier, P] of Object.entries(PAGES)) {
     `<link rel="canonical" href="${url}">`,
     `<meta name="robots" content="${robots}">`,
     GOOGLE_VERIFICATION && `<meta name="google-site-verification" content="${GOOGLE_VERIFICATION}">`,
-    '<meta property="og:type" content="website">',
+    '<meta name="geo.region" content="FR-13">',
+    '<meta name="geo.placename" content="Marseille">',
+    `<meta property="og:type" content="${P.article ? 'article' : 'website'}">`,
     '<meta property="og:locale" content="fr_FR">',
     `<meta property="og:site_name" content="${NOM}">`,
     `<meta property="og:title" content="${echapper(titre)}">`,
@@ -178,10 +205,18 @@ for (const fichier of [...Object.keys(PAGES), 'tarifs.html']) {
 }
 
 // 6. Plan du site (pages indexables uniquement) et robots.txt
-const indexables = Object.values(PAGES).filter((P) => !P.robots);
+// Les photos de Nelly (pas les décors ni le logo) sont listées pour Google Images
+const indexables = Object.entries(PAGES).filter(([, P]) => !P.robots);
+const imagesDe = (fichier) => {
+  const h = readFileSync(path.join(SITE, fichier), 'utf8');
+  const vues = new Set();
+  return [...h.matchAll(/<img[^>]*\ssrc="(img\/(?:nelly|realisations)\/[^"]+)"[^>]*>/g)]
+    .filter(([, src]) => !vues.has(src) && vues.add(src))
+    .map(([, src]) => `    <image:image><image:loc>${DOMAINE}/${src}</image:loc></image:image>`);
+};
 writeFileSync(path.join(SITE, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${indexables.map((P) => `  <url><loc>${DOMAINE}${P.chemin}</loc><lastmod>${AUJOURDHUI}</lastmod><priority>${P.priorite}</priority></url>`).join('\n')}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${indexables.map(([fichier, P]) => [`  <url><loc>${DOMAINE}${P.chemin}</loc><lastmod>${AUJOURDHUI}</lastmod><priority>${P.priorite}</priority>`, ...imagesDe(fichier), '  </url>'].join('\n')).join('\n')}
 </urlset>
 `);
 writeFileSync(path.join(SITE, 'robots.txt'), `User-agent: *
