@@ -121,6 +121,8 @@ if (cards && dots) {
   items.forEach((card, i) => {
     const b = document.createElement('button');
     b.setAttribute('aria-label', `Coiffure ${i + 1}`);
+    b.tabIndex = -1; // points décoratifs (conteneur aria-hidden) : les cartes restent accessibles au clavier
+    b.type = 'button';
     b.addEventListener('click', () => cards.scrollTo({ left: card.offsetLeft - cards.offsetLeft - 20, behavior: 'smooth' }));
     dots.appendChild(b);
   });

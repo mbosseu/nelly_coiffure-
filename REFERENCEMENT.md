@@ -61,9 +61,17 @@ Le site est sur **https://www.nellycoiffure.fr** (domaine chez OVH, site héberg
 - `nellycoiffure.fr` et l'ancienne adresse `nelly-coiffure.vercel.app` redirigent vers `www.nellycoiffure.fr` (Vercel et `site/vercel.json`).
 - Le domaine se renouvelle chaque année chez OVH : activer le renouvellement automatique, sinon le site disparaît à l'échéance.
 
-## Étape 2 — Google Search Console (gratuit, 15 minutes)
+## Étape 2 — Google Search Console ✅ Fait le 31/10/2026
 
 C'est le tableau de bord de Google pour le site : indexation, erreurs, mots-clés qui amènent des visites.
+
+État au 31/10/2026 :
+- Propriété **Domaine `nellycoiffure.fr`** validée par l'entrée TXT `google-site-verification=…` de la zone DNS OVH (ne jamais la supprimer, sinon la validation est perdue).
+- `sitemap.xml` envoyé et lu : 10 pages découvertes.
+- Indexation demandée pour l'accueil, Coiffures, Knotless braids, Coiffure à domicile, Locks et Tresses enfant. Les autres pages sont trouvées par le plan du site.
+- PageSpeed mobile (accueil) : performances 95, SEO 100, bonnes pratiques 100, accessibilité 87 → corrigée (étoiles des avis, points du carrousel).
+
+Pour info, la procédure suivie :
 
 1. Aller sur https://search.google.com/search-console avec le compte Google de Nelly.
 2. Ajouter une propriété :
