@@ -2,6 +2,12 @@
 
 À créer **par Nelly**, avec son propre compte Google, sur https://business.google.com (ou dans l'application Google Maps : photo de profil > « Ajouter votre établissement »). Google vérifie l'identité de la commerçante (vidéo, SMS ou courrier) : personne ne peut le faire à sa place.
 
+## 0. Le compte Google à utiliser
+
+L'adresse **contact@nellycoiffure.fr** existe : c'est une redirection OVH (offre gratuite incluse avec le domaine) vers `blanchelalack@gmail.com`. Elle peut **recevoir** des e-mails, pas en envoyer.
+
+Pour créer un compte Google avec cette adresse : https://accounts.google.com/signup > « Utiliser mon adresse e-mail actuelle » > `contact@nellycoiffure.fr`. Google y envoie un code de confirmation, qui arrive dans la boîte Gmail de redirection. Ce compte sert ensuite à créer la fiche ci-dessous.
+
 Règle d'or : écrire **exactement les mêmes informations que sur le site** (nom, téléphone, horaires, zone). Google recoupe, et la moindre différence fait perdre des places.
 
 ---
