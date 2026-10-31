@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-// Pages guides (référencement) : « coiffure afro à domicile à Marseille » et « conseils tresses africaines ».
+// Pages guides (référencement) : une page par recherche visée (knotless braids, locks, tresses enfant, coiffure à domicile, conseils).
 // Elles reprennent l'en-tête et le pied de page de mentions-legales.html, puis seo.mjs ajoute leurs balises.
 // À relancer seulement pour réécrire ces deux pages : node outils/pages-guides.mjs && node outils/seo.mjs
 
@@ -46,7 +46,101 @@ const cta = (accroche) => `
       </div>
     </section>`;
 
+// Bandeau de 3 photos de la galerie (img/realisations/catalogue), chacune ouvre la galerie filtrée sur son style
+const photos = (liste) => `
+        <div class="guide-photos">
+${liste.map(([fichier, alt]) => {
+    const style = fichier.replace(/-\d+$/, '');
+    return `          <a href="realisations.html?style=${style}#galerie"><img src="img/realisations/catalogue/${fichier}-sm.jpg" width="500" height="625" loading="lazy" alt="${alt}"></a>`;
+  }).join('\n')}
+        </div>`;
+
 const PAGES = [
+  {
+    fichier: 'knotless-braids-marseille.html',
+    titre: 'Knotless braids et box braids à Marseille | Nelly Coiffure',
+    description: 'Knotless braids à Marseille dès 60 €, short braids 50 € : des box braids sans nœud, légères et naturelles. Chez Nelly (13004) ou à domicile.',
+    ariane: 'Knotless braids',
+    titreVisuel: 'Des tresses légères, <em>sans nœud à la racine.</em>',
+    corps: `
+        <p>Les knotless braids sont la coiffure que l’on me demande le plus à Marseille. Ce sont des box braids nouvelle génération&nbsp;: la tresse démarre avec vos propres cheveux, puis la mèche est ajoutée petit à petit. Résultat&nbsp;: aucun nœud à la racine, moins de tension, et des tresses qui bougent naturellement dès le premier jour.</p>
+${photos([['knotless-braids-1', 'Knotless braids longues blondes réalisées par Nelly à Marseille'], ['knotless-braids-2', 'Knotless braids bohème à pointes bouclées, Nelly Coiffure Marseille'], ['knotless-braids-6', 'Knotless braids aux pointes bouclées réalisées par Nelly Coiffure']])}
+        <h2>Knotless braids ou box braids classiques&nbsp;?</h2>
+        <p>Les box braids classiques commencent par un petit nœud de mèche serré contre le cuir chevelu&nbsp;: c’est solide, mais plus lourd et parfois douloureux les premiers jours. Les knotless braids partent à plat, sans nœud&nbsp;: elles sont plus confortables, plus discrètes à la racine et plus douces pour les bords fragiles. C’est la technique que je privilégie.</p>
+        <h2>Tarifs</h2>
+        <ul>
+          <li><strong>Knotless braids</strong>&nbsp;: à partir de 60&nbsp;€</li>
+          <li><strong>Short braids</strong> (tresses courtes, au carré ou aux épaules)&nbsp;: à partir de 50&nbsp;€</li>
+        </ul>
+        <p>Le prix final dépend de la longueur, de la taille des tresses et des finitions (pointes bouclées, perles, couleurs). Je vous le confirme toujours sur WhatsApp avant le rendez-vous, avec les mèches à prévoir. Toutes les autres coiffures sont sur la page <a href="coiffures.html">Coiffures et tarifs</a>.</p>
+        <h2>Combien de temps durent les knotless braids&nbsp;?</h2>
+        <p>Bien entretenues, elles tiennent <strong>4 à 6 semaines</strong>, jusqu’à 8 au maximum. La pose prend plusieurs heures selon la longueur et la taille choisies&nbsp;: je vous donne une estimation précise avant la séance. Pour les garder belles, suivez mes <a href="conseils-tresses-africaines.html">conseils d’entretien des tresses africaines</a>.</p>
+        <h2>Chez moi ou chez vous</h2>
+        <p>Je vous reçois dans le 4<sup>e</sup> arrondissement de Marseille (13004), ou je me déplace chez vous dans tout Marseille et les communes voisines&nbsp;: voir la <a href="coiffure-afro-domicile-marseille.html">coiffure à domicile</a>. Plus de photos dans les <a href="realisations.html?style=knotless-braids#galerie">réalisations de knotless braids</a>.</p>`,
+    faq: [
+      ['Les knotless braids font-elles mal&nbsp;?', 'Beaucoup moins que les box braids classiques&nbsp;: sans nœud à la racine, la tension est répartie. Je ne serre jamais, et vous pouvez me dire à tout moment si quelque chose vous gêne.'],
+      ['Faut-il apporter ses mèches&nbsp;?', 'Cela dépend de la longueur et de la couleur voulues. Envoyez-moi une photo du style sur WhatsApp&nbsp;: je vous dis quelles mèches prévoir, ou si je peux les fournir.'],
+      ['Peut-on ajouter des boucles ou des perles&nbsp;?', 'Oui&nbsp;: pointes bouclées, perles, fils dorés ou mèches colorées. Dites-le-moi en réservant, cela peut faire varier le prix et la durée.'],
+    ],
+    accroche: 'Envie de knotless <br>braids&nbsp;?',
+  },
+  {
+    fichier: 'locks-marseille.html',
+    titre: 'Locks à Marseille, longues ou courtes | Nelly Coiffure',
+    description: 'Pose de locks à Marseille : locks longues au rendu bohème dès 80 €, locks courtes au carré dès 50 €. Chez Nelly (13004) ou à domicile.',
+    ariane: 'Locks',
+    titreVisuel: 'Des locks au rendu <em>bohème et généreux.</em>',
+    corps: `
+        <p>Envie d’un style affirmé, qui se porte des semaines sans y penser&nbsp;? Je réalise des locks longues au rendu bohème et des locks courtes au carré, à Marseille, chez moi ou à votre domicile.</p>
+${photos([['locks-2', 'Locks longues réalisées par Nelly à Marseille'], ['locks-4', 'Locks au rendu bohème, Nelly Coiffure Marseille'], ['locks-courtes-2', 'Locks courtes au carré réalisées par Nelly']])}
+        <h2>Locks longues ou locks courtes</h2>
+        <ul>
+          <li><strong>Locks longues</strong>&nbsp;: un rendu bohème et volumineux, qui descend dans le dos. À partir de 80&nbsp;€.</li>
+          <li><strong>Locks courtes</strong>&nbsp;: au carré ou aux épaules, plus légères et rapides à poser. À partir de 50&nbsp;€.</li>
+        </ul>
+        <p>Le prix final dépend de la longueur, de l’épaisseur et des mèches choisies&nbsp;: je vous le confirme sur WhatsApp avant le rendez-vous. Toute la carte est sur la page <a href="coiffures.html">Coiffures et tarifs</a>.</p>
+        <h2>Bien préparer et entretenir ses locks</h2>
+        <p>Venez avec des cheveux lavés, démêlés et secs. Ensuite, protégez vos locks la nuit avec un foulard ou un bonnet en satin, hydratez le cuir chevelu deux à trois fois par semaine et séchez-les bien après chaque lavage&nbsp;: les locks gardent l’humidité plus longtemps que des tresses. Tous les détails sont dans mes <a href="conseils-tresses-africaines.html">conseils d’entretien</a>.</p>
+        <h2>Chez moi ou chez vous</h2>
+        <p>Je vous reçois dans le 4<sup>e</sup> arrondissement de Marseille (13004), ou je viens chez vous&nbsp;: voir la <a href="coiffure-afro-domicile-marseille.html">coiffure à domicile</a>. Plus de photos dans les <a href="realisations.html?style=locks#galerie">réalisations de locks</a>.</p>`,
+    faq: [
+      ['Combien de temps tiennent les locks&nbsp;?', 'En général 4 à 8 semaines selon la pousse de vos cheveux et votre entretien. Au-delà, mieux vaut les retirer pour préserver vos racines.'],
+      ['Les locks sont-elles lourdes&nbsp;?', 'Les locks longues ont du volume, c’est leur charme. Si vous voulez plus de légèreté, je vous conseille des locks courtes ou une taille plus fine.'],
+      ['Faut-il apporter ses mèches&nbsp;?', 'Envoyez-moi une photo du style voulu sur WhatsApp&nbsp;: je vous dis quelles mèches prévoir et en quelle quantité.'],
+    ],
+    accroche: 'Réservez vos <br>locks',
+  },
+  {
+    fichier: 'tresses-enfant-marseille.html',
+    titre: 'Tresses enfant à Marseille, en douceur | Nelly Coiffure',
+    description: 'Tresses pour enfant à Marseille dès 30 € : tresses couchées et nattes collées posées en douceur, chez Nelly (13004) ou à votre domicile.',
+    ariane: 'Tresses enfant',
+    titreVisuel: 'Des tresses pour les petits, <em>tout en douceur.</em>',
+    corps: `
+        <p>Une jolie coiffure qui tient pour l’école, sans larmes ni douleur&nbsp;: c’est ce que je propose aux enfants à Marseille. Je prends le temps, je fais des pauses et je ne serre jamais trop, pour que la séance reste un bon moment.</p>
+${photos([['tresses-couchees-enfant-2', 'Tresses couchées enfant réalisées par Nelly à Marseille'], ['tresses-couchees-enfant-3', 'Tresses pour enfant, Nelly Coiffure Marseille'], ['nattes-collees-2', 'Nattes collées réalisées par Nelly Coiffure']])}
+        <h2>Les coiffures pour enfant</h2>
+        <ul>
+          <li><strong>Tresses couchées enfant</strong>&nbsp;: des motifs tressés à plat, pratiques et jolis. À partir de 30&nbsp;€.</li>
+          <li><strong>Nattes collées</strong>&nbsp;: simples et nettes, idéales pour la rentrée ou le sport. À partir de 30&nbsp;€.</li>
+        </ul>
+        <p>Le prix final dépend de la longueur et du motif choisi&nbsp;: je le confirme sur WhatsApp avant le rendez-vous. Toute la carte est sur la page <a href="coiffures.html">Coiffures et tarifs</a>.</p>
+        <h2>Mes conseils aux parents</h2>
+        <ul>
+          <li>Lavez et démêlez les cheveux la veille&nbsp;: la séance sera plus courte et plus agréable.</li>
+          <li>Prévoyez un goûter, une tablette ou un dessin animé pour patienter.</li>
+          <li>Le soir, un bonnet ou un foulard en satin garde les tresses nettes plus longtemps.</li>
+          <li>Pour les cuirs chevelus sensibles, préférez des tresses pas trop fines et pas trop longues.</li>
+        </ul>
+        <h2>À domicile, c’est encore plus simple</h2>
+        <p>Les enfants sont souvent plus détendus chez eux. Je me déplace dans tout Marseille et les communes voisines&nbsp;: voir la <a href="coiffure-afro-domicile-marseille.html">coiffure à domicile</a>. Je vous reçois aussi dans le 4<sup>e</sup> arrondissement (13004). Plus de photos dans les <a href="realisations.html?style=tresses-couchees-enfant#galerie">réalisations pour enfant</a>.</p>`,
+    faq: [
+      ['À partir de quel âge peut-on tresser un enfant&nbsp;?', 'Dès que l’enfant peut rester assis un moment et que ses cheveux sont assez longs. Pour les tout-petits, je propose des coiffures simples et rapides.'],
+      ['Combien de temps tiennent les tresses d’un enfant&nbsp;?', 'En général 2 à 3 semaines pour des tresses couchées ou des nattes collées, selon les activités et l’entretien.'],
+      ['Un parent peut-il rester pendant la séance&nbsp;?', 'Bien sûr, c’est même conseillé pour les plus jeunes.'],
+    ],
+    accroche: 'Réservez les tresses <br>de votre enfant',
+  },
   {
     fichier: 'coiffure-afro-domicile-marseille.html',
     titre: 'Coiffeuse afro à domicile à Marseille | Nelly Coiffure',

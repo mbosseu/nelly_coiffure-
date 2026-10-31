@@ -45,7 +45,7 @@ const PAGES = {
   'coiffures.html': {
     chemin: '/coiffures.html', priorite: '0.9', ariane: 'Coiffures et tarifs',
     titre: 'Tarifs tresses, locks, twists à Marseille | Nelly Coiffure',
-    description: 'Prix des tresses africaines à Marseille : knotless braids 60 €, locks 80 €, twists, tissage, nattes collées, coiffures homme et enfant dès 30 €.',
+    description: 'Prix des tresses africaines à Marseille : knotless et box braids 60 €, locks 80 €, twists, tissage, nattes collées, coiffures homme et enfant dès 30 €.',
     h1: 'Coiffures afro et tarifs à Marseille',
   },
   'realisations.html': {
@@ -65,6 +65,15 @@ const PAGES = {
     titre: 'Rendez-vous coiffure afro Marseille | Nelly Coiffure',
     description: 'Prenez rendez-vous pour vos tresses africaines à Marseille : écrivez à Nelly sur WhatsApp. Chez elle ou à domicile, Marseille et alentours.',
     h1: 'Rendez-vous coiffure afro à Marseille',
+  },
+  'knotless-braids-marseille.html': {
+    chemin: '/knotless-braids-marseille.html', priorite: '0.8', ariane: 'Knotless braids',
+  },
+  'locks-marseille.html': {
+    chemin: '/locks-marseille.html', priorite: '0.8', ariane: 'Locks',
+  },
+  'tresses-enfant-marseille.html': {
+    chemin: '/tresses-enfant-marseille.html', priorite: '0.8', ariane: 'Tresses enfant',
   },
   'coiffure-afro-domicile-marseille.html': {
     chemin: '/coiffure-afro-domicile-marseille.html', priorite: '0.8', ariane: 'Coiffure à domicile',

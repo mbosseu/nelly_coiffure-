@@ -66,6 +66,21 @@
   </url>
   <url><loc>https://nelly-coiffure.vercel.app/contact.html</loc><lastmod>2026-10-31</lastmod><priority>0.8</priority>
   </url>
+  <url><loc>https://nelly-coiffure.vercel.app/knotless-braids-marseille.html</loc><lastmod>2026-10-31</lastmod><priority>0.8</priority>
+    <image:image><image:loc>https://nelly-coiffure.vercel.app/img/realisations/catalogue/knotless-braids-1-sm.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nelly-coiffure.vercel.app/img/realisations/catalogue/knotless-braids-2-sm.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nelly-coiffure.vercel.app/img/realisations/catalogue/knotless-braids-6-sm.jpg</image:loc></image:image>
+  </url>
+  <url><loc>https://nelly-coiffure.vercel.app/locks-marseille.html</loc><lastmod>2026-10-31</lastmod><priority>0.8</priority>
+    <image:image><image:loc>https://nelly-coiffure.vercel.app/img/realisations/catalogue/locks-2-sm.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nelly-coiffure.vercel.app/img/realisations/catalogue/locks-4-sm.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nelly-coiffure.vercel.app/img/realisations/catalogue/locks-courtes-2-sm.jpg</image:loc></image:image>
+  </url>
+  <url><loc>https://nelly-coiffure.vercel.app/tresses-enfant-marseille.html</loc><lastmod>2026-10-31</lastmod><priority>0.8</priority>
+    <image:image><image:loc>https://nelly-coiffure.vercel.app/img/realisations/catalogue/tresses-couchees-enfant-2-sm.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nelly-coiffure.vercel.app/img/realisations/catalogue/tresses-couchees-enfant-3-sm.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nelly-coiffure.vercel.app/img/realisations/catalogue/nattes-collees-2-sm.jpg</image:loc></image:image>
+  </url>
   <url><loc>https://nelly-coiffure.vercel.app/coiffure-afro-domicile-marseille.html</loc><lastmod>2026-10-31</lastmod><priority>0.8</priority>
   </url>
   <url><loc>https://nelly-coiffure.vercel.app/conseils-tresses-africaines.html</loc><lastmod>2026-10-31</lastmod><priority>0.7</priority>

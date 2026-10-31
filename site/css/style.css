@@ -1305,6 +1305,11 @@ html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -
 .guide li { margin-bottom: 8px; padding-left: 4px; }
 .guide li::marker { color: var(--copper); }
 .guide strong { font-weight: 500; color: var(--ink); }
-.faq details p a, .info-band__item p a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.faq details p a, .info-band__item p a, .section-intro .body a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 .guide ul { list-style: disc; }
 .guide ol { list-style: decimal; }
+.guide-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 30px 0 10px; }
+.guide-photos a { display: block; overflow: hidden; border-radius: 18px; aspect-ratio: 4 / 5; box-shadow: 0 18px 34px -24px rgba(40, 20, 10, .55); }
+.guide-photos img { width: 100%; height: 100%; object-fit: cover; transition: transform .8s var(--ease); }
+.guide-photos a:hover img { transform: scale(1.05); }
+@media (max-width: 600px) { .guide-photos { gap: 8px; } .guide-photos a { border-radius: 12px; } }

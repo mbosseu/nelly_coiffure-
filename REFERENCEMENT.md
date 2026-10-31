@@ -25,7 +25,22 @@ Délai réaliste : indexation en quelques jours ; premières positions locales e
 - Deux pages qui captent des recherches précises, reliées depuis le pied de page de chaque page et depuis l'accueil, Contact et Coiffures :
   - `coiffure-afro-domicile-marseille.html` : « coiffeuse afro à domicile Marseille », avec les quartiers et communes desservis ;
   - `conseils-tresses-africaines.html` : préparation, entretien, durée, knotless ou box braids (article signé Nelly, avec ses questions fréquentes).
+  - `knotless-braids-marseille.html`, `locks-marseille.html`, `tresses-enfant-marseille.html` : une page par coiffure phare, avec photos, prix et questions fréquentes.
   Pour les réécrire : modifier `outils/pages-guides.mjs`, puis lancer `node outils/pages-guides.mjs` et `node outils/seo.mjs`.
+- Un mot-clé principal par page, jamais deux pages sur le même :
+
+  | Page | Recherche visée |
+  |---|---|
+  | Accueil | tresses africaines Marseille |
+  | Coiffures et tarifs | prix tresses africaines Marseille |
+  | Knotless braids | knotless braids Marseille, box braids Marseille |
+  | Locks | locks Marseille |
+  | Tresses enfant | tresses enfant Marseille |
+  | Coiffure à domicile | coiffeuse afro à domicile Marseille |
+  | Conseils | entretien tresses africaines, knotless ou box braids |
+  | Réalisations | photos de tresses (Google Images) |
+
+- IndexNow (Bing, ChatGPT, Copilot) : après chaque mise en ligne, lancer `node outils/indexnow.mjs` pour signaler les pages modifiées.
 - Plan du site avec les photos de Nelly (Google Images) et textes alternatifs descriptifs sur toutes les photos de réalisations.
 - `favicon.ico` et icônes 48 px / 192 px + `site.webmanifest` : le logo de Nelly s'affiche à côté du site dans les résultats Google.
 
