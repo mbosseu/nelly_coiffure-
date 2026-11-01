@@ -243,3 +243,15 @@ textarea { resize: vertical; min-height: 80px; }
 .palettes span { width: 44px; height: 44px; border-radius: 50%; background: conic-gradient(var(--a) 0 33%, var(--b) 0 66%, var(--c) 0); }
 .palettes small { font-size: .65rem; color: var(--text); }
 @media (max-width: 420px) { .palettes { grid-template-columns: repeat(2, 1fr); } }
+
+/* Menu et pied de page */
+.ligne-nav { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; margin: 8px 0; }
+.ligne-nav:has(> select[data-champ="type"]) { grid-template-columns: 1fr auto 1fr auto; }
+.ligne-nav input, .ligne-nav select { min-width: 0; margin: 0; }
+.ligne-nav__ordre { display: flex; gap: 2px; }
+.ligne-nav__ordre .bouton { padding: 6px 9px; min-height: 0; }
+.ligne-nav__actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+@media (max-width: 560px) {
+  .ligne-nav, .ligne-nav:has(> select[data-champ="type"]) { grid-template-columns: 1fr 1fr; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .ligne-nav__ordre { grid-column: 1 / -1; justify-content: flex-end; }
+}

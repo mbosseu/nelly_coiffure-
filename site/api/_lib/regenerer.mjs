@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { marquer, appliquerPages, retirerAjouts } from './pages.mjs';
+import { appliquerNavigation, verifierNavigation } from './navigation.mjs';
 
 // Générateur commun du site : à partir du contenu modifiable (contenu/site.json) et des pages HTML actuelles,
 // produit les pages à jour. Utilisé par outils/seo.mjs (sur le poste) et par l'API de l'espace de gestion (sur Vercel),
@@ -333,9 +334,9 @@ const rendreTheme = (contenu, NL) => {
 
 // --- Réseaux sociaux --------------------------------------------------------------
 
-export const RESEAUX_NOMS = { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat' };
-const reseauxDe = (contenu) => contenu.reseaux || { instagram: RESEAUX[0], tiktok: RESEAUX[1], facebook: RESEAUX[2], snapchat: RESEAUX[3] };
-const pseudo = (url) => (String(url).match(/(?:instagram\.com\/|tiktok\.com\/@)([A-Za-z0-9._]+)/) || [])[1];
+export const RESEAUX_NOMS = { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat', youtube: 'YouTube' };
+const reseauxDe = (contenu) => ({ youtube: '', ...(contenu.reseaux || { instagram: RESEAUX[0], tiktok: RESEAUX[1], facebook: RESEAUX[2], snapchat: RESEAUX[3] }) });
+const pseudo = (url) => (String(url).match(/(?:instagram\.com\/|tiktok\.com\/@|youtube\.com\/@)([A-Za-z0-9._-]+)/) || [])[1];
 
 // Les liens apparaissent à plusieurs endroits (pied de page, Contact, Réalisations) : on remplace l'ancienne adresse
 // complète par la nouvelle. Les pseudos affichés sont repérés par data-reseau="instagram|tiktok…" : chacun suit son réseau
@@ -352,7 +353,7 @@ const remplacerReseaux = (t, contenu, ancien) => {
   }
   return t.replace(/(<(?:small|span) data-reseau="([a-z]+)">)@?[^<]*(<\/(?:small|span)>)/g, (m, ouv, cle, fin) => {
     const p = pseudo(n[cle]);
-    return p ? `${ouv}@${p}${fin}` : `${ouv}${RESEAUX_NOMS[cle] || cle}${fin}`;
+    return p ? `${ouv}@${p}${fin}` : `${ouv}Nelly Coiffure${fin}`;
   });
 };
 
@@ -424,6 +425,7 @@ const appliquerContenu = (h, fichier, contenu, ancien, aujourdhui) => {
   });
   if (PAGES[fichier] && !PAGES[fichier].robots) h = appliquerPages(h, fichier, contenu, formatsTelephone, sectionsAjoutees(contenu, fichier, aujourdhui, NL));
   h = zone(h, 'theme', rendreTheme(contenu, NL));
+  if (PAGES[fichier]) h = appliquerNavigation(h, fichier, contenu, attributsLien, reseauxDe(contenu));
   return remplacerReseaux(remplacerTelephones(h, contenu, ancien), contenu, ancien);
 };
 
@@ -598,12 +600,24 @@ export function verifierContenu(c) {
   erreurs.push(...verifierPages(c.pages));
   if (c.theme !== undefined && !(c.theme in THEMES)) erreurs.push('Couleurs du site inconnues.');
   if (c.reseaux !== undefined) {
+    // Instagram est obligatoire (boutons de la page Réalisations) ; les autres réseaux peuvent être laissés vides
     for (const [cle, nom] of Object.entries(RESEAUX_NOMS)) {
-      if (!urlValide(c.reseaux?.[cle])) erreurs.push(`Le lien ${nom} doit être une adresse complète commençant par https://`);
+      const v = String(c.reseaux?.[cle] || '').trim();
+      if ((cle === 'instagram' || v) && !urlValide(v)) erreurs.push(`Le lien ${nom} doit être une adresse complète commençant par https://`);
     }
   }
+  erreurs.push(...verifierNavigation(c.navigation, PAGES_PUBLIQUES, verifierLien));
   return erreurs;
 }
+
+// Destination d'un lien ou d'un bouton : renvoie le problème, ou une chaîne vide
+export const verifierLien = (b) => {
+  if (!b || !['whatsapp', 'page', 'externe', 'telephone'].includes(b.type)) return 'destination inconnue.';
+  if (b.type === 'externe' && !urlValide(b.valeur)) return 'l’adresse doit commencer par https://';
+  if (b.type === 'page' && !PAGES_PUBLIQUES.has(String(b.valeur || '').split('#')[0])) return 'choisissez une page du site.';
+  if (b.type === 'telephone' && !/^0[1-9](?:[ .]?\d{2}){4}$/.test(String(b.valeur || '').trim())) return 'numéro de téléphone invalide.';
+  return '';
+};
 
 export const urlValide = (u) => { try { const x = new URL(String(u || '').trim()); return x.protocol === 'https:' || x.protocol === 'http:'; } catch { return false; } };
 const PAGES_PUBLIQUES = new Set(Object.keys(PAGES).filter((f) => !PAGES[f].robots));

@@ -8,7 +8,9 @@ const DOSSIER = 'img/realisations/catalogue';
 const MAX_ENVOI = 3.6 * 1024 * 1024; // marge sous la limite de 4,5 Mo d'une requête Vercel
 const CLE_BROUILLON = 'nc_brouillon';
 const TEL = /^0[1-9](?:[ .]?\d{2}){4}$/;
-const RESEAUX = { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat' };
+const RESEAUX = { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat', youtube: 'YouTube' };
+// Seul Instagram est obligatoire (boutons de la page Réalisations) ; un réseau laissé vide disparaît du site
+const reseauValide = (cle, v) => (cle !== 'instagram' && !String(v || '').trim()) || urlValide(v);
 const PAGES = [
   ['index.html', 'Accueil'], ['coiffures.html', 'Coiffures et tarifs'], ['realisations.html', 'Réalisations'],
   ['a-propos.html', 'À propos'], ['contact.html', 'Contact'], ['knotless-braids-marseille.html', 'Knotless braids'],
@@ -83,7 +85,8 @@ $('#form-connexion').addEventListener('submit', async (e) => {
 });
 
 async function demarrer() {
-  const { contenu, version } = await api('contenu');
+  const { contenu, version, navigationDefaut } = await api('contenu');
+  etat.navDefaut = navigationDefaut;
   normaliser(contenu);
   etat.base = contenu;
   etat.version = version;
@@ -117,6 +120,7 @@ function normaliser(c) {
     instagram: 'https://www.instagram.com/nellycoiffure237/', tiktok: 'https://www.tiktok.com/@nellycoiffure237',
     facebook: 'https://www.facebook.com/share/1CFM1XgV6n/', snapchat: 'https://snapchat.com/t/rsEMEsWo',
   };
+  c.reseaux.youtube = c.reseaux.youtube || '';
   return c;
 }
 
@@ -220,7 +224,8 @@ function resumeModifications() {
   if ((a.theme || 'cuivre') !== (b.theme || 'cuivre')) lignes.push('Couleurs du site');
   if (JSON.stringify(a.horaires) !== JSON.stringify(b.horaires)) lignes.push('Horaires');
   if (JSON.stringify(a.telephones) !== JSON.stringify(b.telephones)) lignes.push('Téléphones');
-  for (const [cle, nom] of Object.entries(RESEAUX)) if (a.reseaux[cle] !== b.reseaux[cle]) lignes.push(`Lien ${nom}`);
+  for (const [cle, nom] of Object.entries(RESEAUX)) if ((a.reseaux[cle] || '') !== (b.reseaux[cle] || '')) lignes.push(`Lien ${nom}`);
+  if (JSON.stringify(a.navigation || null) !== JSON.stringify(b.navigation || null)) lignes.push('Menu et pied de page');
   for (const [f, n] of PAGES) if (JSON.stringify(a.pages[f] || {}) !== JSON.stringify(b.pages[f] || {})) lignes.push(`Page ${n} modifiée`);
   for (const s of b.services) {
     const avant = a.services.find((x) => x.cle === s.cle);
@@ -941,10 +946,10 @@ function afficherInfos() {
   $('#liste-reseaux').innerHTML = aide + Object.entries(RESEAUX).map(([cle, nom]) => `
     <label for="r-${cle}">${nom}</label>
     <div class="champ-lien">
-      <input id="r-${cle}" type="url" inputmode="url" data-reseau="${cle}" value="${echapper(etat.contenu.reseaux[cle])}">
+      <input id="r-${cle}" type="url" inputmode="url" data-reseau="${cle}" value="${echapper(etat.contenu.reseaux[cle])}" placeholder="${cle === 'instagram' ? '' : 'Laisser vide si vous n’avez pas ce réseau'}">
       <a class="bouton bouton--discret" href="${echapper(etat.contenu.reseaux[cle])}" target="_blank" rel="noopener" data-tester="${cle}">Tester</a>
     </div>
-    <p class="message message--erreur" id="erreur-r-${cle}" hidden>Adresse incomplète : elle doit commencer par https://</p>`).join('');
+    <p class="message message--erreur" id="erreur-r-${cle}" ${reseauValide(cle, etat.contenu.reseaux[cle]) ? 'hidden' : ''}>Adresse incomplète : elle doit commencer par https://</p>`).join('');
 }
 
 $('#liste-horaires').addEventListener('change', (e) => {
@@ -979,9 +984,158 @@ $('#liste-reseaux').addEventListener('input', (e) => {
   if (!cle) return;
   etat.contenu.reseaux[cle] = e.target.value.trim();
   const ok = urlValide(e.target.value);
-  $(`#erreur-r-${cle}`).hidden = ok;
+  $(`#erreur-r-${cle}`).hidden = reseauValide(cle, e.target.value);
   $(`[data-tester="${cle}"]`).href = ok ? e.target.value.trim() : '#';
   changement({ regrouper: true });
+});
+
+// --- Menu et pied de page ----------------------------------------------------------
+
+let ficheNav = null; // copie de travail, appliquée au contenu seulement à « Valider »
+
+const nomPage = (v) => {
+  const [f, ancre] = String(v).split('#');
+  const n = (PAGES.find(([x]) => x === f) || [])[1] || f;
+  return ancre ? `${n} › ${ancre.replace(/-/g, ' ')}` : n;
+};
+// Choix de page : les pages du site, plus la destination actuelle si elle vise un endroit précis d'une page
+const optionsPage = (choisie) => [...PAGES.map(([f]) => f), ...(PAGES.some(([f]) => f === choisie) ? [] : [choisie])]
+  .map((v) => `<option value="${echapper(v)}" ${v === choisie ? 'selected' : ''}>${echapper(nomPage(v))}</option>`).join('');
+const ordre = (chemin, i, n) => `
+  <button type="button" class="bouton bouton--discret" data-nav-monter="${chemin}" data-i="${i}" aria-label="Monter" ${i === 0 ? 'disabled' : ''}>↑</button>
+  <button type="button" class="bouton bouton--discret" data-nav-descendre="${chemin}" data-i="${i}" aria-label="Descendre" ${i === n - 1 ? 'disabled' : ''}>↓</button>
+  <button type="button" class="bouton bouton--danger" data-nav-retirer="${chemin}" data-i="${i}" aria-label="Retirer">✕</button>`;
+
+function afficherNav() {
+  const n = ficheNav;
+  $('#nav-menu').innerHTML = n.menu.map((x, i) => `
+    <div class="ligne-nav" data-menu="${i}">
+      <input data-champ="texte" maxlength="30" value="${echapper(x.texte)}" aria-label="Nom du lien ${i + 1}">
+      <select data-champ="page" aria-label="Page du lien ${i + 1}">${optionsPage(x.page)}</select>
+      <span class="ligne-nav__ordre">${ordre('menu', i, n.menu.length)}</span>
+    </div>`).join('');
+  $('#nav-menu-ajouter').hidden = n.menu.length >= 7;
+  $('#nav-rdv-texte').value = n.rendezVous.texte;
+  $('#nav-rdv-court').value = n.rendezVous.court || '';
+  $('#nav-rdv-message').value = n.rendezVous.message;
+  $('#nav-invite').value = n.pied.invite;
+  $('#nav-presentation').value = n.pied.presentation;
+  $('#nav-infos').value = n.pied.infos.join('\n');
+  $('#nav-colonnes').innerHTML = n.pied.colonnes.map((c, ci) => `
+    <fieldset class="bloc-bouton" data-colonne="${ci}">
+      <legend>Colonne ${ci + 1}</legend>
+      <label>Titre de la colonne<input data-champ="titre" maxlength="40" value="${echapper(c.titre)}"></label>
+      ${c.liens.map((l, li) => `
+      <div class="ligne-nav" data-lien="${li}">
+        <input data-champ="texte" maxlength="40" value="${echapper(l.texte)}" aria-label="Texte du lien">
+        <select data-champ="type" aria-label="Destination">
+          <option value="page" ${l.lien.type === 'page' ? 'selected' : ''}>Page du site</option>
+          <option value="externe" ${l.lien.type === 'externe' ? 'selected' : ''}>Autre site</option>
+        </select>
+        ${l.lien.type === 'externe'
+          ? `<input data-champ="valeur" type="url" inputmode="url" placeholder="https://…" value="${echapper(l.lien.valeur)}" aria-label="Adresse du site">`
+          : `<select data-champ="valeur" aria-label="Page">${optionsPage(l.lien.valeur)}</select>`}
+        <span class="ligne-nav__ordre">${ordre(`col-${ci}`, li, c.liens.length)}</span>
+      </div>`).join('')}
+      <div class="ligne-nav__actions">
+        ${c.liens.length < 10 ? `<button type="button" class="bouton bouton--contour" data-nav-ajouter-lien="${ci}">＋ Ajouter un lien</button>` : ''}
+        <button type="button" class="bouton bouton--danger" data-nav-retirer-colonne="${ci}">Retirer la colonne</button>
+      </div>
+    </fieldset>`).join('');
+  $('#nav-colonne-ajouter').hidden = n.pied.colonnes.length >= 3;
+  $('#nav-erreur').hidden = true;
+}
+
+$('#ouvrir-nav').addEventListener('click', () => {
+  ficheNav = structuredClone(etat.contenu.navigation || etat.navDefaut);
+  afficherNav();
+  $('#fiche-nav').showModal();
+  $('#fiche-nav').scrollTop = 0;
+});
+
+// Chaque saisie met à jour la copie de travail (le contenu, lui, ne change qu'à « Valider »)
+$('#form-nav').addEventListener('input', (e) => {
+  const el = e.target;
+  const n = ficheNav;
+  const menu = el.closest('[data-menu]');
+  const colonne = el.closest('[data-colonne]');
+  const lien = el.closest('[data-lien]');
+  if (menu) n.menu[Number(menu.dataset.menu)][el.dataset.champ] = el.value;
+  else if (lien) {
+    const l = n.pied.colonnes[Number(colonne.dataset.colonne)].liens[Number(lien.dataset.lien)];
+    if (el.dataset.champ === 'texte') l.texte = el.value;
+    else if (el.dataset.champ === 'valeur') l.lien.valeur = el.value.trim();
+  } else if (colonne) n.pied.colonnes[Number(colonne.dataset.colonne)].titre = el.value;
+  else if (el.id === 'nav-rdv-texte') n.rendezVous.texte = el.value;
+  else if (el.id === 'nav-rdv-court') n.rendezVous.court = el.value;
+  else if (el.id === 'nav-rdv-message') n.rendezVous.message = el.value;
+  else if (el.id === 'nav-invite') n.pied.invite = el.value;
+  else if (el.id === 'nav-presentation') n.pied.presentation = el.value;
+  else if (el.id === 'nav-infos') n.pied.infos = el.value.split('\n').map((x) => x.trim()).filter(Boolean);
+});
+$('#form-nav').addEventListener('change', (e) => {
+  if (e.target.dataset.champ !== 'type') return;
+  const colonne = e.target.closest('[data-colonne]');
+  const l = ficheNav.pied.colonnes[Number(colonne.dataset.colonne)].liens[Number(e.target.closest('[data-lien]').dataset.lien)];
+  l.lien = e.target.value === 'externe' ? { type: 'externe', valeur: '' } : { type: 'page', valeur: 'index.html' };
+  afficherNav();
+});
+
+$('#form-nav').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const n = ficheNav;
+  const liste = (chemin) => (chemin === 'menu' ? n.menu : n.pied.colonnes[Number(chemin.slice(4))].liens);
+  const i = Number(b.dataset.i);
+  if (b.dataset.navMonter || b.dataset.navDescendre) {
+    const l = liste(b.dataset.navMonter || b.dataset.navDescendre);
+    const j = b.dataset.navMonter ? i - 1 : i + 1;
+    [l[i], l[j]] = [l[j], l[i]];
+  } else if (b.dataset.navRetirer) {
+    const l = liste(b.dataset.navRetirer);
+    if (b.dataset.navRetirer === 'menu' && l.length <= 2) { alert('Le menu doit garder au moins 2 liens.'); return; }
+    l.splice(i, 1);
+  } else if (b.dataset.navAjouterLien) {
+    n.pied.colonnes[Number(b.dataset.navAjouterLien)].liens.push({ texte: '', lien: { type: 'page', valeur: 'index.html' } });
+  } else if (b.dataset.navRetirerColonne) {
+    if (!confirm('Retirer cette colonne et tous ses liens ?')) return;
+    n.pied.colonnes.splice(Number(b.dataset.navRetirerColonne), 1);
+  } else if (b.id === 'nav-menu-ajouter') n.menu.push({ texte: '', page: 'index.html' });
+  else if (b.id === 'nav-colonne-ajouter') n.pied.colonnes.push({ titre: '', liens: [{ texte: '', lien: { type: 'page', valeur: 'index.html' } }] });
+  else if (b.id === 'nav-origine') {
+    if (!confirm('Remettre le menu et le pied de page d’origine ?')) return;
+    ficheNav = structuredClone(etat.navDefaut);
+  } else return;
+  afficherNav();
+  const champ = b.id === 'nav-menu-ajouter' ? $('#nav-menu .ligne-nav:last-child input') : b.dataset.navAjouterLien ? $$(`[data-colonne="${b.dataset.navAjouterLien}"] [data-lien]`).at(-1).querySelector("input") : null;
+  champ?.focus();
+});
+
+function verifierNav(n) {
+  if (n.menu.some((x) => !x.texte.trim())) return 'Chaque lien du menu a besoin d’un nom.';
+  if (!n.rendezVous.texte.trim()) return 'Le bouton de rendez-vous a besoin d’un texte.';
+  for (const c of n.pied.colonnes) {
+    if (!c.titre.trim()) return 'Chaque colonne du pied de page a besoin d’un titre.';
+    for (const l of c.liens) {
+      if (!l.texte.trim()) return `Un lien de la colonne « ${c.titre} » n’a pas de texte.`;
+      if (l.lien.type === 'externe' && !urlValide(l.lien.valeur)) return `Lien « ${l.texte} » : l’adresse doit être complète et commencer par https://`;
+    }
+  }
+  if (n.pied.infos.length > 5) return '5 lignes d’informations au maximum.';
+  return '';
+}
+
+$('#nav-valider').addEventListener('click', (e) => {
+  e.preventDefault();
+  const n = ficheNav;
+  n.menu.forEach((x) => { x.texte = x.texte.trim(); });
+  n.pied.colonnes.forEach((c) => { c.titre = c.titre.trim(); c.liens.forEach((l) => { l.texte = l.texte.trim(); }); });
+  const pb = verifierNav(n);
+  if (pb) { $('#nav-erreur').textContent = pb; $('#nav-erreur').hidden = false; return; }
+  if (JSON.stringify(n) === JSON.stringify(etat.navDefaut)) delete etat.contenu.navigation;
+  else etat.contenu.navigation = structuredClone(n);
+  $('#fiche-nav').close();
+  changement();
 });
 
 // --- Historique ------------------------------------------------------------------
@@ -1359,7 +1513,7 @@ function verifierAvantPublication() {
   const problemes = [];
   verifierTelephones();
   for (const cle of ['principal', 'secondaire']) if (!TEL.test(String(etat.contenu.telephones[cle]).trim())) problemes.push(`Téléphone ${cle === 'principal' ? 'principal' : 'secondaire'} incomplet (onglet Infos).`);
-  for (const [cle, nom] of Object.entries(RESEAUX)) if (!urlValide(etat.contenu.reseaux[cle])) problemes.push(`Lien ${nom} incomplet (onglet Infos).`);
+  for (const [cle, nom] of Object.entries(RESEAUX)) if (!reseauValide(cle, etat.contenu.reseaux[cle])) problemes.push(`Lien ${nom} incomplet (onglet Infos).`);
   for (const a of etat.contenu.annonces) { const e = verifierAnnonce(a); if (e && !(a.fin && a.fin < aujourdhui())) problemes.push(`Annonce « ${a.titre || a.texte} » : ${e}`); }
   return problemes;
 }

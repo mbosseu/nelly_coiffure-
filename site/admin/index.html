@@ -113,6 +113,11 @@
             <button type="button" role="radio" data-theme="bronze"><span style="--a:#9C7A45;--b:#D3B47E;--c:#75572B"></span>Bronze</button>
           </div>
         </div>
+        <h2 class="sous-titre">Menu et pied de page</h2>
+        <div class="carte">
+          <p class="aide aide--carte">Les liens du menu en haut des pages, le bouton « Prendre rendez-vous » et le contenu du pied de page (présent sur toutes les pages).</p>
+          <button class="bouton bouton--contour bouton--large" id="ouvrir-nav" type="button">Modifier le menu et le pied de page</button>
+        </div>
         <h2 class="sous-titre">Réseaux sociaux</h2>
         <div class="carte" id="liste-reseaux">
           <p class="aide aide--carte">Collez l’adresse complète de chaque compte (copiée depuis l’application, bouton « Partager le profil »). Elle remplace l’ancienne partout sur le site.</p>
@@ -290,6 +295,42 @@
         <span></span>
         <button class="bouton bouton--discret" value="annuler" formnovalidate>Fermer</button>
         <button class="bouton bouton--plein" id="section-valider" value="valider">Valider</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Menu et pied de page -->
+  <dialog class="fiche fiche--grande" id="fiche-nav">
+    <form method="dialog" id="form-nav" novalidate>
+      <h2>Menu et pied de page</h2>
+      <p class="etiquette">Menu (en haut de toutes les pages)</p>
+      <div id="nav-menu"></div>
+      <button type="button" class="bouton bouton--contour" id="nav-menu-ajouter">＋ Ajouter un lien au menu</button>
+
+      <p class="etiquette">Bouton « Prendre rendez-vous »</p>
+      <label for="nav-rdv-texte">Texte du bouton</label>
+      <input id="nav-rdv-texte" maxlength="30">
+      <label for="nav-rdv-court">Version courte (petits écrans)</label>
+      <input id="nav-rdv-court" maxlength="16">
+      <label for="nav-rdv-message">Message WhatsApp prérempli</label>
+      <input id="nav-rdv-message" maxlength="200">
+
+      <p class="etiquette">Pied de page</p>
+      <label for="nav-invite">Phrase d’invitation (*mot* pour le mettre en valeur)</label>
+      <input id="nav-invite" maxlength="140">
+      <label for="nav-presentation">Présentation sous le logo</label>
+      <textarea id="nav-presentation" maxlength="300" rows="3"></textarea>
+      <div id="nav-colonnes"></div>
+      <button type="button" class="bouton bouton--contour" id="nav-colonne-ajouter">＋ Ajouter une colonne de liens</button>
+      <label for="nav-infos">Informations sous les coordonnées (une par ligne, 5 au maximum)</label>
+      <textarea id="nav-infos" rows="3"></textarea>
+
+      <p class="message message--erreur" id="nav-erreur" role="alert" hidden></p>
+      <div class="fiche__actions">
+        <button class="bouton bouton--danger" id="nav-origine" type="button">Revenir à l’origine</button>
+        <span></span>
+        <button class="bouton bouton--discret" value="annuler" formnovalidate>Fermer</button>
+        <button class="bouton bouton--plein" id="nav-valider" value="valider">Valider</button>
       </div>
     </form>
   </dialog>

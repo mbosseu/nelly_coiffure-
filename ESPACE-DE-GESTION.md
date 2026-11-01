@@ -93,6 +93,12 @@ puis ouvrir http://localhost:5174/admin/ (mot de passe d'essai : `essai`). Le si
 - **Couleurs du site** (onglet Infos) : 4 palettes chaudes accordées au design (Cuivre d'origine, Or rose, Terracotta, Bronze). Elles redéfinissent `--copper`, `--copper-light` et `--accent` dans la zone `<!-- cms:theme -->` de chaque page.
 - Revenir à Cuivre et supprimer les sections ajoutées redonne exactement les pages d'origine.
 
+## Menu et pied de page (1er novembre 2026)
+
+- Onglet Infos → « Modifier le menu et le pied de page » : liens du menu (2 à 7, nom, page, ordre), textes du bouton « Prendre rendez-vous » et son message WhatsApp, phrase d'invitation et présentation du pied de page, colonnes de liens (jusqu'à 3 × 10, vers une page du site ou un autre site), lignes d'informations. « Revenir à l'origine » remet le site d'origine.
+- Stocké dans `contenu.navigation` (absent = valeurs par défaut de `api/_lib/navigation.mjs`, qui reproduisent le site d'origine) ; appliqué à toutes les pages par `appliquerNavigation`.
+- Réseaux : YouTube ajouté ; seul Instagram est obligatoire, un réseau laissé vide disparaît du pied de page et de la liste « Me suivre » de Contact (`<!-- cms:reseaux -->`).
+
 ## Test de simplicité avec Nelly (scénario 7, à faire avec elle)
 
 Sans lui expliquer l'application, lui demander, sur son téléphone :

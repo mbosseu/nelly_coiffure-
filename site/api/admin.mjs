@@ -1,5 +1,6 @@
 import { regenerer, verifierContenu, FICHIERS, PAGES, DOMAINE } from './_lib/regenerer.mjs';
 import { structurePage } from './_lib/pages.mjs';
+import { NAVIGATION_DEFAUT } from './_lib/navigation.mjs';
 import { createHash } from 'node:crypto';
 import { lireTexte, listerDossier, publier, historique, ErreurGithub } from './_lib/github.mjs';
 import { motDePasseValide, ouvrirSession, fermerSession, sessionValide } from './_lib/session.mjs';
@@ -55,7 +56,7 @@ export default async function handler(req, res) {
 
     if (action === 'contenu' && req.method === 'GET') {
       const { texte, sha } = await lireTexte(CONTENU);
-      return json(res, 200, { contenu: JSON.parse(texte), version: sha });
+      return json(res, 200, { contenu: JSON.parse(texte), version: sha, navigationDefaut: NAVIGATION_DEFAUT });
     }
     if (action === 'historique' && req.method === 'GET') {
       return json(res, 200, { versions: await historique(CONTENU) });
