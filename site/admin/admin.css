@@ -264,3 +264,13 @@ textarea { resize: vertical; min-height: 80px; }
 .fond-cta { position: relative; height: 120px; border-radius: 14px; overflow: hidden; background: #1A0D06; margin: 4px 0 12px; }
 .fond-cta img { width: 100%; height: 100%; object-fit: cover; opacity: .9; }
 .fond-cta::after { content: "Prendre rendez-vous"; position: absolute; inset: 0; display: grid; place-items: center; color: #FBF3EA; font-family: var(--serif, serif); font-size: 1.3rem; background: linear-gradient(90deg, rgba(26, 13, 6, .85), rgba(26, 13, 6, .25) 50%, rgba(26, 13, 6, .85)); }
+
+/* Disposition d'une section d'origine */
+.dispositions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0 4px; }
+.dispositions label { position: relative; margin: 0; }
+.dispositions input { position: absolute; opacity: 0; pointer-events: none; }
+.dispositions span { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 8px; border: 1px solid var(--line); border-radius: 14px; background: var(--cream-card); font-size: .85rem; font-weight: 500; text-align: center; cursor: pointer; }
+.dispositions input:checked + span { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.dispositions input:focus-visible + span { outline: 2px solid var(--copper); outline-offset: 2px; }
+.dispo { display: block; width: 64px; height: 38px; border-radius: 6px; background: linear-gradient(90deg, #E8D6C4 0 45%, transparent 45% 55%, #8E5B3C 55%); }
+.dispo--inverse { background: linear-gradient(90deg, #8E5B3C 0 45%, transparent 45% 55%, #E8D6C4 55%); }

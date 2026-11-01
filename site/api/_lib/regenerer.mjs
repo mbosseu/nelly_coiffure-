@@ -676,6 +676,7 @@ export function verifierPages(pages) {
     }
     if (p.ordre && !(Array.isArray(p.ordre) && p.ordre.every((id) => /^(s\d+|a-[a-z0-9-]+)$/.test(id)))) erreurs.push(`${nom} : ordre des sections illisible.`);
     if (p.masquees && !(Array.isArray(p.masquees) && p.masquees.every((id) => /^(s\d+|a-[a-z0-9-]+)$/.test(id)))) erreurs.push(`${nom} : sections masquées illisibles.`);
+    if (p.inversees && !(Array.isArray(p.inversees) && p.inversees.every((id) => /^s\d+$/.test(id)))) erreurs.push(`${nom} : sections inversées illisibles.`);
   }
   return erreurs;
 }

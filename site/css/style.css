@@ -1395,3 +1395,31 @@ main > section[hidden] { display: none !important; }
 @media (max-width: 600px) { .promo__grille--2 { grid-template-columns: minmax(0, 1fr); } }
 .promo--fond-sombre .promo__carte .body, .promo--fond-sombre .body { color: rgba(246, 236, 226, .78); }
 .promo--fond-sombre .title { color: var(--cream); }
+
+/* =====================================================================
+   Sections inversées depuis l'espace de gestion (image et texte changent de côté, sur ordinateur)
+   ===================================================================== */
+@media (min-width: 1025px) {
+  .page-hero[data-inverse] .page-hero__inner { grid-template-columns: .9fr 1.1fr; }
+  .page-hero[data-inverse] .page-hero__media { order: -1; justify-self: start; margin: 0 0 0 4%; }
+  .page-hero[data-inverse] .page-hero__text { padding: 0 2.5% 0 0; }
+  .page-hero[data-inverse]::before { right: auto; left: -180px; }
+  .page-hero[data-inverse] .arch-line { left: -22px; transform: scaleX(-1); }
+  .page-hero[data-inverse] .seal { left: auto; right: -62px; }
+
+  .realisations[data-inverse] .realisations__inner { grid-template-columns: 1.5fr 1.08fr; }
+  .realisations[data-inverse] .realisations__text { order: 2; padding: 0 2.5% 0 0; }
+
+  .story[data-inverse], [data-inverse] .story { grid-template-columns: 1.1fr .9fr; }
+  [data-inverse] .story__quote { order: 2; }
+
+  /* L'image (avec sa courbe et ses dégradés) est retournée en bloc ; la photo et la liste sont remises à l'endroit */
+  .univers[data-inverse] .univers__media { left: 0; right: 45%; transform: scaleX(-1); }
+  .univers[data-inverse] .univers__img img, .univers[data-inverse] .univers__list { transform: scaleX(-1); }
+  .univers[data-inverse] .univers__text { margin-left: auto; max-width: 540px; padding: 96px 2.5% 90px 0; }
+
+  .experience[data-inverse] .experience__media { left: auto; right: 0; transform: scaleX(-1); }
+  .experience[data-inverse] .experience__img img { transform: scaleX(-1); }
+  .experience[data-inverse] .experience__script { transform: scaleX(-1) rotate(-9deg); }
+  .experience[data-inverse] .experience__inner { justify-content: flex-start; }
+}

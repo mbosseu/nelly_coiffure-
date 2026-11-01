@@ -1332,7 +1332,7 @@ const nettoyerPage = (f = pageEnCours()) => {
   const p = etat.contenu.pages[f];
   if (!p) return;
   for (const k of ['textes', 'images', 'boutons']) if (p[k] && !Object.keys(p[k]).length) delete p[k];
-  for (const k of ['ordre', 'masquees']) if (p[k] && !p[k].length) delete p[k];
+  for (const k of ['ordre', 'masquees', 'inversees']) if (p[k] && !p[k].length) delete p[k];
   if (!Object.keys(p).length) delete etat.contenu.pages[f];
 };
 
@@ -1361,7 +1361,7 @@ function afficherSections() {
       <li class="${s.masquee ? 'est-masque' : ''}">
         ${vignette}
         <button type="button" class="liste__texte" data-section="${i}">
-          <strong>${echapper(s.titre)}${s.masquee ? '<span class="badge">masquée</span>' : ''}</strong>
+          <strong>${echapper(s.titre)}${s.masquee ? '<span class="badge">masquée</span>' : ''}${s.inversee ? '<span class="badge">inversée</span>' : ''}</strong>
           <small>${s.ajout ? `${FORMATS[etat.contenu.annonces.find((a) => a.id === s.ajout)?.format] || 'Section'} · ajoutée par vous` : details || 'Section décorative'}</small>
         </button>
         ${s.premiere ? '<span class="pastille pastille--gris">fixe</span>' : `
@@ -1460,7 +1460,15 @@ function ouvrirSection(index) {
       <label data-b-champ="externe">Adresse du site<input data-b-valeur="externe" type="url" inputmode="url" placeholder="https://…" value="${echapper(type === 'externe' ? valeur : '')}"></label>
     </fieldset>`;
   }).join('');
+  const disposition = s.inversible ? `
+    <p class="etiquette">Disposition</p>
+    <div class="dispositions" role="radiogroup" aria-label="Disposition de la section">
+      <label><input type="radio" name="disposition" value="origine" ${s.inversee ? '' : 'checked'}><span><i class="dispo dispo--origine" aria-hidden="true"></i>Comme à l’origine</span></label>
+      <label><input type="radio" name="disposition" value="inverse" ${s.inversee ? 'checked' : ''}><span><i class="dispo dispo--inverse" aria-hidden="true"></i>Image et texte inversés</span></label>
+    </div>
+    <p class="aide aide--petite">Sur ordinateur, l’image et le texte changent de côté. Sur téléphone, ils restent l’un sous l’autre.</p>` : '';
   $('#section-champs').innerHTML = [
+    disposition,
     textes && `<p class="etiquette">Textes</p>${textes}`,
     images && `<p class="etiquette">Images</p>${images}`,
     boutons && `<p class="etiquette">Boutons</p>${boutons}`,
@@ -1582,6 +1590,12 @@ $('#form-section').addEventListener('submit', (e) => {
     if (m) { m.alt = $(`[data-alt="${im.id}"]`).value.trim(); images[im.id] = m; } else delete images[im.id];
   }
   p.textes = textes; p.boutons = boutons; p.images = images;
+  const dispo = $('[name="disposition"]:checked', $('#section-champs'));
+  if (dispo) {
+    const inv = new Set(p.inversees || []);
+    if (dispo.value === 'inverse') inv.add(s.id); else inv.delete(s.id);
+    p.inversees = [...inv];
+  }
   nettoyerPage();
   changement();
   chargerSections();

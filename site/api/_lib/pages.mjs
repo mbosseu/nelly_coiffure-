@@ -3,12 +3,18 @@
 // 1. marquer() repère, dans <main>, les sections (data-s), les textes simples (data-t), les images (data-i) et les
 //    boutons (data-b). Les identifiants sont stables d'une génération à l'autre. Les zones gérées ailleurs
 //    (<!-- cms:… -->, prix, pseudos, titre H1 lié au référencement) ne sont pas touchées.
-// 2. appliquerPages() applique contenu.pages[fichier] : { textes, images, boutons, ordre, masquees }.
+// 2. appliquerPages() applique contenu.pages[fichier] : { textes, images, boutons, ordre, masquees, inversees }.
 // 3. structurePage() décrit la page pour l'espace de gestion (sections et leurs éléments modifiables).
 // Les attributs data-* sont invisibles pour les visiteurs et sans effet sur le référencement.
 
 const TEXTES = /<(h2|h3|h4|p|li|dt|dd|summary|figcaption|span|small|blockquote)\b([^>]*)>((?:[^<]|<br\s*\/?>|<\/?(?:em|strong|sup|i|b)>)+?)<\/\1>/g;
 const IMAGES = /<img\b([^>]*)>/g;
+// Sections d'origine à deux colonnes dont l'image et le texte peuvent changer de côté (sur ordinateur, voir style.css)
+export function inversible(t) {
+  const ouv = t.slice(0, t.indexOf('>'));
+  if (/class="page-hero\b/.test(ouv)) return t.includes('page-hero__media');
+  return /class="(?:univers|realisations|experience)"/.test(ouv) || t.includes('class="container story"');
+}
 const BOUTONS = /<a\b([^>]*\bclass="[^"]*\bbtn\b[^"]*"[^>]*)>([\s\S]*?)<\/a>/g;
 
 const echapper = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -160,10 +166,12 @@ function ordonner(h, p) {
   const blocs = [...main.matchAll(re)].map((m) => ({ texte: m[0], index: m.index, id: attr(m[0].slice(0, m[0].indexOf('>')), 'data-s') }));
   if (blocs.length < 2) return h;
   const masquees = new Set(p.masquees || []);
+  const inversees = new Set(p.inversees || []);
   const visibilite = (t, id) => {
     const ouv = t.slice(0, t.indexOf('>') + 1);
     // Seul le masquage posé ici est retiré (une annonce programmée garde son « hidden » de date)
-    let n = ouv.replace(/ hidden data-masquee="1"/g, '');
+    let n = ouv.replace(/ hidden data-masquee="1"/g, '').replace(/ data-inverse="1"/g, '');
+    if (inversees.has(id) && inversible(t)) n = n.replace(/>$/, ' data-inverse="1">');
     if (masquees.has(id)) n = n.replace(/>$/, ' hidden data-masquee="1">');
     return n + t.slice(ouv.length);
   };
@@ -204,6 +212,6 @@ export function structurePage(h) {
       .map((x) => ({ id: attr(x[1], 'data-b'), texte: versSaisie((decouperBouton(x[2]) || [])[2] || ''), href: decoder(attr(x[1], 'href') || ''), wa: decoder(attr(x[1], 'data-wa') || '') }));
     const titre = textes.find((x) => x.type === 'titre')?.texte || textes.find((x) => x.type !== 'petit-titre')?.texte || `Section ${i + 1}`;
     const nom = i === 0 ? 'En-tête de la page' : attr(ouv, 'data-ajout') ? decoder(attr(ouv, 'aria-label') || 'Section ajoutée') : titre.replace(/\*/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 70);
-    return { id: attr(ouv, 'data-s'), ajout: attr(ouv, 'data-ajout') || null, premiere: i === 0, masquee: /data-masquee="1"/.test(ouv), titre: nom, textes, images, boutons };
+    return { id: attr(ouv, 'data-s'), ajout: attr(ouv, 'data-ajout') || null, premiere: i === 0, masquee: /data-masquee="1"/.test(ouv), inversible: !attr(ouv, 'data-ajout') && inversible(t), inversee: /data-inverse="1"/.test(ouv), titre: nom, textes, images, boutons };
   });
 }
