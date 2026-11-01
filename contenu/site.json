@@ -1,10 +1,11 @@
 {
   "annonces": [],
   "reseaux": {
-    "instagram": "https://www.instagram.com/nellycoiffure237/",
+    "instagram": "https://www.instagram.com/djonelly?cplk=NnpnYzI1N3J1cGRv&utm_source=qr",
     "tiktok": "https://www.tiktok.com/@nellycoiffure237",
     "facebook": "https://www.facebook.com/share/1CFM1XgV6n/",
-    "snapchat": "https://snapchat.com/t/rsEMEsWo"
+    "snapchat": "https://snapchat.com/t/rsEMEsWo",
+    "youtube": ""
   },
   "telephones": {
     "principal": "06 04 02 32 90",
@@ -14,38 +15,38 @@
     {
       "jour": "lundi",
       "etat": "ouvert",
-      "debut": "09:00",
-      "fin": "19:00"
+      "debut": "08:00",
+      "fin": "20:00"
     },
     {
       "jour": "mardi",
       "etat": "ouvert",
-      "debut": "09:00",
-      "fin": "19:00"
+      "debut": "08:00",
+      "fin": "20:00"
     },
     {
       "jour": "mercredi",
       "etat": "ouvert",
-      "debut": "09:00",
-      "fin": "19:00"
+      "debut": "08:00",
+      "fin": "20:00"
     },
     {
       "jour": "jeudi",
       "etat": "ouvert",
-      "debut": "09:00",
-      "fin": "19:00"
+      "debut": "08:00",
+      "fin": "20:00"
     },
     {
       "jour": "vendredi",
       "etat": "ouvert",
-      "debut": "09:00",
-      "fin": "19:00"
+      "debut": "08:00",
+      "fin": "20:00"
     },
     {
       "jour": "samedi",
       "etat": "ouvert",
       "debut": "08:00",
-      "fin": "18:00"
+      "fin": "20:00"
     },
     {
       "jour": "dimanche",
