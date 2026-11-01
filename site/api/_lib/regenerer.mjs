@@ -554,7 +554,7 @@ export function regenerer(fichiers, contenu, { ancien, aujourdhui = new Date().t
   // Version du CSS et du JS dans leurs adresses : chaque modification force les téléphones à recharger la nouvelle version
   const versions = {};
   for (const res of ['css/style.css', 'js/main.js']) {
-    if (sortie[res] !== undefined) versions[res] = createHash('sha1').update(sortie[res]).digest('hex').slice(0, 10);
+    if (sortie[res] !== undefined) versions[res] = createHash('sha1').update(sortie[res].replace(/\r\n/g, '\n')).digest('hex').slice(0, 10);
   }
   for (const f of [...Object.keys(PAGES), 'tarifs.html']) {
     if (sortie[f] === undefined) continue;
