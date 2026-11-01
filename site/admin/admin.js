@@ -2229,25 +2229,42 @@ const ICONES = {
   palette: svg('<path d="M12 3.5a8.5 8.5 0 100 17c1.2 0 1.8-.8 1.8-1.7 0-1.2-1-1.6-1-2.6 0-.9.7-1.5 1.7-1.5H17a3.5 3.5 0 003.5-3.5c0-4.4-3.8-7.7-8.5-7.7z"/><circle cx="8" cy="11" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/>'),
 };
 
+// Tableau de bord : une action principale mise en avant, puis les autres par thème (tuiles)
 const TACHES = [
-  ['plume', 'Modifier un texte ou une photo', 'Directement sur vos pages', () => ouvrirOnglet('pages')],
-  ['plus', 'Ajouter une section à une page', 'Promo, information, points forts…', () => { ouvrirOnglet('pages'); setTimeout(() => ouvrirModeles(sections[sections.length - 1]?.id || 'fin'), 400); }],
-  ['annonce', 'Annoncer une promo ou une info', 'Sur une ou plusieurs pages, avec des dates', () => { ouvrirOnglet('annonces'); $('#ajouter-annonce').click(); }],
-  ['ciseaux', 'Changer un prix ou une coiffure', 'Onglet Coiffures', () => ouvrirOnglet('coiffures')],
-  ['photo', 'Ajouter des photos de mes réalisations', 'Recadrées automatiquement', () => ouvrirOnglet('photos')],
-  ['horloge', 'Horaires, téléphone, réseaux', 'Onglet Infos', () => ouvrirOnglet('infos')],
-  ['palette', 'Couleurs, logo, menu', 'L’allure générale du site', () => { ouvrirOnglet('infos'); setTimeout(() => $('#palettes').scrollIntoView({ block: 'center' }), 100); }],
+  { icone: 'plume', titre: 'Modifier mes pages', aide: 'Touchez un texte ou une photo de votre site pour le changer, directement.', vedette: true, action: () => ouvrirOnglet('pages') },
+  { groupe: 'Mettre en avant', icone: 'plus', titre: 'Ajouter une section', aide: 'Promo, information, points forts', action: () => { ouvrirOnglet('pages'); setTimeout(() => ouvrirModeles(sections[sections.length - 1]?.id || 'fin'), 400); } },
+  { groupe: 'Mettre en avant', icone: 'annonce', titre: 'Annoncer une promo', aide: 'Sur une ou plusieurs pages, avec des dates', action: () => { ouvrirOnglet('annonces'); $('#ajouter-annonce').click(); } },
+  { groupe: 'Mon salon', icone: 'ciseaux', titre: 'Prix et coiffures', aide: 'Tarifs, descriptions, photos', action: () => ouvrirOnglet('coiffures') },
+  { groupe: 'Mon salon', icone: 'photo', titre: 'Mes réalisations', aide: 'Ajouter vos dernières photos', action: () => ouvrirOnglet('photos') },
+  { groupe: 'Mon salon', icone: 'horloge', titre: 'Horaires et contact', aide: 'Jours, téléphone, réseaux', action: () => ouvrirOnglet('infos') },
+  { groupe: 'Mon salon', icone: 'palette', titre: 'Style du site', aide: 'Couleurs, logo, menu', action: () => { ouvrirOnglet('infos'); setTimeout(() => $('#palettes').scrollIntoView({ block: 'center' }), 100); } },
 ];
-$('#taches').innerHTML = TACHES.map(([icone, titre, aide], i) => `<button type="button" class="tache" data-tache="${i}"><span class="tache__icone">${ICONES[icone]}</span><strong>${titre}</strong><small>${aide}</small></button>`).join('');
+const FLECHE = svg('<path d="M5 12h14M13 6l6 6-6 6"/>');
+function afficherTaches() {
+  const tuile = (t, i) => `<button type="button" class="tache${t.vedette ? ' tache--vedette' : ''}" data-tache="${i}">
+      <span class="tache__icone">${ICONES[t.icone]}</span>
+      <span class="tache__texte"><strong>${t.titre}</strong><small>${t.aide}</small></span>
+      <span class="tache__fleche">${t.vedette ? '<em>Commencer</em>' : ''}${FLECHE}</span>
+    </button>`;
+  const groupes = [...new Set(TACHES.filter((t) => t.groupe).map((t) => t.groupe))];
+  $('#taches').innerHTML = TACHES.map((t, i) => (t.vedette ? tuile(t, i) : '')).join('')
+    + groupes.map((g) => `<section class="taches__groupe"><h3>${g}</h3><div class="taches__grille">${TACHES.map((t, i) => (t.groupe === g ? tuile(t, i) : '')).join('')}</div></section>`).join('');
+}
+afficherTaches();
 $('#taches').addEventListener('click', (e) => {
   const b = e.target.closest('[data-tache]');
   if (!b) return;
   $('#fiche-accueil').close();
-  TACHES[Number(b.dataset.tache)][3]();
+  TACHES[Number(b.dataset.tache)].action();
 });
 $('#accueil-masquer').addEventListener('change', (e) => { try { localStorage.setItem(CLE_ACCUEIL, e.target.checked ? '1' : ''); } catch { /* sans effet */ } });
 function ouvrirAccueil() {
   try { $('#accueil-masquer').checked = localStorage.getItem(CLE_ACCUEIL) === '1'; } catch { /* sans effet */ }
+  const date = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  $('#accueil-date').textContent = date.charAt(0).toUpperCase() + date.slice(1);
+  const n = modifie() ? resumeModifications().length || 1 : 0;
+  $('#accueil-etat').textContent = n ? `${n} modification${n > 1 ? 's' : ''} en attente de publication` : 'Votre site est à jour';
+  $('#accueil-etat').classList.toggle('accueil__etat--attente', Boolean(n));
   $('#fiche-accueil').showModal();
 }
 $('#ouvrir-accueil')?.addEventListener('click', () => { $('#fiche-compte').close(); ouvrirAccueil(); });

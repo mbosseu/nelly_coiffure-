@@ -354,3 +354,83 @@ textarea { resize: vertical; min-height: 80px; }
 .onglets button span svg { width: 22px; height: 22px; }
 .onglets button[aria-current="page"] span { color: var(--copper); }
 .onglets button[aria-current="page"] { color: var(--ink); }
+
+/* =====================================================================
+   Tableau de bord d'accueil : bandeau, action principale, tuiles par thème
+   ===================================================================== */
+.accueil { border: 0; padding: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; background: var(--cream); color: var(--text); overflow-y: auto; }
+.accueil[open] { display: flex; flex-direction: column; animation: accueil-entree .35s ease-out; }
+.accueil::backdrop { background: var(--ink); }
+@keyframes accueil-entree { from { opacity: 0; transform: translateY(12px); } }
+.accueil__haut { position: relative; overflow: hidden; padding: calc(28px + var(--haut)) 24px 64px; background: radial-gradient(120% 140% at 100% 0%, #4A2C1C 0%, #2A1810 45%, var(--ink) 100%); color: var(--cream); }
+.accueil__haut::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; border: 1px solid rgba(221, 174, 134, .25); box-shadow: 0 0 0 26px rgba(221, 174, 134, .05), 0 0 0 60px rgba(221, 174, 134, .03); pointer-events: none; }
+.accueil__fermer { position: absolute; top: calc(14px + var(--haut)); right: 14px; z-index: 1; width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(246, 236, 226, .25); background: transparent; color: var(--cream); font-size: .95rem; cursor: pointer; }
+.accueil__date { font-size: .7rem; letter-spacing: .22em; text-transform: uppercase; color: var(--copper); margin-bottom: 10px; }
+#accueil-titre { font-family: var(--serif); font-weight: 400; font-size: clamp(2.2rem, 7vw, 3rem); line-height: 1.05; color: var(--cream); }
+.accueil__intro { margin-top: 8px; font-size: 1rem; color: rgba(246, 236, 226, .78); }
+.accueil__etat { display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; padding: 6px 14px 6px 10px; border-radius: 99px; background: rgba(246, 236, 226, .08); border: 1px solid rgba(246, 236, 226, .14); font-size: .78rem; color: rgba(246, 236, 226, .9); }
+.accueil__etat::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #7FC29B; box-shadow: 0 0 0 3px rgba(127, 194, 155, .2); }
+.accueil__etat--attente::before { background: #E3A46F; box-shadow: 0 0 0 3px rgba(227, 164, 111, .25); }
+.accueil__corps { position: relative; flex: 1; width: 100%; max-width: 860px; margin: -40px auto 0; padding: 0 16px calc(28px + var(--bas)); }
+
+.accueil .taches { display: block; margin: 0; }
+.accueil .tache { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 0; width: 100%; min-height: 0; padding: 18px; border: 1px solid var(--line); border-radius: 20px; background: #fff; text-align: left; font: inherit; color: var(--text); cursor: pointer; box-shadow: 0 1px 0 rgba(255, 255, 255, .8) inset, 0 10px 24px -20px rgba(60, 30, 15, .5); transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease; }
+.accueil .tache:hover, .accueil .tache:focus-visible { transform: translateY(-3px); border-color: rgba(181, 122, 80, .6); box-shadow: 0 18px 34px -22px rgba(60, 30, 15, .6); outline: none; }
+.accueil .tache:active { transform: scale(.98); }
+.accueil .tache__icone { grid-row: auto; width: 46px; height: 46px; margin-bottom: 16px; display: grid; place-items: center; border-radius: 14px; background: linear-gradient(145deg, #F7E9DC, #EFDCCB); color: var(--accent); }
+.accueil .tache__icone svg { width: 23px; height: 23px; }
+.tache__texte { display: flex; flex-direction: column; gap: 4px; padding-right: 10px; }
+.accueil .tache strong { font-family: var(--serif); font-weight: 400; font-size: 1.22rem; line-height: 1.2; color: var(--ink); }
+.accueil .tache small { font-size: .78rem; line-height: 1.45; color: #7A675A; }
+.tache__fleche { position: absolute; top: 18px; right: 18px; display: inline-flex; align-items: center; gap: 8px; color: var(--copper); opacity: .7; transition: transform .25s ease, opacity .25s ease; }
+.tache__fleche svg { width: 18px; height: 18px; }
+.accueil .tache:hover .tache__fleche { transform: translateX(3px); opacity: 1; }
+
+/* Action principale */
+.accueil .tache--vedette { flex-direction: row; align-items: center; gap: 16px; padding: 22px 20px; border: 0; background: linear-gradient(120deg, #B57A50 0%, #9A6240 100%); color: #fff; box-shadow: 0 22px 40px -22px rgba(120, 60, 25, .8); }
+.accueil .tache--vedette .tache__icone { flex-shrink: 0; margin: 0; width: 56px; height: 56px; border-radius: 18px; background: rgba(255, 255, 255, .16); color: #fff; }
+.accueil .tache--vedette .tache__icone svg { width: 27px; height: 27px; }
+.accueil .tache--vedette strong { color: #fff; font-size: 1.45rem; }
+.accueil .tache--vedette small { color: rgba(255, 255, 255, .85); font-size: .82rem; }
+.accueil .tache--vedette .tache__texte { flex: 1; padding-right: 0; }
+.accueil .tache--vedette .tache__fleche { position: static; flex-shrink: 0; padding: 10px 14px; border-radius: 99px; background: #fff; color: var(--accent); opacity: 1; }
+.tache__fleche em { font-style: normal; font-weight: 600; font-size: .82rem; }
+
+/* Groupes de tuiles */
+.taches__groupe { margin-top: 26px; }
+.taches__groupe h3 { display: flex; align-items: center; gap: 12px; margin: 0 4px 12px; font-size: .68rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--accent); }
+.taches__groupe h3::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.taches__grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (min-width: 720px) {
+  .accueil__haut { padding: calc(44px + var(--haut)) 40px 76px; text-align: left; }
+  .accueil__fermer { right: 24px; }
+  .taches__groupe:last-of-type .taches__grille { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+@media (max-width: 380px) { .accueil .tache { padding: 15px; } .accueil .tache strong { font-size: 1.08rem; } }
+
+.accueil__pied { margin-top: 28px; padding: 18px; border-radius: 18px; background: var(--cream-card); border: 1px solid var(--line); }
+.accueil__rassurer { font-size: .84rem; line-height: 1.5; padding-left: 12px; border-left: 2px solid var(--copper); }
+.accueil__liens { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 16px; margin-top: 14px; }
+.accueil__liens .interrupteur { margin: 0; font-size: .8rem; font-weight: 400; }
+.accueil__liens .bouton { min-height: 40px; }
+
+/* Modèles de section : grille aussi sur téléphone */
+@media (max-width: 520px) {
+  .modeles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .modele { padding: 10px; }
+  .modele .mini { height: 42px; }
+  .modele strong { font-size: 1rem; }
+  .modele small { font-size: .72rem; }
+}
+
+.accueil__haut, .accueil__corps { flex-shrink: 0; }
+.accueil__contenu { position: relative; z-index: 1; max-width: 828px; margin: 0 auto; }
+.accueil__etat { width: fit-content; }
+@media (max-width: 719px) {
+  .accueil .tache--vedette { flex-direction: column; align-items: flex-start; gap: 14px; padding: 22px; }
+  .accueil .tache--vedette .tache__fleche { align-self: stretch; justify-content: center; padding: 12px 16px; }
+  .accueil .tache--vedette .tache__fleche em { display: inline; }
+  .accueil .tache--vedette .tache__icone { width: 50px; height: 50px; }
+}
+.modele small { color: #7A675A; font-weight: 400; }
+.modele:last-child:nth-child(odd) { grid-column: 1 / -1; }

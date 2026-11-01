@@ -433,13 +433,25 @@
   </dialog>
 
   <!-- Accueil et visite guidée -->
-  <dialog class="fiche fiche--grande" id="fiche-accueil">
-    <div>
-      <h2 id="accueil-titre">Bonjour Nelly</h2>
-      <p class="aide">Que voulez-vous faire aujourd’hui ? Rien n’est mis en ligne tant que vous n’appuyez pas sur <strong>Publier</strong> : vous pouvez essayer sans risque.</p>
+  <dialog class="accueil" id="fiche-accueil">
+    <div class="accueil__haut">
+      <button class="accueil__fermer" type="button" data-fermer aria-label="Fermer l’accueil">✕</button>
+      <div class="accueil__contenu">
+        <p class="accueil__date" id="accueil-date"></p>
+        <h2 id="accueil-titre">Bonjour Nelly</h2>
+        <p class="accueil__intro">Que souhaitez-vous faire aujourd’hui ?</p>
+        <p class="accueil__etat" id="accueil-etat"></p>
+      </div>
+    </div>
+    <div class="accueil__corps">
       <div class="taches" id="taches"></div>
-      <label class="interrupteur"><input type="checkbox" id="accueil-masquer"><span>Ne plus afficher cet écran à l’ouverture</span></label>
-      <div class="fiche__actions"><button class="bouton bouton--discret" type="button" id="lancer-visite">Visite guidée</button><span></span><button class="bouton bouton--discret" type="button" data-fermer>Fermer</button></div>
+      <div class="accueil__pied">
+        <p class="accueil__rassurer">Rien n’est mis en ligne tant que vous n’appuyez pas sur <strong>Publier</strong> : vous pouvez essayer sans risque.</p>
+        <div class="accueil__liens">
+          <button class="bouton bouton--contour" type="button" id="lancer-visite">Visite guidée</button>
+          <label class="interrupteur"><input type="checkbox" id="accueil-masquer"><span>Ne plus afficher à l’ouverture</span></label>
+        </div>
+      </div>
     </div>
   </dialog>
   <div class="visite" id="visite" hidden>
