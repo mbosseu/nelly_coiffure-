@@ -66,6 +66,18 @@ function afficherConnexion(message = '') {
   $('#mdp').focus();
 }
 
+// Afficher ou masquer le mot de passe pendant la saisie
+function voirMotDePasse(visible) {
+  $('#mdp').type = visible ? 'text' : 'password';
+  $('#voir-mdp').setAttribute('aria-pressed', String(visible));
+  $('#voir-mdp').setAttribute('aria-label', visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+  $('#voir-mdp-texte').textContent = visible ? 'Masquer' : 'Afficher';
+}
+$('#voir-mdp').addEventListener('click', () => {
+  voirMotDePasse($('#mdp').type === 'password');
+  $('#mdp').focus();
+});
+
 $('#form-connexion').addEventListener('submit', async (e) => {
   e.preventDefault();
   const bouton = $('#form-connexion button');
@@ -75,6 +87,7 @@ $('#form-connexion').addEventListener('submit', async (e) => {
   try {
     await api('connexion', { methode: 'POST', corps: { motDePasse: $('#mdp').value } });
     $('#mdp').value = '';
+    voirMotDePasse(false);
     await demarrer();
   } catch (err) {
     erreur.textContent = err.message;
@@ -209,6 +222,7 @@ function majBarre() {
   $('#barre-publier').hidden = !modifie() && !etat.defaire.length;
   $('#nb-modifs').textContent = modifie() ? `${n || 1} modification${n > 1 ? 's' : ''}` : 'Aucune modification';
   $('#nb-modifs-court').textContent = modifie() ? `${n || 1} à publier` : '';
+  if (modifie()) proposerDemoPublier();
   $('#publier').disabled = !modifie();
   $('#ouvrir-apercu').disabled = !modifie();
   $('#defaire').disabled = !etat.defaire.length;
@@ -1540,7 +1554,7 @@ function ouvrirSection(index) {
   $('#section-champs').innerHTML = [
     disposition,
     textes && `<p class="etiquette">Textes</p>${textes}`,
-    images && `<p class="etiquette">Images</p>${images}`,
+    images && `<p class="etiquette">Images <button class="lien-demo" type="button" data-voir-demo="photo">▶ Comment changer une photo</button></p>${images}`,
     boutons && `<p class="etiquette">Boutons</p>${boutons}`,
   ].filter(Boolean).join('') || '<p class="aide">Cette section est décorative : elle n’a pas de texte modifiable. Vous pouvez la déplacer ou la masquer depuis la liste.</p>';
   $$('#section-champs .bloc-bouton').forEach(majBouton);
@@ -2288,7 +2302,7 @@ function ouvrirAccueil() {
 $('#ouvrir-accueil')?.addEventListener('click', () => { $('#fiche-compte').close(); ouvrirAccueil(); });
 $('#ouvrir-visite')?.addEventListener('click', () => { $('#fiche-compte').close(); lancerVisite(); });
 $('#lancer-visite').addEventListener('click', () => { $('#fiche-accueil').close(); lancerVisite(); });
-$('#editeur-aide').addEventListener('click', () => lancerVisite(VISITE_EDITEUR));
+$('#editeur-aide').addEventListener('click', () => ouvrirAide());
 const CLE_CONSEIL = 'nc_conseil_vu';
 try { $('#editeur-conseil').hidden = localStorage.getItem(CLE_CONSEIL) === '1'; } catch { /* sans effet */ }
 $('#conseil-compris').addEventListener('click', () => {
@@ -2350,6 +2364,204 @@ function finirVisite() {
 }
 $('#visite-suivant').addEventListener('click', () => { if (++visite.i >= visite.etapes.length) finirVisite(); else afficherEtape(); });
 $('#visite-fin').addEventListener('click', finirVisite);
+
+// --- Démonstrations animées ------------------------------------------------------------
+// Une mini-maquette de l'écran, un doigt qui montre les gestes, une phrase par étape.
+// Chaque étape : légende, élément à toucher (data-d), puis une action sur la maquette.
+
+const pauseDemo = (ms) => new Promise((r) => { demo.minuteries.push(setTimeout(r, ms)); });
+const demo = { cle: null, jeton: 0, minuteries: [] };
+
+// Petits outils pour écrire les scènes
+const D = {
+  el: (nom) => $(`#demo [data-d="${nom}"]`),
+  montrer: (nom, oui = true) => D.el(nom)?.classList.toggle('d-visible', oui),
+  classe: (nom, c, oui = true) => D.el(nom)?.classList.toggle(c, oui),
+  async taper(nom, texte, jeton) {
+    const el = D.el(nom);
+    el.textContent = '';
+    for (const lettre of texte) { if (jeton !== demo.jeton) return; el.textContent += lettre; await pauseDemo(55); }
+  },
+  // Déplacement fluide d'un élément dans la liste (il glisse à sa nouvelle place)
+  deplacer(nom, avantNom, apres = false) {
+    const el = D.el(nom); const ref = D.el(avantNom);
+    const blocs = [...el.parentElement.children];
+    const avant = new Map(blocs.map((b) => [b, b.getBoundingClientRect().top]));
+    if (apres) ref.after(el); else ref.before(el);
+    for (const b of blocs) {
+      const dy = avant.get(b) - b.getBoundingClientRect().top;
+      if (!dy) continue;
+      b.style.transition = 'none'; b.style.transform = `translateY(${dy}px)`;
+      requestAnimationFrame(() => requestAnimationFrame(() => { b.style.transition = 'transform .7s cubic-bezier(.2,.8,.2,1)'; b.style.transform = ''; }));
+    }
+  },
+};
+
+const ECRAN_SITE = (contenu) => `<div class="d-ecran"><div class="d-entete"><span class="d-logo">Nelly</span><span class="d-menu"></span></div>${contenu}</div>`;
+const DEMOS = {
+  texte: {
+    titre: 'Modifier un texte', resume: 'Toucher, écrire, valider',
+    scene: ECRAN_SITE(`
+      <div class="d-bloc"><span class="d-sur">Nos coiffures</span><p class="d-titre d-modifiable" data-d="titre">Des styles pour chaque personnalité</p><span class="d-ligne"></span><span class="d-ligne d-ligne--courte"></span></div>
+      <div class="d-bloc d-bloc--photo"><span class="d-photo"></span></div>`)
+      + '<div class="d-outils-texte" data-d="barre"><span>✦ Couleur</span><span>Annuler</span><b data-d="ok">✓ Terminé</b></div><div class="d-toast" data-d="toast">✓ Texte modifié</div>',
+    etapes: [
+      { legende: 'Les textes entourés de pointillés se modifient : touchez celui que vous voulez changer.', doigt: 'titre', toucher: true, action: () => { D.classe('titre', 'd-actif'); D.montrer('barre'); } },
+      { legende: 'Écrivez votre nouveau texte, comme dans un message.', action: (j) => D.taper('titre', 'Offre spéciale de Noël', j) },
+      { legende: 'Touchez « Terminé » pour valider.', doigt: 'ok', toucher: true, action: () => { D.classe('titre', 'd-actif', false); D.montrer('barre', false); D.montrer('toast'); } },
+      { legende: 'C’est noté ! Il restera à appuyer sur « Publier » pour le mettre en ligne.', attente: 2600 },
+    ],
+  },
+  deplacer: {
+    titre: 'Déplacer une section', resume: 'Monter, descendre ou glisser',
+    scene: ECRAN_SITE(`<div class="d-pile">
+      <div class="d-bloc d-bloc--sombre" data-d="a"><span class="d-etiquette">Bienvenue</span></div>
+      <div class="d-bloc" data-d="b"><span class="d-etiquette">Nos coiffures</span><span class="d-ligne"></span></div>
+      <div class="d-bloc" data-d="c"><span class="d-etiquette">Avis de mes clientes</span><span class="d-ligne"></span></div>
+      <div class="d-bloc" data-d="d"><span class="d-etiquette">Prendre rendez-vous</span><span class="d-ligne"></span></div></div>`)
+      + '<div class="d-outils" data-d="outils"><span data-d="monter">↑ Monter</span><span>↓ Descendre</span><span data-d="glisser">⠿ Glisser</span><span>Masquer</span></div><div class="d-repere" data-d="repere"></div>',
+    etapes: [
+      { legende: 'Touchez le fond de la section à déplacer : elle s’entoure et une barre d’outils apparaît.', doigt: 'c', toucher: true, action: () => { D.classe('c', 'd-choisie'); D.montrer('outils'); } },
+      { legende: 'Touchez « Monter » : la section passe au-dessus de la précédente.', doigt: 'monter', toucher: true, action: () => D.deplacer('c', 'b') },
+      { legende: 'Pour aller plus loin, maintenez le doigt sur « Glisser »…', doigt: 'glisser', appui: true },
+      { legende: '… faites glisser jusqu’à l’endroit voulu : un trait montre où elle sera posée…', doigtVers: 'd', decalage: 0.55, action: () => { D.montrer('outils', false); const r = D.el('d').getBoundingClientRect(); const z = $('#demo').getBoundingClientRect(); const rep = D.el('repere'); rep.style.top = `${r.bottom - z.top + 3}px`; D.montrer('repere'); } },
+      { legende: '… et relâchez. C’est tout !', relacher: true, action: () => { D.montrer('repere', false); D.deplacer('c', 'd', true); } },
+    ],
+  },
+  ajouter: {
+    titre: 'Ajouter une section', resume: 'Choisir un modèle et l’écrire',
+    scene: ECRAN_SITE(`<div class="d-pile" data-d="pile">
+      <div class="d-bloc" data-d="b"><span class="d-etiquette">Nos coiffures</span><span class="d-ligne"></span></div>
+      <div class="d-plus" data-d="plus">＋ Ajouter une section ici</div>
+      <div class="d-bloc" data-d="c"><span class="d-etiquette">Avis de mes clientes</span><span class="d-ligne"></span></div></div>`)
+      + `<div class="d-feuille" data-d="feuille"><p class="d-feuille__titre">Ajouter une section</p><div class="d-modeles">
+        <span><i class="d-mini d-mini--photo"></i>Photo et texte</span><span data-d="seul"><i class="d-mini d-mini--texte"></i>Texte seul</span>
+        <span><i class="d-mini d-mini--cartes"></i>Trois points forts</span><span><i class="d-mini d-mini--appel"></i>Bande « Réservez »</span></div></div>
+      <div class="d-bloc d-bloc--nouveau" data-d="nouveau"><span class="d-sur">Information</span><p class="d-titre d-modifiable" data-d="ntitre">Votre titre ici</p><span class="d-ligne d-ligne--courte"></span></div>`,
+    etapes: [
+      { legende: 'Entre deux sections, touchez « ＋ Ajouter une section ici ».', doigt: 'plus', toucher: true, action: () => D.montrer('feuille') },
+      { legende: 'Choisissez un modèle. Ici : « Texte seul », pour une information.', doigt: 'seul', toucher: true, cacherDoigt: true, action: () => { D.montrer('feuille', false); const n = D.el('nouveau'); D.el('plus').after(n); n.classList.add('d-visible'); } },
+      { legende: 'La section apparaît avec un texte d’exemple : touchez-le…', doigt: 'ntitre', toucher: true, action: () => D.classe('ntitre', 'd-actif') },
+      { legende: '… et écrivez le vôtre. La mise en page est déjà prête.', action: async (j) => { await D.taper('ntitre', 'Fermé le 25 décembre', j); D.classe('ntitre', 'd-actif', false); } },
+      { legende: 'Tant qu’un texte d’exemple reste, l’application vous le rappelle avant de publier.', attente: 2600 },
+    ],
+  },
+  photo: {
+    titre: 'Changer une photo', resume: 'Remplacer et cadrer',
+    scene: ECRAN_SITE(`<div class="d-bloc d-bloc--photo"><span class="d-photo" data-d="photo"></span><span class="d-ligne"></span></div><div class="d-bloc"><span class="d-ligne"></span><span class="d-ligne d-ligne--courte"></span></div>`)
+      + `<div class="d-feuille" data-d="fiche"><p class="d-feuille__titre">Modifier la section</p><span class="d-cadre" data-d="cadre"><span class="d-cadre__img" data-d="cadreimg"></span></span>
+        <div class="d-boutons"><span data-d="remplacer">Remplacer</span><span>＋</span><span>－</span></div><b class="d-valider" data-d="valider">Valider</b></div>
+      <div class="d-galerie" data-d="galerie"><p>Vos photos</p><div><span class="d-vignette d-vignette--1"></span><span class="d-vignette d-vignette--2" data-d="choix"></span><span class="d-vignette d-vignette--3"></span></div></div>`,
+    etapes: [
+      { legende: 'Touchez la photo que vous voulez changer.', doigt: 'photo', toucher: true, action: () => D.montrer('fiche') },
+      { legende: 'Touchez « Remplacer »…', doigt: 'remplacer', toucher: true, action: () => D.montrer('galerie') },
+      { legende: '… et choisissez une photo de votre téléphone.', doigt: 'choix', toucher: true, cacherDoigt: true, action: () => { D.montrer('galerie', false); D.classe('cadreimg', 'd-nouvelle'); } },
+      { legende: 'Faites glisser la photo avec le doigt pour bien la cadrer.', doigt: 'cadre', appui: true },
+      { legende: 'Elle suit votre doigt : gardez le visage bien au centre.', doigtVers: 'cadre', decalageX: -0.28, action: () => D.classe('cadreimg', 'd-decalee') },
+      { legende: 'Touchez « Valider » : la nouvelle photo est en place.', relacher: true, doigt: 'valider', toucher: true, cacherDoigt: true, action: () => { D.montrer('fiche', false); D.classe('photo', 'd-nouvelle'); } },
+    ],
+  },
+  publier: {
+    titre: 'Vérifier et publier', resume: 'Aperçu puis mise en ligne',
+    scene: ECRAN_SITE(`<div class="d-bloc"><p class="d-titre">Offre spéciale de Noël</p><span class="d-ligne"></span></div><div class="d-bloc d-bloc--photo"><span class="d-photo"></span></div>`)
+      + `<div class="d-publier"><span class="d-rond">↶</span><small>2 à publier</small><span data-d="apercu">Aperçu</span><b data-d="publier">Publier</b></div>
+      <div class="d-apercu" data-d="vue"><p>Aperçu de vos modifications</p><span class="d-apercu__page"></span></div>
+      <div class="d-feuille" data-d="confirmer"><p class="d-feuille__titre" data-d="ctitre">Publier sur le site ?</p><p class="d-liste" data-d="cliste">• Texte modifié<br>• Photo changée</p><b class="d-valider" data-d="go">Publier</b></div>`,
+    etapes: [
+      { legende: 'Vos changements restent en brouillon, en sécurité sur votre téléphone. Touchez « Aperçu » pour voir le résultat.', doigt: 'apercu', toucher: true, action: () => D.montrer('vue') },
+      { legende: 'Vous voyez la page exactement comme vos clientes la verront.', attente: 2200, action: () => D.montrer('vue', false) },
+      { legende: 'Tout est bon ? Touchez « Publier ».', doigt: 'publier', toucher: true, cacherDoigt: true, action: () => D.montrer('confirmer') },
+      { legende: 'L’application résume ce qui change. Touchez « Publier » pour confirmer.', doigt: 'go', toucher: true, cacherDoigt: true, action: () => { D.el('ctitre').textContent = 'C’est envoyé ✓'; D.el('cliste').textContent = 'Votre site sera à jour dans une minute environ.'; D.montrer('go', false); D.classe('go', 'd-cache'); } },
+      { legende: 'Une erreur ? Rien n’est perdu : l’onglet Historique permet de revenir en arrière.', attente: 2800 },
+    ],
+  },
+};
+
+function afficherListeDemos() {
+  $('#demos-liste').innerHTML = Object.entries(DEMOS).map(([cle, d], i) => `
+    <button type="button" class="demo-carte" data-demo="${cle}">
+      <span class="demo-carte__num">${i + 1}</span>
+      <span class="demo-carte__texte"><strong>${d.titre}</strong><small>${d.resume}</small></span>
+      <span class="demo-carte__jouer" aria-hidden="true">▶</span>
+    </button>`).join('');
+}
+afficherListeDemos();
+
+function ouvrirAide() { $('#fiche-aide').showModal(); }
+$('#accueil-demos').addEventListener('click', () => { $('#fiche-accueil').close(); ouvrirAide(); });
+$('#ouvrir-demos').addEventListener('click', () => { $('#fiche-compte').close(); ouvrirAide(); });
+$('#demos-liste').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-demo]');
+  if (b) { $('#fiche-aide').close(); ouvrirDemo(b.dataset.demo); }
+});
+$('#aide-visite').addEventListener('click', () => { $('#fiche-aide').close(); lancerVisite(VISITE_EDITEUR); });
+
+function arreterDemo() {
+  demo.jeton++;
+  demo.minuteries.forEach(clearTimeout);
+  demo.minuteries = [];
+}
+
+function ouvrirDemo(cle) {
+  demo.cle = cle;
+  $('#demo-titre').textContent = DEMOS[cle].titre;
+  if (!$('#fiche-demo').open) $('#fiche-demo').showModal();
+  jouerDemo();
+}
+
+async function jouerDemo() {
+  arreterDemo();
+  const jeton = demo.jeton;
+  const d = DEMOS[demo.cle];
+  const zone = $('#demo');
+  zone.innerHTML = `${d.scene}<span class="demo__doigt" id="demo-doigt"></span>`;
+  $('#demo-points').innerHTML = d.etapes.map(() => '<i></i>').join('');
+  const doigt = $('#demo-doigt');
+  const viser = (nom, dx = 0.5, dy = 0.5) => {
+    const el = D.el(nom); if (!el) return;
+    const r = el.getBoundingClientRect(); const z = zone.getBoundingClientRect();
+    doigt.style.left = `${r.left - z.left + r.width * dx}px`;
+    doigt.style.top = `${r.top - z.top + r.height * dy}px`;
+    doigt.classList.add('d-visible');
+  };
+  doigt.style.left = '78%'; doigt.style.top = '92%';
+  await pauseDemo(500);
+  for (const [i, e] of d.etapes.entries()) {
+    if (jeton !== demo.jeton) return;
+    $('#demo-num').textContent = `${i + 1}/${d.etapes.length}`;
+    $('#demo-legende').textContent = e.legende;
+    $$('#demo-points i').forEach((p, k) => p.classList.toggle('actif', k <= i));
+    if (e.relacher) doigt.classList.remove('d-appui');
+    if (e.doigt) { viser(e.doigt); await pauseDemo(950); }
+    if (e.doigtVers) { viser(e.doigtVers, 0.5 + (e.decalageX || 0), e.decalage ?? 0.5); await pauseDemo(1100); }
+    if (e.appui) { doigt.classList.add('d-appui'); await pauseDemo(500); }
+    if (e.toucher) { doigt.classList.remove('d-tape'); void doigt.offsetWidth; doigt.classList.add('d-tape'); await pauseDemo(350); }
+    if (jeton !== demo.jeton) return;
+    if (e.action) await e.action(jeton);
+    if (e.cacherDoigt || (!e.doigt && !e.doigtVers && !e.appui)) doigt.classList.remove('d-visible');
+    // Temps de lecture : au moins 3 s, plus pour les phrases longues
+    await pauseDemo(e.attente ?? Math.max(3000, e.legende.length * 38));
+  }
+  if (jeton === demo.jeton) $('#demo-revoir').focus({ preventScroll: true });
+}
+
+$('#demo-revoir').addEventListener('click', jouerDemo);
+$('#demo-compris').addEventListener('click', () => $('#fiche-demo').close());
+$('#demo-autres').addEventListener('click', () => { $('#fiche-demo').close(); ouvrirAide(); });
+$('#fiche-demo').addEventListener('close', arreterDemo);
+
+function proposerDemoPublier() {
+  try { if (localStorage.getItem('nc_demo_publier')) return; localStorage.setItem('nc_demo_publier', '1'); } catch { return; }
+  setTimeout(() => notifier('Première modification ! Elle reste en brouillon jusqu’à « Publier ».', { libelle: '▶ Voir comment', action: () => ouvrirDemo('publier') }), 3400);
+}
+
+// Raccourcis « Voir la démo » placés aux endroits où l'on en a besoin
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-voir-demo]');
+  if (!b) return;
+  e.preventDefault();
+  ouvrirDemo(b.dataset.voirDemo);
+});
 
 // Prévenir avant de quitter avec des images non publiées (elles ne sont pas gardées sur l'appareil)
 window.addEventListener('beforeunload', (e) => { if (modifie() && [...etat.nouvelles.values()].some((p) => p.grand)) { e.preventDefault(); e.returnValue = ''; } });

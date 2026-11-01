@@ -26,7 +26,13 @@
     <p class="message" id="message-connexion" hidden></p>
     <form id="form-connexion">
       <label for="mdp">Mot de passe</label>
-      <input id="mdp" type="password" autocomplete="current-password" required>
+      <div class="champ-mdp">
+        <input id="mdp" type="password" autocomplete="current-password" required>
+        <button type="button" class="champ-mdp__voir" id="voir-mdp" aria-label="Afficher le mot de passe" aria-pressed="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/><path class="champ-mdp__barre" d="M4 4l16 16"/></svg>
+          <span id="voir-mdp-texte">Afficher</span>
+        </button>
+      </div>
       <button class="bouton bouton--plein" type="submit">Se connecter</button>
       <p class="message message--erreur" id="erreur-connexion" role="alert" hidden></p>
     </form>
@@ -64,7 +70,7 @@
           <button class="bouton bouton--contour editeur__petit" id="editeur-plan" type="button" title="Liste des sections, à réorganiser par glisser-déposer">Plan</button>
           <button class="bouton bouton--discret editeur__petit" id="editeur-aide" type="button">Aide</button>
         </div>
-        <p class="editeur__conseil" id="editeur-conseil">Touchez un <strong>texte</strong> pour l’écrire, une <strong>photo</strong> pour la changer, le <strong>fond d’une section</strong> pour la déplacer, et <strong>＋</strong> pour ajouter une section. <button class="lien-discret" id="conseil-compris" type="button">Compris</button></p>
+        <p class="editeur__conseil" id="editeur-conseil">Touchez un <strong>texte</strong> pour l’écrire, une <strong>photo</strong> pour la changer, le <strong>fond d’une section</strong> pour la déplacer, et <strong>＋</strong> pour ajouter une section. <button class="lien-discret" type="button" data-voir-demo="texte">▶ Voir la démo</button> <button class="lien-discret" id="conseil-compris" type="button">Compris</button></p>
         <div class="editeur__zone" id="editeur-zone">
           <p class="editeur__chargement" id="editeur-chargement"><span class="chargement"></span> Ouverture de la page…</p>
           <iframe class="editeur__cadre" id="editeur-cadre" title="Votre page, modifiable" sandbox="allow-scripts allow-same-origin"></iframe>
@@ -193,6 +199,7 @@
       <p class="aide">Vous êtes connectée à l’espace de gestion de <strong>Nelly Coiffure</strong>. La connexion reste active 30 jours sur cet appareil.</p>
       <div class="menu-compte">
         <button class="bouton bouton--plein bouton--large" id="ouvrir-accueil" type="button">Que voulez-vous faire ?</button>
+        <button class="bouton bouton--contour bouton--large" id="ouvrir-demos" type="button">▶ Démonstrations animées</button>
         <button class="bouton bouton--contour bouton--large" id="ouvrir-visite" type="button">Visite guidée de l’application</button>
         <a class="bouton bouton--contour bouton--large" href="/" target="_blank" rel="noopener">Voir le site</a>
         <button class="bouton bouton--contour bouton--large" id="installer" type="button" hidden>Installer l’application sur ce téléphone</button>
@@ -415,7 +422,7 @@
   <dialog class="fiche" id="fiche-plan">
     <div>
       <h2>Plan de la page</h2>
-      <p class="aide">Faites glisser une section par sa poignée <strong>⠿</strong> pour changer l’ordre. L’œil la masque ou la réaffiche. Touchez son nom pour la modifier.</p>
+      <p class="aide">Faites glisser une section par sa poignée <strong>⠿</strong> pour changer l’ordre. L’œil la masque ou la réaffiche. Touchez son nom pour la modifier. <button class="lien-demo" type="button" data-voir-demo="deplacer">▶ Voir la démo</button></p>
       <ul class="liste liste--sections" id="liste-sections"></ul>
       <button class="bouton bouton--plein bouton--large" id="ajouter-section" type="button">＋ Ajouter une section à la fin</button>
       <div class="fiche__actions"><span></span><button class="bouton bouton--plein" type="button" data-fermer>Terminé</button></div>
@@ -426,7 +433,7 @@
   <dialog class="fiche fiche--grande" id="fiche-modeles">
     <div>
       <h2>Ajouter une section</h2>
-      <p class="aide">Choisissez un modèle : il est ajouté avec un texte d’exemple, que vous remplacez ensuite directement sur la page.</p>
+      <p class="aide">Choisissez un modèle : il est ajouté avec un texte d’exemple, que vous remplacez ensuite directement sur la page. <button class="lien-demo" type="button" data-voir-demo="ajouter">▶ Voir la démo</button></p>
       <div class="modeles" id="modeles"></div>
       <div class="fiche__actions"><span></span><button class="bouton bouton--discret" type="button" data-fermer>Annuler</button></div>
     </div>
@@ -448,7 +455,7 @@
       <div class="accueil__pied">
         <p class="accueil__rassurer">Rien n’est mis en ligne tant que vous n’appuyez pas sur <strong>Publier</strong> : vous pouvez essayer sans risque.</p>
         <div class="accueil__liens">
-          <button class="bouton bouton--contour" type="button" id="lancer-visite">Visite guidée</button>
+          <span class="accueil__aides"><button class="bouton bouton--plein" type="button" id="accueil-demos">▶ Démonstrations</button><button class="bouton bouton--contour" type="button" id="lancer-visite">Visite guidée</button></span>
           <label class="interrupteur"><input type="checkbox" id="accueil-masquer"><span>Ne plus afficher à l’ouverture</span></label>
         </div>
       </div>
@@ -461,6 +468,31 @@
       <div class="visite__actions"><button class="bouton bouton--discret" type="button" id="visite-fin">Passer</button><button class="bouton bouton--plein" type="button" id="visite-suivant">Suivant</button></div>
     </div>
   </div>
+
+  <!-- Aide : démonstrations animées -->
+  <dialog class="fiche fiche--grande" id="fiche-aide">
+    <div>
+      <h2>Comment faire ?</h2>
+      <p class="aide">Choisissez une action : une courte animation vous montre les gestes, étape par étape.</p>
+      <div class="demos-liste" id="demos-liste"></div>
+      <div class="fiche__actions"><button class="bouton bouton--discret" type="button" id="aide-visite">Visite guidée de l’application</button><span></span><button class="bouton bouton--plein" type="button" data-fermer>Fermer</button></div>
+    </div>
+  </dialog>
+  <dialog class="fiche fiche--grande demo-fiche" id="fiche-demo">
+    <div>
+      <p class="demo-fiche__sur">Démonstration</p>
+      <h2 id="demo-titre"></h2>
+      <div class="demo" id="demo" aria-hidden="true"></div>
+      <div class="demo__legende" aria-live="polite"><span class="demo__num" id="demo-num"></span><p id="demo-legende"></p></div>
+      <div class="demo__points" id="demo-points"></div>
+      <div class="fiche__actions">
+        <button class="bouton bouton--discret" type="button" id="demo-revoir">↺ Revoir</button>
+        <span></span>
+        <button class="bouton bouton--contour" type="button" id="demo-autres">Autres démos</button>
+        <button class="bouton bouton--plein" type="button" id="demo-compris">J’ai compris</button>
+      </div>
+    </div>
+  </dialog>
 
   <!-- Message bref après une action -->
   <p class="toast" id="toast" role="status" hidden></p>
