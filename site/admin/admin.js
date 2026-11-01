@@ -285,6 +285,7 @@ function ouvrirOnglet(nom) {
   $('#titre-onglet').textContent = TITRES[nom];
   if (nom === 'historique') afficherHistorique();
   document.body.classList.toggle('mode-editeur', nom === 'pages');
+  $('#toast').hidden = true;
   if (nom === 'pages') { ajusterEditeur(); chargerSections(); }
   window.scrollTo(0, 0);
 }
@@ -1692,9 +1693,24 @@ function pageConseillee() {
 }
 
 // Page générée → affichable ici : liens relatifs au site, images pas encore publiées affichées depuis l'appareil
+// (adresses « blob: » et non « data: » : la virgule d'une adresse data: casse les listes srcset des images)
+const adressesBlob = new Map();
+function adresseBlob(dataUrl) {
+  if (!adressesBlob.has(dataUrl)) {
+    const [entete, base64] = dataUrl.split(',');
+    const octets = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+    adressesBlob.set(dataUrl, URL.createObjectURL(new Blob([octets], { type: entete.slice(5).split(';')[0] })));
+  }
+  return adressesBlob.get(dataUrl);
+}
 function preparerPage(html, extra = '') {
-  let page = html.replace('<head>', `<head><base href="/" target="_blank">${extra}`);
-  for (const [img, p] of etat.nouvelles) if (p.apercu) page = page.split(`${img}-sm.jpg`).join(p.apercu).split(`${img}.jpg`).join(p.apercu).split(`${img}-clair.png`).join(p.apercuClair || p.apercu).split(`${img}.png`).join(p.apercu);
+  let page = html.replace('<head>', `<head><base href="${location.origin}/" target="_blank">${extra}`);
+  for (const [img, p] of etat.nouvelles) {
+    if (!p.apercu) continue;
+    const a = adresseBlob(p.apercu);
+    const clair = p.apercuClair ? adresseBlob(p.apercuClair) : a;
+    page = page.split(`${img}-sm.jpg`).join(a).split(`${img}.jpg`).join(a).split(`${img}-clair.png`).join(clair).split(`${img}.png`).join(a);
+  }
   return page;
 }
 
@@ -1824,7 +1840,9 @@ $('#fiche-publier').addEventListener('click', async (e) => {
 // ouvrir sa fiche, le fond d'une section pour la déplacer (flèches ou glisser), « ＋ » pour en ajouter une.
 // Les modifications utilisent les mêmes données que les fiches (contenu.pages, annonces) : rien de spécial à publier.
 
-const ed = { ecran: 'mobile', defilement: 0, choisie: null };
+// Sur un grand écran, l'éditeur montre d'abord la version ordinateur
+const ed = { ecran: window.innerWidth >= 1000 ? 'ordinateur' : 'mobile', defilement: 0, choisie: null };
+$$('[data-ed-ecran]').forEach((x) => x.setAttribute('aria-checked', String(x.dataset.edEcran === ed.ecran)));
 
 // Styles ajoutés à la page dans l'éditeur seulement (jamais publiés)
 const STYLE_EDITEUR = `<style id="style-editeur">
