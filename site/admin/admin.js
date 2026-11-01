@@ -1,42 +1,66 @@
 // Espace de gestion de Nelly Coiffure.
-// Les modifications restent sur le téléphone (brouillon) jusqu'à « Publier » : l'API régénère alors le site
-// et Vercel le remet en ligne en une minute environ.
+// Les modifications restent sur l'appareil (brouillon) jusqu'à « Publier » : l'API régénère alors le site
+// et Vercel le remet en ligne en une minute environ. « Aperçu » montre la page générée sans rien publier.
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-const JOURS = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const DOSSIER = 'img/realisations/catalogue';
 const MAX_ENVOI = 3.6 * 1024 * 1024; // marge sous la limite de 4,5 Mo d'une requête Vercel
 const CLE_BROUILLON = 'nc_brouillon';
+const TEL = /^0[1-9](?:[ .]?\d{2}){4}$/;
+const RESEAUX = { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat' };
+const PAGES = [
+  ['index.html', 'Accueil'], ['coiffures.html', 'Coiffures et tarifs'], ['realisations.html', 'Réalisations'],
+  ['a-propos.html', 'À propos'], ['contact.html', 'Contact'], ['knotless-braids-marseille.html', 'Knotless braids'],
+  ['locks-marseille.html', 'Locks'], ['tresses-enfant-marseille.html', 'Tresses enfant'],
+  ['coiffure-afro-domicile-marseille.html', 'Coiffure à domicile'], ['conseils-tresses-africaines.html', 'Conseils tresses'],
+];
+const FORMATS = { section: 'Grande section', carte: 'Carte', encadre: 'Encadré', bandeau: 'Bandeau' };
 
 const etat = {
   base: null, // contenu publié (dernière version chargée)
   contenu: null, // contenu en cours de modification
-  version: null, // empreinte du contenu publié, pour éviter d'écraser une publication faite ailleurs
-  nouvelles: new Map(), // image → { grand, petit (base64), apercu (URL) } pour les photos pas encore publiées
-  onglet: 'annonce',
+  version: null, // empreinte du contenu publié, pour ne pas écraser une publication faite ailleurs
+  nouvelles: new Map(), // image → { grand, petit (base64), apercu (URL), largeur, hauteur } pas encore publiées
+  onglet: 'annonces',
+  defaire: [], // états précédents (annuler / rétablir)
+  refaire: [],
+  instantane: null,
+  dernierAjout: 0,
 };
 
 // --- API -------------------------------------------------------------------------
 
 async function api(action, { methode = 'GET', corps, params = '' } = {}) {
-  const r = await fetch(`/api/admin?action=${action}${params}`, {
-    method: methode,
-    credentials: 'same-origin',
-    headers: corps ? { 'Content-Type': 'application/json', 'X-Nelly-Admin': '1' } : { 'X-Nelly-Admin': '1' },
-    body: corps ? JSON.stringify(corps) : undefined,
-  });
+  let r;
+  try {
+    r = await fetch(`/api/admin?action=${action}${params}`, {
+      method: methode,
+      credentials: 'same-origin',
+      headers: corps ? { 'Content-Type': 'application/json', 'X-Nelly-Admin': '1' } : { 'X-Nelly-Admin': '1' },
+      body: corps ? JSON.stringify(corps) : undefined,
+    });
+  } catch {
+    throw new Error('Pas de connexion internet. Vos modifications sont gardées sur cet appareil : réessayez dès que le réseau revient.');
+  }
   const donnees = await r.json().catch(() => ({}));
-  if (r.status === 401 && action !== 'connexion') { afficherConnexion(); throw new Error(donnees.erreur || 'Session expirée.'); }
+  if (r.status === 401 && action !== 'connexion') {
+    afficherConnexion('Votre session a expiré. Reconnectez-vous : vos modifications non publiées sont conservées.');
+    throw new Error(donnees.erreur || 'Session expirée.');
+  }
+  if (r.status === 413) throw new Error('L’envoi est trop lourd. Publiez moins de photos à la fois.');
   if (!r.ok) throw new Error(donnees.erreur || `Erreur ${r.status}`);
   return donnees;
 }
 
 // --- Démarrage et connexion -------------------------------------------------------
 
-function afficherConnexion() {
+function afficherConnexion(message = '') {
+  $$('dialog[open]').forEach((d) => d.close());
   $('#appli').hidden = true;
   $('#connexion').hidden = false;
+  $('#message-connexion').textContent = message;
+  $('#message-connexion').hidden = !message;
   $('#mdp').focus();
 }
 
@@ -58,60 +82,148 @@ $('#form-connexion').addEventListener('submit', async (e) => {
   }
 });
 
-$('#deconnexion').addEventListener('click', async () => {
-  if (modifie() && !confirm('Des modifications ne sont pas publiées. Elles resteront sur ce téléphone. Se déconnecter ?')) return;
-  await api('deconnexion', { methode: 'POST', corps: {} }).catch(() => {});
-  afficherConnexion();
-});
-
 async function demarrer() {
   const { contenu, version } = await api('contenu');
+  normaliser(contenu);
   etat.base = contenu;
   etat.version = version;
   etat.contenu = structuredClone(contenu);
-  // Brouillon non publié gardé sur ce téléphone (les nouvelles photos, elles, ne survivent pas à la fermeture)
+  // Brouillon non publié gardé sur cet appareil (les nouvelles images, elles, ne survivent pas à la fermeture)
   try {
     const b = JSON.parse(localStorage.getItem(CLE_BROUILLON) || 'null');
     if (b && b.version === version && JSON.stringify(b.contenu) !== JSON.stringify(contenu)) {
       etat.contenu = b.contenu;
-      const perdues = imagesUtilisees(etat.contenu).filter((img) => !imagesUtilisees(etat.base).includes(img));
-      if (perdues.length) {
-        etat.contenu.photos = etat.contenu.photos.filter((p) => !perdues.includes(p.image));
-        etat.contenu.services = etat.contenu.services.filter((s) => !perdues.includes(s.photo));
-        setTimeout(() => alert('Certaines photos ajoutées avant la fermeture de l’application n’avaient pas été publiées. Ajoutez-les de nouveau.'), 300);
-      }
+      normaliser(etat.contenu);
+      if (retirerImagesPerdues()) setTimeout(() => alert('Certaines images ajoutées avant la fermeture de l’application n’avaient pas été publiées. Ajoutez-les de nouveau.'), 300);
     }
   } catch { /* stockage indisponible : on repart du contenu publié */ }
+  etat.defaire = [];
+  etat.refaire = [];
+  etat.instantane = JSON.stringify(etat.contenu);
   $('#connexion').hidden = true;
   $('#appli').hidden = false;
   toutAfficher();
 }
 
-// --- Brouillon et barre de publication --------------------------------------------
+// Contenu des anciennes versions (une seule annonce texte, pas de réseaux) → format actuel
+function normaliser(c) {
+  if (!Array.isArray(c.annonces)) {
+    const a = c.annonce || {};
+    c.annonces = String(a.texte || '').trim() ? [{ id: 'annonce-1', active: !!a.active, format: 'bandeau', titre: '', texte: a.texte, pages: ['toutes'] }] : [];
+  }
+  delete c.annonce;
+  c.reseaux = c.reseaux || {
+    instagram: 'https://www.instagram.com/nellycoiffure237/', tiktok: 'https://www.tiktok.com/@nellycoiffure237',
+    facebook: 'https://www.facebook.com/share/1CFM1XgV6n/', snapchat: 'https://snapchat.com/t/rsEMEsWo',
+  };
+  return c;
+}
+
+function retirerImagesPerdues() {
+  const connues = new Set(imagesUtilisees(etat.base));
+  const perdues = imagesUtilisees(etat.contenu).filter((img) => !connues.has(img) && !etat.nouvelles.has(img));
+  if (!perdues.length) return false;
+  etat.contenu.photos = etat.contenu.photos.filter((p) => !perdues.includes(p.image));
+  etat.contenu.services = etat.contenu.services.filter((s) => !perdues.includes(s.photo));
+  etat.contenu.annonces.forEach((a) => { if (a.image && perdues.includes(a.image.src)) a.image = null; });
+  return true;
+}
+
+// --- Mon compte ------------------------------------------------------------------
+
+let invitationInstallation = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); invitationInstallation = e; });
+const estInstallee = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const estIphone = () => /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+$('#ouvrir-compte').addEventListener('click', () => {
+  $('#installer').hidden = estInstallee() || !invitationInstallation;
+  $('#aide-iphone').hidden = estInstallee() || !estIphone();
+  $('#fiche-compte').showModal();
+});
+$('#installer').addEventListener('click', async () => {
+  if (!invitationInstallation) return;
+  invitationInstallation.prompt();
+  await invitationInstallation.userChoice.catch(() => {});
+  invitationInstallation = null;
+  $('#installer').hidden = true;
+});
+$('#deconnexion').addEventListener('click', async () => {
+  if (modifie() && !confirm('Des modifications ne sont pas publiées. Elles resteront sur cet appareil jusqu’à votre prochaine connexion. Se déconnecter ?')) return;
+  try {
+    await api('deconnexion', { methode: 'POST', corps: {} });
+  } catch (err) {
+    alert(`La déconnexion n’a pas pu être confirmée : ${err.message}`);
+    return;
+  }
+  afficherConnexion('Vous êtes déconnectée.');
+});
+
+// --- Brouillon, annuler / rétablir, barre de publication ---------------------------
 
 const modifie = () => etat.contenu && JSON.stringify(etat.contenu) !== JSON.stringify(etat.base);
 
-function changement() {
+// À appeler après chaque modification : mémorise l'état précédent pour « Annuler »
+// (les frappes rapprochées dans un même champ comptent comme une seule action)
+function changement({ regrouper = false } = {}) {
+  const maintenant = JSON.stringify(etat.contenu);
+  if (maintenant !== etat.instantane) {
+    if (!(regrouper && Date.now() - etat.dernierAjout < 1200 && etat.defaire.length)) etat.defaire.push(etat.instantane);
+    if (etat.defaire.length > 60) etat.defaire.shift();
+    etat.refaire = [];
+    etat.instantane = maintenant;
+    etat.dernierAjout = Date.now();
+  }
+  majBarre();
+}
+
+function majBarre() {
   try { localStorage.setItem(CLE_BROUILLON, JSON.stringify({ version: etat.version, contenu: etat.contenu })); } catch { /* sans effet */ }
   const n = resumeModifications().length;
-  $('#barre-publier').hidden = !modifie();
-  $('#nb-modifs').textContent = `${n || 1} modification${n > 1 ? 's' : ''}`;
+  $('#barre-publier').hidden = !modifie() && !etat.defaire.length;
+  $('#nb-modifs').textContent = modifie() ? `${n || 1} modification${n > 1 ? 's' : ''}` : 'Aucune modification';
+  $('#publier').disabled = !modifie();
+  $('#ouvrir-apercu').disabled = !modifie();
+  $('#defaire').disabled = !etat.defaire.length;
+  $('#refaire').disabled = !etat.refaire.length;
 }
+
+function revenirA(texte) {
+  etat.contenu = JSON.parse(texte);
+  etat.instantane = texte;
+  toutAfficher({ garderPile: true });
+}
+$('#defaire').addEventListener('click', () => {
+  if (!etat.defaire.length) return;
+  etat.refaire.push(etat.instantane);
+  revenirA(etat.defaire.pop());
+});
+$('#refaire').addEventListener('click', () => {
+  if (!etat.refaire.length) return;
+  etat.defaire.push(etat.instantane);
+  revenirA(etat.refaire.pop());
+});
 
 function resumeModifications() {
   const a = etat.base;
   const b = etat.contenu;
   const lignes = [];
-  if (JSON.stringify(a.annonce) !== JSON.stringify(b.annonce)) lignes.push(b.annonce.active && b.annonce.texte.trim() ? 'Annonce mise à jour' : 'Annonce retirée');
+  for (const x of b.annonces) {
+    const avant = a.annonces.find((y) => y.id === x.id);
+    if (!avant) lignes.push(`Nouvelle annonce : ${x.titre || x.texte}`);
+    else if (JSON.stringify(avant) !== JSON.stringify(x)) lignes.push(`Annonce modifiée : ${x.titre || x.texte}`);
+  }
+  for (const x of a.annonces) if (!b.annonces.some((y) => y.id === x.id)) lignes.push(`Annonce supprimée : ${x.titre || x.texte}`);
   if (JSON.stringify(a.horaires) !== JSON.stringify(b.horaires)) lignes.push('Horaires');
   if (JSON.stringify(a.telephones) !== JSON.stringify(b.telephones)) lignes.push('Téléphones');
+  for (const [cle, nom] of Object.entries(RESEAUX)) if (a.reseaux[cle] !== b.reseaux[cle]) lignes.push(`Lien ${nom}`);
   for (const s of b.services) {
     const avant = a.services.find((x) => x.cle === s.cle);
     if (!avant) lignes.push(`Nouvelle coiffure : ${s.nom}`);
     else if (JSON.stringify(avant) !== JSON.stringify(s)) lignes.push(avant.prix !== s.prix ? `${s.nom} : ${avant.prix} € → ${s.prix} €` : `${s.nom} modifiée`);
   }
   for (const s of a.services) if (!b.services.some((x) => x.cle === s.cle)) lignes.push(`Coiffure supprimée : ${s.nom}`);
-  if (a.services.map((s) => s.cle).join() !== b.services.map((s) => s.cle).join() && lignes.length === 0) lignes.push('Ordre des coiffures');
+  if (a.services.map((s) => s.cle).join() !== b.services.map((s) => s.cle).join() && !lignes.some((l) => l.includes('oiffure'))) lignes.push('Ordre des coiffures');
   const ajoutees = b.photos.filter((p) => !a.photos.some((x) => x.image === p.image)).length;
   const retirees = a.photos.filter((p) => !b.photos.some((x) => x.image === p.image)).length;
   if (ajoutees) lignes.push(`${ajoutees} photo${ajoutees > 1 ? 's' : ''} ajoutée${ajoutees > 1 ? 's' : ''}`);
@@ -122,15 +234,14 @@ function resumeModifications() {
 
 $('#annuler-tout').addEventListener('click', () => {
   if (!confirm('Annuler toutes les modifications non publiées ?')) return;
-  etat.contenu = structuredClone(etat.base);
-  etat.nouvelles.clear();
-  try { localStorage.removeItem(CLE_BROUILLON); } catch { /* sans effet */ }
-  toutAfficher();
+  etat.defaire.push(etat.instantane);
+  etat.refaire = [];
+  revenirA(JSON.stringify(etat.base));
 });
 
 // --- Onglets ---------------------------------------------------------------------
 
-const TITRES = { annonce: 'Annonce', coiffures: 'Coiffures et prix', photos: 'Photos', horaires: 'Horaires', historique: 'Historique' };
+const TITRES = { annonces: 'Annonces', coiffures: 'Coiffures et prix', photos: 'Photos', infos: 'Infos et liens', historique: 'Historique' };
 $$('.onglets button').forEach((b) => b.addEventListener('click', () => ouvrirOnglet(b.dataset.cible)));
 
 function ouvrirOnglet(nom) {
@@ -142,73 +253,319 @@ function ouvrirOnglet(nom) {
   window.scrollTo(0, 0);
 }
 
-function toutAfficher() {
-  afficherAnnonce();
+function toutAfficher({ garderPile = false } = {}) {
+  afficherAnnonces();
   afficherCoiffures();
   afficherPhotos();
-  afficherHoraires();
+  afficherInfos();
   ouvrirOnglet(etat.onglet);
-  changement();
+  if (!garderPile) etat.instantane = JSON.stringify(etat.contenu);
+  majBarre();
 }
 
 // --- Outils ----------------------------------------------------------------------
 
 const urlImage = (img, petit = true) => etat.nouvelles.get(img)?.apercu || `/${img}${petit ? '-sm' : ''}.jpg`;
-const imagesUtilisees = (c) => [...new Set([...c.services.map((s) => s.photo), ...c.photos.map((p) => p.image)])];
-const echapper = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const versCle = (nom) => nom.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'coiffure';
+const imagesUtilisees = (c) => [...new Set([...c.services.map((s) => s.photo), ...c.photos.map((p) => p.image), ...(c.annonces || []).map((a) => a.image?.src).filter(Boolean)])];
+const echapper = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const versCle = (nom) => nom.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'element';
+const urlValide = (u) => { try { const x = new URL(String(u || '').trim()); return x.protocol === 'https:' || x.protocol === 'http:'; } catch { return false; } };
+const aujourdhui = () => new Date().toLocaleDateString('sv');
+const dateFr = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
 
-// Photo du téléphone → deux JPEG recadrés en 4:5 (1000×1250 et 500×625), comme les photos du site
-async function preparerPhoto(fichier) {
+async function chargerImage(fichier) {
+  if (!/^image\//.test(fichier.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(fichier.name)) throw new Error('Ce fichier n’est pas une image. Choisissez une photo (JPEG, PNG…).');
+  if (fichier.size > 40 * 1024 * 1024) throw new Error('Cette image est trop lourde (plus de 40 Mo). Choisissez-en une autre.');
   const url = URL.createObjectURL(fichier);
-  try {
-    const img = new Image();
-    img.src = url;
-    await img.decode();
-    const rendre = (l, h, qualite) => {
-      const c = document.createElement('canvas');
-      c.width = l; c.height = h;
-      const ratio = l / h;
-      let sl = img.naturalWidth; let sh = img.naturalHeight;
-      if (sl / sh > ratio) sl = sh * ratio; else sh = sl / ratio;
-      const ctx = c.getContext('2d');
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, (img.naturalWidth - sl) / 2, (img.naturalHeight - sh) / 2, sl, sh, 0, 0, l, h);
-      return c.toDataURL('image/jpeg', qualite);
-    };
-    const grand = rendre(1000, 1250, 0.82);
-    const petit = rendre(500, 625, 0.8);
-    return { grand: grand.split(',')[1], petit: petit.split(',')[1], apercu: petit };
-  } finally {
+  const img = new Image();
+  img.src = url;
+  try { await img.decode(); } catch {
     URL.revokeObjectURL(url);
+    throw new Error('Ce format d’image n’est pas lisible ici. Sur iPhone, choisissez la photo depuis « Photos » plutôt que « Fichiers ».');
   }
+  return { img, liberer: () => URL.revokeObjectURL(url) };
 }
 
-// Nom jamais utilisé pour une nouvelle photo : les navigateurs gardent les images en cache 30 jours,
-// une photo ne doit donc jamais reprendre l'adresse d'une ancienne (le serveur vérifie aussi)
+const dessiner = (img, l, h, qualite, recadrer) => {
+  const c = document.createElement('canvas');
+  c.width = l; c.height = h;
+  let sx = 0; let sy = 0; let sl = img.naturalWidth; let sh = img.naturalHeight;
+  if (recadrer) {
+    const ratio = l / h;
+    if (sl / sh > ratio) sl = sh * ratio; else sh = sl / ratio;
+    sx = (img.naturalWidth - sl) / 2; sy = (img.naturalHeight - sh) / 2;
+  }
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(img, sx, sy, sl, sh, 0, 0, l, h);
+  return c.toDataURL('image/jpeg', qualite);
+};
+
+// Photo de réalisation → deux JPEG recadrés en 4:5 (1000×1250 et 500×625), comme les photos du site
+async function preparerPhoto(fichier) {
+  const { img, liberer } = await chargerImage(fichier);
+  try {
+    const grand = dessiner(img, 1000, 1250, 0.82, true);
+    const petit = dessiner(img, 500, 625, 0.8, true);
+    return { grand: grand.split(',')[1], petit: petit.split(',')[1], apercu: petit };
+  } finally { liberer(); }
+}
+
+// Image d'annonce → image entière (sans recadrage), 1600 px et 800 px au plus ; le cadrage se règle ensuite
+async function preparerImageLibre(fichier) {
+  const { img, liberer } = await chargerImage(fichier);
+  try {
+    const echelle = (max) => Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const l = Math.round(img.naturalWidth * echelle(1600)); const h = Math.round(img.naturalHeight * echelle(1600));
+    const grand = dessiner(img, l, h, 0.82, false);
+    const petit = dessiner(img, Math.round(img.naturalWidth * echelle(800)), Math.round(img.naturalHeight * echelle(800)), 0.8, false);
+    return { grand: grand.split(',')[1], petit: petit.split(',')[1], apercu: petit, largeur: l, hauteur: h };
+  } finally { liberer(); }
+}
+
+// Nom jamais utilisé pour une nouvelle image : les navigateurs gardent les images en cache 30 jours
 let sequence = 0;
-const nouveauNom = (style) => `${DOSSIER}/${style}-${Date.now()}${String(sequence++ % 100).padStart(2, '0')}`;
+const nouveauNom = (dossier, prefixe) => `${dossier}/${prefixe}-${Date.now()}${String(sequence++ % 100).padStart(2, '0')}`;
 
 const tailleEnvoi = () => [...etat.nouvelles.entries()].filter(([img, p]) => p.grand && imagesUtilisees(etat.contenu).includes(img)).reduce((t, [, p]) => t + p.grand.length + p.petit.length, 0);
 
-// --- Annonce ---------------------------------------------------------------------
+$$('dialog').forEach((d) => {
+  d.addEventListener('click', (e) => {
+    if (e.target === d || e.target.closest('[data-fermer]')) d.close();
+  });
+});
 
-function afficherAnnonce() {
-  const a = etat.contenu.annonce;
-  $('#annonce-active').checked = !!a.active;
-  $('#annonce-texte').value = a.texte || '';
-  majApercuAnnonce();
+// --- Annonces --------------------------------------------------------------------
+
+function statutAnnonce(a) {
+  if (!a.active) return ['Masquée', 'gris'];
+  if (a.fin && a.fin < aujourdhui()) return ['Terminée', 'gris'];
+  if (a.debut && a.debut > aujourdhui()) return [`Programmée le ${dateFr(a.debut)}`, 'orange'];
+  return ['En ligne', 'vert'];
 }
-function majApercuAnnonce() {
-  const a = etat.contenu.annonce;
-  $('#annonce-compte').textContent = (a.texte || '').length;
-  $('#annonce-apercu').textContent = a.active && a.texte.trim() ? `✦ ${a.texte.trim()}` : '';
+
+function afficherAnnonces() {
+  const ul = $('#liste-annonces');
+  const liste = etat.contenu.annonces;
+  if (!liste.length) {
+    ul.innerHTML = '<li class="vide">Aucune annonce pour le moment. Créez-en une pour mettre en avant une offre ou une information.</li>';
+    return;
+  }
+  ul.innerHTML = liste.map((a, i) => {
+    const [statut, couleur] = statutAnnonce(a);
+    const pages = a.pages.includes('toutes') ? 'Toutes les pages' : a.pages.map((p) => PAGES.find(([f]) => f === p)?.[1]).filter(Boolean).join(', ');
+    const image = a.image?.src && a.format !== 'encadre' && a.format !== 'bandeau' ? `<img class="liste__image" src="${urlImage(a.image.src)}" alt="">` : `<span class="liste__icone" aria-hidden="true">${a.format === 'bandeau' ? '▬' : '✦'}</span>`;
+    return `
+      <li>
+        ${image}
+        <button type="button" class="liste__texte" data-annonce="${i}">
+          <strong>${echapper(a.titre || a.texte)}</strong>
+          <small>${FORMATS[a.format]} · ${echapper(pages)}${a.fin ? ` · jusqu’au ${dateFr(a.fin)}` : ''}</small>
+          <span class="pastille pastille--${couleur}">${statut}</span>
+        </button>
+        <span class="liste__ordre">
+          <button type="button" data-a-monter="${i}" aria-label="Monter l’annonce" ${i === 0 ? 'disabled' : ''}>▲</button>
+          <button type="button" data-a-descendre="${i}" aria-label="Descendre l’annonce" ${i === liste.length - 1 ? 'disabled' : ''}>▼</button>
+        </span>
+      </li>`;
+  }).join('');
 }
-$('#annonce-active').addEventListener('change', (e) => { etat.contenu.annonce.active = e.target.checked; majApercuAnnonce(); changement(); });
-$('#annonce-texte').addEventListener('input', (e) => {
-  etat.contenu.annonce.texte = e.target.value;
-  if (e.target.value.trim() && !etat.contenu.annonce.active) { etat.contenu.annonce.active = true; $('#annonce-active').checked = true; }
-  majApercuAnnonce();
+
+$('#liste-annonces').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const l = etat.contenu.annonces;
+  if (b.dataset.annonce !== undefined) return ouvrirAnnonce(Number(b.dataset.annonce));
+  const i = Number(b.dataset.aMonter ?? b.dataset.aDescendre);
+  const j = b.dataset.aMonter !== undefined ? i - 1 : i + 1;
+  [l[i], l[j]] = [l[j], l[i]];
+  afficherAnnonces();
+  changement();
+});
+
+$('#ajouter-annonce').addEventListener('click', () => ouvrirAnnonce(-1));
+
+$('#a-bouton-page').innerHTML = PAGES.map(([f, n]) => `<option value="${f}">${n}</option>`).join('');
+$('#a-pages').innerHTML = PAGES.map(([f, n]) => `<label class="case"><input type="checkbox" value="${f}"><span>${n}</span></label>`).join('');
+
+let ficheAnnonce = null; // { index, a }
+
+function ouvrirAnnonce(index) {
+  const a = index >= 0 ? structuredClone(etat.contenu.annonces[index]) : {
+    id: `annonce-${Date.now().toString(36)}`, active: true, format: 'section', etiquette: '', titre: '', texte: '',
+    image: null, bouton: { texte: '', type: 'whatsapp', valeur: '' }, pages: ['index.html'], debut: '', fin: '',
+  };
+  a.bouton = a.bouton || { texte: '', type: 'whatsapp', valeur: '' };
+  ficheAnnonce = { index, a };
+  $('#annonce-titre-fiche').textContent = index >= 0 ? 'Modifier l’annonce' : 'Nouvelle annonce';
+  $('#a-etiquette').value = a.etiquette || '';
+  $('#a-titre').value = a.titre || '';
+  $('#a-texte').value = a.texte || '';
+  $('#a-bouton-texte').value = a.bouton.texte || '';
+  $('#a-bouton-type').value = a.bouton.type || 'whatsapp';
+  $('#a-bouton-wa').value = a.bouton.type === 'whatsapp' ? a.bouton.valeur || '' : '';
+  $('#a-bouton-page').value = a.bouton.type === 'page' ? a.bouton.valeur || 'contact.html' : 'contact.html';
+  $('#a-bouton-tel').value = a.bouton.type === 'telephone' ? a.bouton.valeur || '' : etat.contenu.telephones.principal;
+  $('#a-bouton-url').value = a.bouton.type === 'externe' ? a.bouton.valeur || '' : '';
+  $('#a-toutes').checked = a.pages.includes('toutes');
+  $$('#a-pages input').forEach((c) => { c.checked = a.pages.includes(c.value); });
+  $('#a-debut').value = a.debut || '';
+  $('#a-fin').value = a.fin || '';
+  $('#a-active').checked = a.active !== false;
+  $('#a-alt').value = a.image?.alt || '';
+  $('#a-supprimer').hidden = index < 0;
+  $('#a-erreur').hidden = true;
+  majFicheAnnonce();
+  $('#fiche-annonce').showModal();
+  $('#fiche-annonce').scrollTop = 0;
+}
+
+// Adapte la fiche au format choisi (champs utiles seulement) et au type de destination du bouton
+function majFicheAnnonce() {
+  const a = ficheAnnonce.a;
+  $$('#a-formats button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.format === a.format)));
+  const bandeau = a.format === 'bandeau';
+  const avecImage = a.format === 'section' || a.format === 'carte';
+  $('#a-bloc-etiquette').hidden = bandeau;
+  $('#a-bloc-titre').hidden = bandeau;
+  $('#a-texte-label').textContent = bandeau ? 'Message (une phrase courte)' : 'Texte';
+  const max = bandeau ? 160 : 400;
+  $('#a-texte').maxLength = max;
+  $('#a-texte-max').textContent = max;
+  $('#a-texte-compte').textContent = $('#a-texte').value.length;
+  $('#a-bloc-image').hidden = !avecImage;
+  $('#a-bouton-texte').placeholder = bandeau ? 'Ex. : En savoir plus' : 'Ex. : Je réserve sur WhatsApp';
+  const type = $('#a-bouton-type').value;
+  $('#a-bloc-destination').hidden = !$('#a-bouton-texte').value.trim();
+  ['whatsapp', 'page', 'telephone', 'externe'].forEach((t) => { $(`#a-dest-${t}`).hidden = t !== type; });
+  if (!$('#a-bouton-wa').value) $('#a-bouton-wa').placeholder = `Bonjour Nelly, je suis intéressée par : ${$('#a-titre').value || 'votre offre'}.`;
+  $('#a-pages').hidden = $('#a-toutes').checked;
+  // Image et cadrage
+  const img = a.image;
+  $('#a-cadreur').hidden = !img;
+  $('#a-image-retirer').hidden = !img;
+  $('#a-image-bouton').firstChild.textContent = img ? 'Remplacer l’image' : 'Ajouter une image';
+  if (img) {
+    const ratios = a.format === 'carte' ? ['1 / 1', '16 / 10'] : ['4 / 5', '4 / 3'];
+    $$('.cadreur__cadre').forEach((cadre, i) => {
+      cadre.style.aspectRatio = ratios[i];
+      const im = $('img', cadre);
+      const src = etat.nouvelles.get(img.src)?.apercu || `/${img.src}-sm.jpg`;
+      if (im.getAttribute('src') !== src) im.src = src;
+      im.style.objectPosition = `${img.x}% ${img.y}%`;
+      im.style.transform = `scale(${img.zoom})`;
+      im.style.transformOrigin = `${img.x}% ${img.y}%`;
+    });
+  }
+}
+
+$('#a-formats').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-format]');
+  if (!b) return;
+  ficheAnnonce.a.format = b.dataset.format;
+  majFicheAnnonce();
+});
+['#a-texte', '#a-bouton-texte', '#a-titre'].forEach((s) => $(s).addEventListener('input', majFicheAnnonce));
+['#a-bouton-type', '#a-toutes'].forEach((s) => $(s).addEventListener('change', majFicheAnnonce));
+
+$('#a-image').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const erreur = $('#a-erreur');
+  erreur.hidden = true;
+  try {
+    const image = await preparerImageLibre(f);
+    const src = nouveauNom('img/annonces', versCle($('#a-titre').value || 'annonce').slice(0, 30));
+    etat.nouvelles.set(src, image);
+    ficheAnnonce.a.image = { src, x: 50, y: 50, zoom: 1, largeur: image.largeur, hauteur: image.hauteur, alt: $('#a-alt').value };
+    majFicheAnnonce();
+  } catch (err) {
+    erreur.textContent = err.message;
+    erreur.hidden = false;
+  }
+});
+$('#a-image-retirer').addEventListener('click', () => { ficheAnnonce.a.image = null; majFicheAnnonce(); });
+
+// Cadrage : faire glisser l'image, agrandir, réduire, recentrer
+$$('[data-cadrage]').forEach((b) => b.addEventListener('click', () => {
+  const img = ficheAnnonce.a.image;
+  if (!img) return;
+  if (b.dataset.cadrage === 'plus') img.zoom = Math.min(2.5, Math.round((img.zoom + 0.15) * 100) / 100);
+  if (b.dataset.cadrage === 'moins') img.zoom = Math.max(1, Math.round((img.zoom - 0.15) * 100) / 100);
+  if (b.dataset.cadrage === 'centre') Object.assign(img, { x: 50, y: 50, zoom: 1 });
+  majFicheAnnonce();
+}));
+$$('.cadreur__cadre').forEach((cadre) => {
+  let depart = null;
+  cadre.addEventListener('pointerdown', (e) => {
+    if (!ficheAnnonce.a.image) return;
+    depart = { px: e.clientX, py: e.clientY, x: ficheAnnonce.a.image.x, y: ficheAnnonce.a.image.y };
+    cadre.setPointerCapture(e.pointerId);
+    cadre.classList.add('est-deplace');
+  });
+  cadre.addEventListener('pointermove', (e) => {
+    if (!depart) return;
+    const r = cadre.getBoundingClientRect();
+    const img = ficheAnnonce.a.image;
+    // Glisser vers la droite montre la partie gauche de l'image (le point de cadrage recule)
+    img.x = Math.round(Math.min(100, Math.max(0, depart.x - ((e.clientX - depart.px) / r.width) * 100 / img.zoom)));
+    img.y = Math.round(Math.min(100, Math.max(0, depart.y - ((e.clientY - depart.py) / r.height) * 100 / img.zoom)));
+    majFicheAnnonce();
+  });
+  const fin = () => { depart = null; cadre.classList.remove('est-deplace'); };
+  cadre.addEventListener('pointerup', fin);
+  cadre.addEventListener('pointercancel', fin);
+});
+
+$('#form-annonce').addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'valider') return;
+  const a = ficheAnnonce.a;
+  a.etiquette = $('#a-etiquette').value.trim();
+  a.titre = $('#a-titre').value.trim();
+  a.texte = $('#a-texte').value.trim();
+  if (a.image) a.image.alt = $('#a-alt').value.trim();
+  const type = $('#a-bouton-type').value;
+  const valeurs = { whatsapp: $('#a-bouton-wa').value.trim() || $('#a-bouton-wa').placeholder, page: $('#a-bouton-page').value, telephone: $('#a-bouton-tel').value.trim(), externe: $('#a-bouton-url').value.trim() };
+  a.bouton = { texte: $('#a-bouton-texte').value.trim(), type, valeur: valeurs[type] };
+  a.pages = $('#a-toutes').checked ? ['toutes'] : $$('#a-pages input:checked').map((c) => c.value);
+  a.debut = $('#a-debut').value;
+  a.fin = $('#a-fin').value;
+  a.active = $('#a-active').checked;
+  if (a.format === 'encadre' || a.format === 'bandeau') a.image = null;
+  const erreur = verifierAnnonce(a);
+  if (erreur) {
+    e.preventDefault();
+    $('#a-erreur').textContent = erreur;
+    $('#a-erreur').hidden = false;
+    $('#a-erreur').scrollIntoView({ block: 'center' });
+    return;
+  }
+  if (ficheAnnonce.index < 0) etat.contenu.annonces.unshift(a);
+  else etat.contenu.annonces[ficheAnnonce.index] = a;
+  afficherAnnonces();
+  changement();
+});
+
+function verifierAnnonce(a) {
+  if (a.format === 'bandeau' ? !a.texte : !a.titre) return a.format === 'bandeau' ? 'Écrivez le message du bandeau.' : 'Donnez un titre à l’annonce.';
+  if ((a.format === 'section') && !a.image) return 'La grande section a besoin d’une image. Ajoutez-en une, ou choisissez « Encadré ».';
+  if (a.bouton.texte) {
+    if (a.bouton.type === 'externe' && !urlValide(a.bouton.valeur)) return 'L’adresse du bouton doit être complète et commencer par https:// (copiez-la depuis votre navigateur).';
+    if (a.bouton.type === 'telephone' && !TEL.test(a.bouton.valeur)) return 'Le numéro du bouton doit ressembler à 06 12 34 56 78.';
+  }
+  if (!a.pages.length) return 'Choisissez au moins une page où afficher l’annonce.';
+  if (a.debut && a.fin && a.fin < a.debut) return 'La date de fin est avant la date de début.';
+  if (a.fin && a.fin < aujourdhui()) return 'La date de fin est déjà passée : l’annonce ne serait pas affichée.';
+  return '';
+}
+
+$('#a-supprimer').addEventListener('click', () => {
+  const a = etat.contenu.annonces[ficheAnnonce.index];
+  if (!confirm(`Supprimer l’annonce « ${a.titre || a.texte} » ?\n\nAstuce : pour la retirer temporairement, décochez plutôt « Annonce active ».`)) return;
+  etat.contenu.annonces.splice(ficheAnnonce.index, 1);
+  $('#fiche-annonce').close();
+  afficherAnnonces();
   changement();
 });
 
@@ -247,7 +604,7 @@ $('#liste-coiffures').addEventListener('click', (e) => {
 
 $('#ajouter-coiffure').addEventListener('click', () => ouvrirCoiffure(-1));
 
-let fiche = null; // { index, brouillon, photoNouvelle }
+let fiche = null; // { index, brouillon }
 
 function ouvrirCoiffure(index) {
   const s = index >= 0 ? etat.contenu.services[index] : { nom: '', categorie: 'Tresses', description: '', prix: '', photo: '', visible: true };
@@ -268,7 +625,7 @@ function afficherChoixPhoto() {
   const s = fiche.brouillon;
   const choix = [...new Set([s.photo, ...etat.contenu.photos.filter((p) => p.style === s.cle).map((p) => p.image)].filter(Boolean))];
   $('#c-photos').innerHTML = choix.length
-    ? choix.map((img) => `<button type="button" data-photo="${img}" aria-pressed="${img === s.photo}"><img src="${urlImage(img)}" alt=""></button>`).join('')
+    ? choix.map((img) => `<button type="button" data-photo="${img}" aria-pressed="${img === s.photo}" aria-label="Choisir cette photo"><img src="${urlImage(img)}" alt=""></button>`).join('')
     : '<p class="aide">Ajoutez une photo pour cette coiffure.</p>';
 }
 
@@ -283,12 +640,16 @@ $('#c-fichier').addEventListener('change', async (e) => {
   const f = e.target.files[0];
   e.target.value = '';
   if (!f) return;
-  const nom = $('#c-nom').value.trim();
-  const style = fiche.brouillon.cle || versCle(nom);
-  const img = nouveauNom(style);
-  etat.nouvelles.set(img, await preparerPhoto(f));
-  fiche.brouillon.photo = img;
-  afficherChoixPhoto();
+  try {
+    const style = fiche.brouillon.cle || versCle($('#c-nom').value.trim() || 'coiffure');
+    const img = nouveauNom(DOSSIER, style);
+    etat.nouvelles.set(img, await preparerPhoto(f));
+    fiche.brouillon.photo = img;
+    afficherChoixPhoto();
+  } catch (err) {
+    $('#c-erreur').textContent = err.message;
+    $('#c-erreur').hidden = false;
+  }
 });
 
 $('#form-coiffure').addEventListener('submit', (e) => {
@@ -309,7 +670,7 @@ $('#form-coiffure').addEventListener('submit', (e) => {
     s.cle = cle; s.ancre = cle; s.alt = `${s.nom}, exemple de coiffure`;
     // La photo prise pendant la création est rangée sous ce nom définitif
     if (etat.nouvelles.has(s.photo) && !s.photo.includes(`/${cle}-`)) {
-      const img = nouveauNom(cle);
+      const img = nouveauNom(DOSSIER, cle);
       etat.nouvelles.set(img, etat.nouvelles.get(s.photo));
       etat.nouvelles.delete(s.photo);
       s.photo = img;
@@ -354,7 +715,7 @@ function afficherPhotos() {
   const filtre = $('#photo-filtre').value;
   $('#grille-photos').innerHTML = etat.contenu.photos.map((p, i) => ({ p, i })).filter(({ p }) => !filtre || p.style === filtre).map(({ p, i }) => {
     const s = services.find((x) => x.cle === p.style);
-    return `<button type="button" data-photo="${i}"><img src="${urlImage(p.image)}" alt="" loading="lazy">${etat.nouvelles.get(p.image)?.grand ? '<span class="badge">nouvelle</span>' : ''}<small>${echapper(s ? s.nom : p.style)}</small></button>`;
+    return `<button type="button" data-photo="${i}" aria-label="Photo ${echapper(s ? s.nom : p.style)}"><img src="${urlImage(p.image)}" alt="" loading="lazy">${etat.nouvelles.get(p.image)?.grand ? '<span class="badge">nouvelle</span>' : ''}<small>${echapper(s ? s.nom : p.style)}</small></button>`;
   }).join('');
 }
 
@@ -369,27 +730,24 @@ $('#photo-fichiers').addEventListener('change', async (e) => {
   msg.className = 'message'; msg.hidden = false;
   msg.innerHTML = '<span class="chargement"></span> Préparation des photos…';
   let ajoutees = 0;
+  let probleme = '';
   for (const f of fichiers) {
     try {
-      const img = nouveauNom(style);
       const photo = await preparerPhoto(f);
       if (tailleEnvoi() + photo.grand.length + photo.petit.length > MAX_ENVOI) {
-        msg.className = 'message message--erreur';
-        msg.textContent = `${ajoutees} photo(s) ajoutée(s). Publiez d’abord celles-ci, puis ajoutez les suivantes (limite d’envoi atteinte).`;
+        probleme = 'Limite d’envoi atteinte : publiez d’abord ces photos, puis ajoutez les suivantes.';
         break;
       }
+      const img = nouveauNom(DOSSIER, style);
       etat.nouvelles.set(img, photo);
       etat.contenu.photos.unshift({ style, image: img });
       ajoutees += 1;
-    } catch {
-      msg.className = 'message message--erreur';
-      msg.textContent = 'Une photo n’a pas pu être lue. Essayez avec une autre photo.';
+    } catch (err) {
+      probleme = err.message;
     }
   }
-  if (ajoutees && !msg.classList.contains('message--erreur')) {
-    msg.className = 'message message--ok';
-    msg.textContent = `${ajoutees} photo${ajoutees > 1 ? 's' : ''} prête${ajoutees > 1 ? 's' : ''}. Appuyez sur « Publier » pour les mettre en ligne.`;
-  }
+  msg.className = probleme ? 'message message--erreur' : 'message message--ok';
+  msg.textContent = `${ajoutees ? `${ajoutees} photo${ajoutees > 1 ? 's' : ''} prête${ajoutees > 1 ? 's' : ''}. ` : ''}${probleme || 'Appuyez sur « Publier » pour les mettre en ligne.'}`;
   afficherPhotos();
   afficherCoiffures();
   changement();
@@ -419,15 +777,14 @@ $('#p-supprimer').addEventListener('click', () => {
   }
   if (!confirm('Retirer cette photo du site ?')) return;
   etat.contenu.photos.splice(photoOuverte, 1);
-  etat.nouvelles.delete(p.image);
   $('#fiche-photo').close();
   afficherPhotos();
   changement();
 });
 
-// --- Horaires et téléphones -------------------------------------------------------
+// --- Infos : horaires, téléphones, réseaux ----------------------------------------
 
-function afficherHoraires() {
+function afficherInfos() {
   $('#liste-horaires').innerHTML = etat.contenu.horaires.map((j, i) => `
     <div class="jour">
       <strong>${j.jour}</strong>
@@ -444,6 +801,15 @@ function afficherHoraires() {
     </div>`).join('');
   $('#tel-principal').value = etat.contenu.telephones.principal;
   $('#tel-secondaire').value = etat.contenu.telephones.secondaire;
+  verifierTelephones();
+  const aide = $('#liste-reseaux .aide').outerHTML;
+  $('#liste-reseaux').innerHTML = aide + Object.entries(RESEAUX).map(([cle, nom]) => `
+    <label for="r-${cle}">${nom}</label>
+    <div class="champ-lien">
+      <input id="r-${cle}" type="url" inputmode="url" data-reseau="${cle}" value="${echapper(etat.contenu.reseaux[cle])}">
+      <a class="bouton bouton--discret" href="${echapper(etat.contenu.reseaux[cle])}" target="_blank" rel="noopener" data-tester="${cle}">Tester</a>
+    </div>
+    <p class="message message--erreur" id="erreur-r-${cle}" hidden>Adresse incomplète : elle doit commencer par https://</p>`).join('');
 }
 
 $('#liste-horaires').addEventListener('change', (e) => {
@@ -454,14 +820,34 @@ $('#liste-horaires').addEventListener('change', (e) => {
   if (el.dataset.champ === 'etat') {
     if (j.etat === 'ouvert' && !j.debut) { j.debut = '09:00'; j.fin = '19:00'; }
     if (j.etat !== 'ouvert') { j.debut = ''; j.fin = ''; }
-    afficherHoraires();
+    afficherInfos();
   }
   changement();
 });
+
+function verifierTelephones() {
+  for (const cle of ['principal', 'secondaire']) {
+    const ok = TEL.test(String(etat.contenu.telephones[cle]).trim());
+    const e = $(`#erreur-tel-${cle}`);
+    e.textContent = 'Le numéro doit ressembler à 06 12 34 56 78.';
+    e.hidden = ok;
+  }
+}
 ['principal', 'secondaire'].forEach((cle) => $(`#tel-${cle}`).addEventListener('input', (e) => {
   etat.contenu.telephones[cle] = e.target.value;
-  changement();
+  verifierTelephones();
+  changement({ regrouper: true });
 }));
+
+$('#liste-reseaux').addEventListener('input', (e) => {
+  const cle = e.target.dataset.reseau;
+  if (!cle) return;
+  etat.contenu.reseaux[cle] = e.target.value.trim();
+  const ok = urlValide(e.target.value);
+  $(`#erreur-r-${cle}`).hidden = ok;
+  $(`[data-tester="${cle}"]`).href = ok ? e.target.value.trim() : '#';
+  changement({ regrouper: true });
+});
 
 // --- Historique ------------------------------------------------------------------
 
@@ -473,7 +859,7 @@ async function afficherHistorique() {
     ul.innerHTML = versions.map((v, i) => `
       <li>
         <span class="liste__texte"><strong>${new Date(v.date).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}</strong><small>${echapper(v.message.replace(/^Espace Nelly : /, ''))}</small></span>
-        ${i === 0 ? '<span class="badge">en ligne</span>' : `<button type="button" class="bouton bouton--contour" data-version="${v.sha}">Revenir</button>`}
+        ${i === 0 ? '<span class="pastille pastille--vert">en ligne</span>' : `<button type="button" class="bouton bouton--contour" data-version="${v.sha}">Revenir</button>`}
       </li>`).join('');
   } catch (err) {
     ul.innerHTML = `<li class="message message--erreur">${echapper(err.message)}</li>`;
@@ -483,37 +869,118 @@ async function afficherHistorique() {
 $('#liste-historique').addEventListener('click', async (e) => {
   const b = e.target.closest('[data-version]');
   if (!b) return;
-  if (!confirm('Revenir à cette version ? Elle sera chargée ici : vérifiez-la puis appuyez sur « Publier » pour la remettre en ligne.')) return;
+  if (!confirm('Revenir à cette version ? Elle sera chargée ici : vérifiez-la (Aperçu) puis appuyez sur « Publier » pour la remettre en ligne.')) return;
   b.disabled = true;
   try {
     const { contenu } = await api('version', { params: `&sha=${b.dataset.version}` });
-    etat.contenu = contenu;
-    toutAfficher();
-    ouvrirOnglet('coiffures');
+    etat.contenu = normaliser(contenu);
+    changement();
+    toutAfficher({ garderPile: true });
   } catch (err) {
     alert(err.message);
     b.disabled = false;
   }
 });
 
+// --- Aperçu ----------------------------------------------------------------------
+
+$('#apercu-page').innerHTML = PAGES.map(([f, n]) => `<option value="${f}">${n}</option>`).join('');
+let largeurApercu = 390;
+
+function pageConseillee() {
+  const a = resumeModifications().join(' ');
+  if (/Annonce/.test(a)) {
+    const ann = etat.contenu.annonces.find((x) => JSON.stringify(x) !== JSON.stringify(etat.base.annonces.find((y) => y.id === x.id)));
+    const p = ann?.pages?.[0];
+    if (p && p !== 'toutes') return p;
+    return 'index.html';
+  }
+  if (/photo/.test(a)) return 'realisations.html';
+  if (/Horaires|Téléphones/.test(a)) return 'contact.html';
+  if (/€|oiffure/.test(a)) return 'coiffures.html';
+  return 'index.html';
+}
+
+async function ouvrirApercu() {
+  $('#apercu-page').value = pageConseillee();
+  $('#fiche-apercu').showModal();
+  await chargerApercu();
+}
+$('#ouvrir-apercu').addEventListener('click', ouvrirApercu);
+$('#apercu-page').addEventListener('change', chargerApercu);
+$$('[data-ecran]').forEach((b) => b.addEventListener('click', () => {
+  largeurApercu = Number(b.dataset.ecran);
+  $$('[data-ecran]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+  ajusterApercu();
+}));
+window.addEventListener('resize', ajusterApercu);
+
+function ajusterApercu() {
+  const zone = $('#apercu-zone');
+  const cadre = $('#apercu-cadre');
+  const echelle = Math.min(1, (zone.clientWidth - 16) / largeurApercu);
+  cadre.style.width = `${largeurApercu}px`;
+  cadre.style.height = `${(zone.clientHeight - 16) / echelle}px`;
+  cadre.style.transform = `scale(${echelle})`;
+}
+
+async function chargerApercu() {
+  const cadre = $('#apercu-cadre');
+  const chargement = $('#apercu-chargement');
+  const alertes = $('#apercu-alertes');
+  chargement.hidden = false;
+  chargement.innerHTML = '<span class="chargement"></span> Préparation de l’aperçu…';
+  cadre.style.visibility = 'hidden';
+  try {
+    const { html, avertissements } = await api('apercu', { methode: 'POST', corps: { contenu: etat.contenu, page: $('#apercu-page').value } });
+    // Les images pas encore publiées sont affichées depuis l'appareil
+    let page = html.replace('<head>', '<head><base href="/" target="_blank">');
+    for (const [img, p] of etat.nouvelles) if (p.apercu) page = page.split(`${img}-sm.jpg`).join(p.apercu).split(`${img}.jpg`).join(p.apercu);
+    cadre.srcdoc = page;
+    cadre.onload = () => { chargement.hidden = true; cadre.style.visibility = 'visible'; ajusterApercu(); };
+    alertes.hidden = !avertissements.length;
+    alertes.innerHTML = avertissements.map((a) => `<li>⚠️ ${echapper(a)}</li>`).join('');
+  } catch (err) {
+    chargement.textContent = err.message;
+  }
+}
+$('#apercu-publier').addEventListener('click', () => { $('#fiche-apercu').close(); ouvrirPublication(); });
+
 // --- Publication -----------------------------------------------------------------
 
-$('#publier').addEventListener('click', () => {
+function verifierAvantPublication() {
+  const problemes = [];
+  verifierTelephones();
+  for (const cle of ['principal', 'secondaire']) if (!TEL.test(String(etat.contenu.telephones[cle]).trim())) problemes.push(`Téléphone ${cle === 'principal' ? 'principal' : 'secondaire'} incomplet (onglet Infos).`);
+  for (const [cle, nom] of Object.entries(RESEAUX)) if (!urlValide(etat.contenu.reseaux[cle])) problemes.push(`Lien ${nom} incomplet (onglet Infos).`);
+  for (const a of etat.contenu.annonces) { const e = verifierAnnonce(a); if (e && !(a.fin && a.fin < aujourdhui())) problemes.push(`Annonce « ${a.titre || a.texte} » : ${e}`); }
+  return problemes;
+}
+
+function ouvrirPublication() {
+  const problemes = verifierAvantPublication();
   const lignes = resumeModifications();
-  $('#publier-contenu').innerHTML = `
+  $('#publier-contenu').innerHTML = problemes.length ? `
+    <h2>Avant de publier</h2>
+    <p class="aide">Corrigez ces points : ils empêcheraient la mise à jour du site.</p>
+    <ul class="etapes">${problemes.map((l) => `<li>⚠️ ${echapper(l)}</li>`).join('')}</ul>
+    <div class="fiche__actions"><span></span><button class="bouton bouton--plein" type="button" data-fermer>Compris</button></div>` : `
     <h2>Publier sur le site ?</h2>
     <ul class="etapes">${(lignes.length ? lignes : ['Modifications diverses']).map((l) => `<li>• ${echapper(l)}</li>`).join('')}</ul>
     <p class="aide">Le site sera mis à jour dans environ une minute.</p>
     <p class="message message--erreur" id="publier-erreur" hidden></p>
-    <div class="fiche__actions"><span></span>
+    <div class="fiche__actions">
+      <button class="bouton bouton--discret" type="button" id="publier-apercu">Voir l’aperçu</button>
+      <span></span>
       <button class="bouton bouton--discret" type="button" data-fermer>Pas maintenant</button>
       <button class="bouton bouton--plein" type="button" id="confirmer-publier">Publier</button>
     </div>`;
   $('#fiche-publier').showModal();
-});
+}
+$('#publier').addEventListener('click', ouvrirPublication);
 
 $('#fiche-publier').addEventListener('click', async (e) => {
-  if (e.target.closest('[data-fermer]')) return $('#fiche-publier').close();
+  if (e.target.closest('#publier-apercu')) { $('#fiche-publier').close(); return ouvrirApercu(); }
   if (!e.target.closest('#confirmer-publier')) return;
   const bouton = $('#confirmer-publier');
   const erreur = $('#publier-erreur');
@@ -525,15 +992,17 @@ $('#fiche-publier').addEventListener('click', async (e) => {
     .flatMap(([img, p]) => [{ chemin: `${img}.jpg`, base64: p.grand }, { chemin: `${img}-sm.jpg`, base64: p.petit }]);
   try {
     const r = await api('publier', { methode: 'POST', corps: { contenu: etat.contenu, photos, version: etat.version, resume: resumeModifications().join(', ') } });
-    etat.base = r.contenu || structuredClone(etat.contenu);
+    etat.base = normaliser(r.contenu || structuredClone(etat.contenu));
     etat.contenu = structuredClone(etat.base);
     etat.version = r.version;
-    // Les photos envoyées restent affichées depuis le téléphone le temps que le site se mette à jour (sans être renvoyées)
+    // Les images envoyées restent affichées depuis l'appareil le temps que le site se mette à jour (sans être renvoyées)
     for (const [avant, apres] of Object.entries(r.renommees || {})) {
       if (etat.nouvelles.has(avant)) { etat.nouvelles.set(apres, etat.nouvelles.get(avant)); etat.nouvelles.delete(avant); }
     }
     for (const [img, p] of etat.nouvelles) etat.nouvelles.set(img, { apercu: p.apercu });
     try { localStorage.removeItem(CLE_BROUILLON); } catch { /* sans effet */ }
+    etat.defaire = [];
+    etat.refaire = [];
     toutAfficher();
     $('#publier-contenu').innerHTML = `
       <h2>C’est envoyé ✓</h2>
@@ -550,13 +1019,10 @@ $('#fiche-publier').addEventListener('click', async (e) => {
   }
 });
 
-// Fermer une fiche en touchant le fond
-$$('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d) d.close(); }));
+// Prévenir avant de quitter avec des images non publiées (elles ne sont pas gardées sur l'appareil)
+window.addEventListener('beforeunload', (e) => { if (modifie() && [...etat.nouvelles.values()].some((p) => p.grand)) { e.preventDefault(); e.returnValue = ''; } });
 
-// Prévenir avant de quitter avec des modifications non publiées
-window.addEventListener('beforeunload', (e) => { if (modifie() && etat.nouvelles.size) { e.preventDefault(); e.returnValue = ''; } });
-
-// Application installable (Android) et utilisable hors ligne pour l'écran de démarrage
+// Application installable (Android) et ouverture sans réseau de l'écran de démarrage
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' }).catch(() => {});
 
 demarrer().catch(() => afficherConnexion());

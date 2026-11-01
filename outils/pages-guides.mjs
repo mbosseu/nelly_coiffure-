@@ -245,6 +245,8 @@ for (const P of PAGES) {
         <p class="page-hero__title"><span class="line"><span class="intro" style="--d: .15s">${P.titreVisuel}</span></span></p>
       </div>
     </section>
+    <!-- cms:promos -->
+    <!-- /cms:promos -->
     <section class="section section--tight">
       <div class="container legal guide reveal">${P.corps}
       </div>

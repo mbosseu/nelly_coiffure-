@@ -4,10 +4,10 @@ Une application installable sur le téléphone de Nelly pour modifier elle-même
 
 | Onglet | Ce qu'elle peut faire |
 |---|---|
-| **Annonce** | Afficher un message en haut de toutes les pages (congés, promo, nouveauté) ou le retirer |
+| **Annonces** | Créer des annonces au choix : grande section (image + texte + bouton), carte, encadré ou bandeau ; choisir les pages, les dates de début et de fin, l'image et son cadrage, le bouton et sa destination (WhatsApp, page du site, appel, autre site) |
 | **Coiffures** | Changer prix, nom, catégorie, description et photo ; masquer, ajouter, supprimer, réordonner une coiffure |
 | **Photos** | Ajouter des réalisations depuis la galerie du téléphone (recadrage et allègement automatiques), changer leur coiffure, les retirer |
-| **Horaires** | Ouvert / sur demande / fermé et heures, jour par jour ; les deux numéros de téléphone |
+| **Infos** | Horaires jour par jour, les deux numéros de téléphone, les liens Instagram, TikTok, Facebook et Snapchat (remplacés partout sur le site) |
 | **Historique** | Voir les dernières publications et revenir à une version précédente |
 
 Le design, la mise en page et les textes de présentation restent verrouillés (version 1).
@@ -57,7 +57,7 @@ L'icône « Gestion Nelly » ouvre l'application en plein écran. La connexion r
 
 - **Changer un prix** : onglet *Coiffures* → toucher la coiffure → changer le prix → *Valider* → *Publier*.
 - **Ajouter des photos** : onglet *Photos* → choisir la coiffure → *Ajouter des photos* → choisir dans la galerie → *Publier*. Photos verticales, à la lumière du jour, uniquement ses réalisations et avec l'accord des clientes.
-- **Annoncer des congés** : onglet *Annonce* → écrire le message → *Publier*. Pour l'enlever : décocher « Afficher l'annonce » → *Publier*.
+- **Annoncer une promo ou des congés** : onglet *Annonces* → *Créer une annonce* → choisir la présentation, écrire, choisir les pages (et les dates) → *Valider* → *Aperçu* → *Publier*. Pour la retirer : la toucher → décocher « Annonce active » → *Publier*.
 - **Changer les horaires** : onglet *Horaires* → *Publier*.
 - **Une erreur ?** Onglet *Historique* → *Revenir* sur une version précédente → *Publier*.
 - Tant que rien n'est publié, les changements restent sur le téléphone (la barre orange l'indique) ; *Annuler* les efface.
@@ -70,7 +70,15 @@ node outils/essai-gestion.mjs
 ```
 puis ouvrir http://localhost:5174/admin/ (mot de passe d'essai : `essai`). Le site est copié dans un dossier temporaire et GitHub est simulé : rien n'est publié pour de vrai.
 
-## Limites connues de la version 1
+## Phase 1 (1er novembre 2026)
+
+- **Annonces** : 4 présentations aux couleurs du site, plus de bandeau imposé. Elles se placent juste après l'en-tête des pages choisies (zone `<!-- cms:promos -->`) ; le bandeau, seulement s'il est choisi, en haut de page. Dates : une annonce terminée n'est plus publiée ; une annonce programmée est dans la page mais masquée jusqu'à sa date (`js/main.js`). Images dans `site/img/annonces/`, gardées entières (cadrage par point focal et zoom, sans les déformer).
+- **Réseaux sociaux** : l'adresse complète est remplacée partout ; les pseudos affichés (`data-reseau="instagram"`…) suivent chacun leur réseau.
+- **Mon compte** : voir le site, installer l'application (Android), se déconnecter (le cookie de session est supprimé ; toute action privée est ensuite refusée).
+- **Annuler / Rétablir** (↶ ↷) dans la barre de publication, en plus de « Tout annuler ».
+- **Aperçu** : la page est générée par le même générateur que la publication, avec les images pas encore envoyées, en taille mobile, tablette ou ordinateur. Les problèmes bloquants (lien incomplet, numéro invalide…) sont signalés avant de publier.
+
+## Limites connues
 - Les 3 cartes mises en avant sur l'accueil (knotless, tresses couchées, nattes collées) gardent leur nom et leur photo ; seuls leurs prix suivent.
 - La mention « Du lundi au samedi, sur rendez-vous » du pied de page ne suit pas les horaires.
 - Les textes de présentation (accueil, À propos, questions fréquentes) et les avis ne sont pas encore modifiables : prévus pour la version 2 si besoin.

@@ -23,6 +23,7 @@
   <main class="connexion" id="connexion" hidden>
     <img src="/img/marque/logo.webp" alt="Nelly Coiffure" width="200" height="121">
     <h1>Gestion du site</h1>
+    <p class="message" id="message-connexion" hidden></p>
     <form id="form-connexion">
       <label for="mdp">Mot de passe</label>
       <input id="mdp" type="password" autocomplete="current-password" required>
@@ -36,29 +37,20 @@
     <header class="barre">
       <div>
         <p class="barre__marque">Nelly Coiffure</p>
-        <h1 class="barre__titre" id="titre-onglet">Annonce</h1>
+        <h1 class="barre__titre" id="titre-onglet">Annonces</h1>
       </div>
-      <div class="barre__actions">
-        <a class="bouton bouton--discret" href="/" target="_blank" rel="noopener">Voir le site</a>
-        <button class="bouton bouton--discret" id="deconnexion" type="button" aria-label="Se déconnecter">⎋</button>
-      </div>
+      <button class="compte" id="ouvrir-compte" type="button" aria-haspopup="dialog">
+        <span class="compte__rond" aria-hidden="true">N</span>
+        <span>Mon compte</span>
+      </button>
     </header>
 
     <div class="contenu">
-      <!-- Annonce -->
-      <section class="onglet" data-onglet="annonce">
-        <p class="aide">Un message court affiché en haut de toutes les pages du site : congés, nouvelle prestation, promotion…</p>
-        <div class="carte">
-          <label class="interrupteur">
-            <input type="checkbox" id="annonce-active">
-            <span>Afficher l’annonce sur le site</span>
-          </label>
-          <label for="annonce-texte">Texte de l’annonce</label>
-          <textarea id="annonce-texte" maxlength="160" rows="3" placeholder="Ex. : Fermé du 20 au 27 décembre. Bonnes fêtes !"></textarea>
-          <p class="compteur"><span id="annonce-compte">0</span> / 160</p>
-          <p class="etiquette">Aperçu</p>
-          <div class="apercu-annonce" id="annonce-apercu"></div>
-        </div>
+      <!-- Annonces -->
+      <section class="onglet" data-onglet="annonces">
+        <p class="aide">Mettez en avant une offre, une nouveauté ou une information (congés…) sur les pages de votre choix.</p>
+        <ul class="liste" id="liste-annonces"></ul>
+        <button class="bouton bouton--plein bouton--large" id="ajouter-annonce" type="button">＋ Créer une annonce</button>
       </section>
 
       <!-- Coiffures et prix -->
@@ -76,7 +68,7 @@
           <select id="photo-style"></select>
           <label class="bouton bouton--plein bouton--large bouton--fichier">
             📷 Ajouter des photos
-            <input type="file" id="photo-fichiers" accept="image/*" multiple>
+            <input type="file" id="photo-fichiers" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple>
           </label>
           <p class="message" id="photo-message" hidden></p>
         </div>
@@ -85,15 +77,22 @@
         <div class="grille" id="grille-photos"></div>
       </section>
 
-      <!-- Horaires et téléphones -->
-      <section class="onglet" data-onglet="horaires" hidden>
-        <p class="aide">Les horaires de la page Contact et des informations données à Google.</p>
+      <!-- Informations : horaires, téléphones, réseaux -->
+      <section class="onglet" data-onglet="infos" hidden>
+        <h2 class="sous-titre">Horaires</h2>
         <div class="carte" id="liste-horaires"></div>
+        <h2 class="sous-titre">Téléphones</h2>
         <div class="carte">
           <label for="tel-principal">Téléphone WhatsApp et appels</label>
           <input id="tel-principal" type="tel" inputmode="tel" placeholder="06 12 34 56 78">
+          <p class="message message--erreur" id="erreur-tel-principal" hidden></p>
           <label for="tel-secondaire">Second téléphone</label>
           <input id="tel-secondaire" type="tel" inputmode="tel" placeholder="06 12 34 56 78">
+          <p class="message message--erreur" id="erreur-tel-secondaire" hidden></p>
+        </div>
+        <h2 class="sous-titre">Réseaux sociaux</h2>
+        <div class="carte" id="liste-reseaux">
+          <p class="aide aide--carte">Collez l’adresse complète de chaque compte (copiée depuis l’application, bouton « Partager le profil »). Elle remplace l’ancienne partout sur le site.</p>
         </div>
       </section>
 
@@ -106,21 +105,126 @@
 
     <!-- Barre de publication -->
     <div class="publier" id="barre-publier" hidden>
-      <p><strong id="nb-modifs">1 modification</strong> pas encore en ligne</p>
-      <div>
-        <button class="bouton bouton--discret" id="annuler-tout" type="button">Annuler</button>
-        <button class="bouton bouton--plein" id="publier" type="button">Publier</button>
+      <div class="publier__haut">
+        <p><strong id="nb-modifs">1 modification</strong> pas encore en ligne</p>
+        <button class="lien-discret" id="annuler-tout" type="button">Tout annuler</button>
+      </div>
+      <div class="publier__actions">
+        <button class="icone" id="defaire" type="button" aria-label="Annuler la dernière action" title="Annuler la dernière action">↶</button>
+        <button class="icone" id="refaire" type="button" aria-label="Rétablir l’action annulée" title="Rétablir">↷</button>
+        <span></span>
+        <button class="bouton bouton--clair" id="ouvrir-apercu" type="button">Aperçu</button>
+        <button class="bouton bouton--blanc" id="publier" type="button">Publier</button>
       </div>
     </div>
 
     <nav class="onglets" aria-label="Sections">
-      <button type="button" data-cible="annonce" aria-current="page"><span>📣</span>Annonce</button>
+      <button type="button" data-cible="annonces" aria-current="page"><span>📣</span>Annonces</button>
       <button type="button" data-cible="coiffures"><span>✂️</span>Coiffures</button>
       <button type="button" data-cible="photos"><span>📷</span>Photos</button>
-      <button type="button" data-cible="horaires"><span>🕘</span>Horaires</button>
+      <button type="button" data-cible="infos"><span>🕘</span>Infos</button>
       <button type="button" data-cible="historique"><span>↺</span>Historique</button>
     </nav>
   </div>
+
+  <!-- Mon compte -->
+  <dialog class="fiche" id="fiche-compte">
+    <div>
+      <h2>Mon compte</h2>
+      <p class="aide">Vous êtes connectée à l’espace de gestion de <strong>Nelly Coiffure</strong>. La connexion reste active 30 jours sur cet appareil.</p>
+      <div class="menu-compte">
+        <a class="bouton bouton--contour bouton--large" href="/" target="_blank" rel="noopener">Voir le site</a>
+        <button class="bouton bouton--contour bouton--large" id="installer" type="button" hidden>Installer l’application sur ce téléphone</button>
+        <p class="aide" id="aide-iphone" hidden>Pour l’installer sur iPhone : dans Safari, touchez <strong>Partager</strong> ⬆️ puis <strong>Sur l’écran d’accueil</strong>.</p>
+        <button class="bouton bouton--danger-plein bouton--large" id="deconnexion" type="button">Se déconnecter</button>
+      </div>
+      <div class="fiche__actions"><span></span><button class="bouton bouton--discret" type="button" data-fermer>Fermer</button></div>
+    </div>
+  </dialog>
+
+  <!-- Annonce -->
+  <dialog class="fiche fiche--grande" id="fiche-annonce">
+    <form method="dialog" id="form-annonce" novalidate>
+      <h2 id="annonce-titre-fiche">Nouvelle annonce</h2>
+
+      <p class="etiquette">1. Présentation</p>
+      <div class="formats" id="a-formats" role="radiogroup" aria-label="Présentation de l’annonce">
+        <button type="button" role="radio" data-format="section"><span class="mini mini--section"><i></i><b></b></span><strong>Grande section</strong><small>Image, titre, texte et bouton. Idéal pour une promotion.</small></button>
+        <button type="button" role="radio" data-format="carte"><span class="mini mini--carte"><i></i><b></b></span><strong>Carte</strong><small>Plus compacte, avec une petite image.</small></button>
+        <button type="button" role="radio" data-format="encadre"><span class="mini mini--encadre"><b></b></span><strong>Encadré</strong><small>Texte seul, élégant. Pour une information.</small></button>
+        <button type="button" role="radio" data-format="bandeau"><span class="mini mini--bandeau"><b></b></span><strong>Bandeau</strong><small>Une ligne tout en haut des pages. Pour un message court et urgent.</small></button>
+      </div>
+
+      <p class="etiquette">2. Contenu</p>
+      <div id="a-bloc-etiquette">
+        <label for="a-etiquette">Petit titre (facultatif)</label>
+        <input id="a-etiquette" maxlength="40" placeholder="Ex. : Offre du moment">
+      </div>
+      <div id="a-bloc-titre">
+        <label for="a-titre">Titre</label>
+        <input id="a-titre" maxlength="90" placeholder="Ex. : -20 % sur les knotless braids">
+      </div>
+      <label for="a-texte" id="a-texte-label">Texte</label>
+      <textarea id="a-texte" maxlength="400" rows="3" placeholder="Ex. : Tout le mois de décembre, pour toute réservation sur WhatsApp."></textarea>
+      <p class="compteur"><span id="a-texte-compte">0</span> / <span id="a-texte-max">400</span></p>
+
+      <div id="a-bloc-image">
+        <p class="etiquette">Image</p>
+        <div class="cadreur" id="a-cadreur" hidden>
+          <div class="cadreur__vues">
+            <figure><div class="cadreur__cadre" data-vue="ordinateur"><img alt=""></div><figcaption>Ordinateur</figcaption></figure>
+            <figure><div class="cadreur__cadre" data-vue="mobile"><img alt=""></div><figcaption>Mobile</figcaption></figure>
+          </div>
+          <p class="aide aide--petite">Faites glisser l’image pour la déplacer dans le cadre.</p>
+          <div class="cadreur__commandes">
+            <button type="button" class="bouton bouton--contour" data-cadrage="moins" aria-label="Réduire">－ Réduire</button>
+            <button type="button" class="bouton bouton--contour" data-cadrage="plus" aria-label="Agrandir">＋ Agrandir</button>
+            <button type="button" class="bouton bouton--discret" data-cadrage="centre">Recentrer</button>
+          </div>
+          <label for="a-alt">Description de l’image (pour Google et les malvoyants)</label>
+          <input id="a-alt" maxlength="120" placeholder="Ex. : Knotless braids longues réalisées par Nelly">
+        </div>
+        <div class="ligne-boutons">
+          <label class="bouton bouton--contour bouton--fichier" id="a-image-bouton">Ajouter une image<input type="file" id="a-image" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"></label>
+          <button type="button" class="bouton bouton--danger" id="a-image-retirer" hidden>Retirer l’image</button>
+        </div>
+      </div>
+
+      <p class="etiquette">3. Bouton (facultatif)</p>
+      <label for="a-bouton-texte">Texte du bouton</label>
+      <input id="a-bouton-texte" maxlength="40" placeholder="Ex. : Je réserve sur WhatsApp">
+      <div id="a-bloc-destination">
+        <label for="a-bouton-type">Le bouton mène vers</label>
+        <select id="a-bouton-type">
+          <option value="whatsapp">Une conversation WhatsApp avec moi</option>
+          <option value="page">Une page du site</option>
+          <option value="telephone">Un appel téléphonique</option>
+          <option value="externe">Un autre site (Instagram, boutique…)</option>
+        </select>
+        <div id="a-dest-whatsapp"><label for="a-bouton-wa">Message prérempli</label><input id="a-bouton-wa" maxlength="200"></div>
+        <div id="a-dest-page"><label for="a-bouton-page">Page</label><select id="a-bouton-page"></select></div>
+        <div id="a-dest-telephone"><label for="a-bouton-tel">Numéro</label><input id="a-bouton-tel" type="tel" inputmode="tel" placeholder="06 12 34 56 78"></div>
+        <div id="a-dest-externe"><label for="a-bouton-url">Adresse du site</label><input id="a-bouton-url" type="url" inputmode="url" placeholder="https://…"></div>
+      </div>
+
+      <p class="etiquette">4. Où et quand</p>
+      <label class="interrupteur"><input type="checkbox" id="a-toutes"><span>Sur toutes les pages</span></label>
+      <div class="pages" id="a-pages"></div>
+      <div class="deux-colonnes">
+        <div><label for="a-debut">À partir du (facultatif)</label><input id="a-debut" type="date"></div>
+        <div><label for="a-fin">Jusqu’au (facultatif)</label><input id="a-fin" type="date"></div>
+      </div>
+      <label class="interrupteur"><input type="checkbox" id="a-active"><span>Annonce active</span></label>
+
+      <p class="message message--erreur" id="a-erreur" role="alert" hidden></p>
+      <div class="fiche__actions">
+        <button class="bouton bouton--danger" id="a-supprimer" type="button">Supprimer</button>
+        <span></span>
+        <button class="bouton bouton--discret" value="annuler" formnovalidate>Fermer</button>
+        <button class="bouton bouton--plein" id="a-valider" value="valider">Valider</button>
+      </div>
+    </form>
+  </dialog>
 
   <!-- Fiche de modification d'une coiffure -->
   <dialog class="fiche" id="fiche-coiffure">
@@ -137,7 +241,7 @@
       <textarea id="c-description" maxlength="160" rows="3"></textarea>
       <p class="etiquette">Photo de la carte</p>
       <div class="choix-photo" id="c-photos"></div>
-      <label class="bouton bouton--contour bouton--fichier">Nouvelle photo<input type="file" id="c-fichier" accept="image/*"></label>
+      <label class="bouton bouton--contour bouton--fichier">Nouvelle photo<input type="file" id="c-fichier" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"></label>
       <label class="interrupteur"><input type="checkbox" id="c-visible"><span>Visible sur le site</span></label>
       <p class="message message--erreur" id="c-erreur" hidden></p>
       <div class="fiche__actions">
@@ -161,6 +265,28 @@
         <button class="bouton bouton--plein" value="valider">OK</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Aperçu -->
+  <dialog class="apercu" id="fiche-apercu">
+    <div class="apercu__barre">
+      <button class="bouton bouton--discret" type="button" data-fermer>✕ Fermer</button>
+      <select id="apercu-page" aria-label="Page à afficher"></select>
+      <div class="apercu__ecrans" role="radiogroup" aria-label="Taille d’écran">
+        <button type="button" role="radio" data-ecran="390" aria-checked="true">Mobile</button>
+        <button type="button" role="radio" data-ecran="820" aria-checked="false">Tablette</button>
+        <button type="button" role="radio" data-ecran="1366" aria-checked="false">Ordinateur</button>
+      </div>
+    </div>
+    <ul class="apercu__alertes" id="apercu-alertes" hidden></ul>
+    <div class="apercu__zone" id="apercu-zone">
+      <p class="apercu__chargement" id="apercu-chargement"><span class="chargement"></span> Préparation de l’aperçu…</p>
+      <iframe id="apercu-cadre" title="Aperçu du site" sandbox="allow-scripts allow-same-origin"></iframe>
+    </div>
+    <div class="apercu__pied">
+      <p class="aide aide--petite">Aperçu de vos modifications, pas encore en ligne.</p>
+      <button class="bouton bouton--plein" type="button" id="apercu-publier">Publier</button>
+    </div>
   </dialog>
 
   <!-- Confirmation et résultat de publication -->

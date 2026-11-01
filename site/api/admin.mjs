@@ -9,7 +9,7 @@ import { motDePasseValide, ouvrirSession, fermerSession, sessionValide } from '.
 // et envoie le tout en un seul commit sur GitHub ; Vercel remet ensuite le site en ligne (environ une minute).
 
 const CONTENU = 'contenu/site.json';
-const PHOTO = /^img\/realisations\/catalogue\/[a-z0-9-]+(-sm)?\.jpg$/;
+const PHOTO = /^img\/(realisations\/catalogue|annonces)\/[a-z0-9-]+(-sm)?\.jpg$/;
 const MAX_PHOTO = 900 * 1024;
 const INDEXNOW_CLE = '9854d7068bfd3aafaa6ed978dd241645';
 
@@ -65,6 +65,7 @@ export default async function handler(req, res) {
       return json(res, 200, { contenu: JSON.parse(texte) });
     }
     if (action === 'publier' && req.method === 'POST') return await publierContenu(req, res);
+    if (action === 'apercu' && req.method === 'POST') return await apercu(req, res);
 
     return json(res, 404, { erreur: 'Action inconnue.' });
   } catch (e) {
@@ -72,6 +73,30 @@ export default async function handler(req, res) {
     const message = e instanceof ErreurGithub ? 'Le site n’a pas pu être mis à jour (GitHub). Réessayez dans un instant.' : 'Erreur inattendue. Réessayez dans un instant.';
     return json(res, 500, { erreur: message });
   }
+}
+
+// Pages actuelles du site (dernière version sur GitHub), gardées une minute pour enchaîner les aperçus rapidement
+let memoire = { quand: 0, fichiers: null };
+async function lireFichiersSite({ frais = true } = {}) {
+  if (!frais && memoire.fichiers && Date.now() - memoire.quand < 60 * 1000) return memoire.fichiers;
+  const fichiers = {};
+  await Promise.all(FICHIERS.map(async (f) => {
+    try { fichiers[f] = (await lireTexte(`site/${f}`)).texte; }
+    catch (e) { if (e.statut !== 404) throw e; }
+  }));
+  memoire = { quand: Date.now(), fichiers };
+  return fichiers;
+}
+
+// Aperçu fidèle : la page est générée exactement comme à la publication, sans rien publier
+async function apercu(req, res) {
+  const { contenu, page } = req.body || {};
+  if (!PAGES[page] || PAGES[page].robots) return json(res, 400, { erreur: 'Page inconnue.' });
+  const erreurs = verifierContenu(contenu);
+  const fichiers = await lireFichiersSite({ frais: false });
+  const ancien = JSON.parse((await lireTexte(CONTENU)).texte);
+  const resultat = { ...fichiers, ...regenerer(fichiers, contenu, { ancien }) };
+  return json(res, 200, { html: resultat[page], avertissements: erreurs });
 }
 
 async function publierContenu(req, res) {
@@ -94,10 +119,13 @@ async function publierContenu(req, res) {
   const ancien = JSON.parse(actuel.texte);
 
   // Nouvelles photos dont le nom existe déjà sur le site : renommées pour ne jamais écraser une photo en ligne
-  const enLigne = await listerDossier('site/img/realisations/catalogue');
+  const [enLigne, imagesAnnonces] = await Promise.all([
+    listerDossier('site/img/realisations/catalogue'),
+    listerDossier('site/img/annonces').catch((e) => { if (e.statut === 404) return new Set(); throw e; }),
+  ]);
   const base = (chemin) => chemin.replace(/(-sm)?\.jpg$/, '');
   const nomsEnLigne = new Set([...enLigne].map((n) => n.replace(/(-sm)?\.jpg$/, '')));
-  const bases = [...new Set(photos.map((p) => base(p.chemin)))];
+  const bases = [...new Set(photos.map((p) => base(p.chemin)).filter((b) => b.startsWith('img/realisations/')))];
   const reserves = new Set([...nomsEnLigne, ...bases.map((b) => b.split('/').pop())]);
   const renommer = new Map();
   for (const b of bases) {
@@ -123,13 +151,15 @@ async function publierContenu(req, res) {
     const present = (envoyees.has(`${img}.jpg`) || enLigne.has(`${nom}.jpg`)) && (envoyees.has(`${img}-sm.jpg`) || enLigne.has(`${nom}-sm.jpg`));
     if (!present) return json(res, 400, { erreur: 'Une photo utilisée est introuvable. Ajoutez-la de nouveau.' });
   }
+  for (const a of contenu.annonces || []) {
+    if (!a.image?.src) continue;
+    const nom = a.image.src.split('/').pop();
+    const present = (envoyees.has(`${a.image.src}.jpg`) || imagesAnnonces.has(`${nom}.jpg`)) && (envoyees.has(`${a.image.src}-sm.jpg`) || imagesAnnonces.has(`${nom}-sm.jpg`));
+    if (!present) return json(res, 400, { erreur: `L’image de l’annonce « ${a.titre || a.texte} » est introuvable. Ajoutez-la de nouveau.` });
+  }
 
   // Régénération des pages à partir de la dernière version en ligne
-  const fichiers = {};
-  await Promise.all(FICHIERS.map(async (f) => {
-    try { fichiers[f] = (await lireTexte(`site/${f}`)).texte; }
-    catch (e) { if (e.statut !== 404) throw e; }
-  }));
+  const fichiers = await lireFichiersSite();
   const modifies = regenerer(fichiers, contenu, { ancien });
 
   // Les photos retirées disparaissent du site mais leurs fichiers restent dans le dépôt :

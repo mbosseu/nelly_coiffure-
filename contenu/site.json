@@ -1,7 +1,10 @@
 {
-  "annonce": {
-    "active": false,
-    "texte": "Test"
+  "annonces": [],
+  "reseaux": {
+    "instagram": "https://www.instagram.com/nellycoiffure237/",
+    "tiktok": "https://www.tiktok.com/@nellycoiffure237",
+    "facebook": "https://www.facebook.com/share/1CFM1XgV6n/",
+    "snapchat": "https://snapchat.com/t/rsEMEsWo"
   },
   "telephones": {
     "principal": "06 04 02 32 90",

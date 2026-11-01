@@ -14,6 +14,12 @@ function setWa(el, msg) {
 document.querySelectorAll('[data-wa]').forEach((el) => setWa(el, el.dataset.wa));
 document.querySelectorAll('.js-year').forEach((el) => { el.textContent = new Date().getFullYear(); });
 
+// Annonces programmées (espace de gestion) : visibles seulement entre leur date de début et leur date de fin
+const today = new Date().toLocaleDateString('sv');
+document.querySelectorAll('[data-debut], [data-fin]').forEach((el) => {
+  el.hidden = Boolean((el.dataset.debut && today < el.dataset.debut) || (el.dataset.fin && today > el.dataset.fin));
+});
+
 // Entrée du hero une fois les polices prêtes (évite le saut de typo pendant l'animation)
 const start = () => requestAnimationFrame(() => document.body.classList.add('is-loaded'));
 Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 900))]).then(start);

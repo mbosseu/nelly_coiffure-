@@ -205,10 +205,116 @@ const rendreHoraires = (contenu, NL) => [
   '            </dl>',
 ].join(NL);
 
-const rendreAnnonce = (contenu, NL) => {
+// --- Annonces -------------------------------------------------------------------
+// Chaque annonce choisit son format : « section » (image + texte + bouton), « carte » (plus compacte),
+// « encadre » (texte seul) ou « bandeau » (barre fine en haut de page, facultative).
+// Elle s'affiche sur les pages choisies, entre ses dates de début et de fin (vérifiées à la publication
+// et, pour les dates à venir, par js/main.js chez le visiteur).
+
+export const FORMATS_ANNONCE = ['section', 'carte', 'encadre', 'bandeau'];
+// Pages où une annonce peut apparaître (dans l'ordre du menu)
+export const PAGES_ANNONCES = [
+  ['index.html', 'Accueil'], ['coiffures.html', 'Coiffures et tarifs'], ['realisations.html', 'Réalisations'],
+  ['a-propos.html', 'À propos'], ['contact.html', 'Contact'], ['knotless-braids-marseille.html', 'Knotless braids'],
+  ['locks-marseille.html', 'Locks'], ['tresses-enfant-marseille.html', 'Tresses enfant'],
+  ['coiffure-afro-domicile-marseille.html', 'Coiffure à domicile'], ['conseils-tresses-africaines.html', 'Conseils tresses'],
+];
+
+// Ancien format (une seule annonce texte en bandeau) → liste d'annonces
+export const annoncesDe = (contenu) => {
+  if (Array.isArray(contenu.annonces)) return contenu.annonces;
   const a = contenu.annonce || {};
-  if (!a.active || !String(a.texte || '').trim()) return NL;
-  return `${NL}    <div class="annonce" role="note"><p>${echapper(String(a.texte).trim())}</p></div>${NL}`;
+  return String(a.texte || '').trim() ? [{ id: 'annonce-1', active: !!a.active, format: 'bandeau', titre: '', texte: a.texte, pages: ['toutes'] }] : [];
+};
+
+const annoncesVisibles = (contenu, fichier, aujourdhui) => annoncesDe(contenu).filter((a) => a.active
+  && (a.pages || []).some((p) => p === 'toutes' || p === fichier)
+  && !(a.fin && a.fin < aujourdhui));
+
+// Destination d'un bouton : WhatsApp (message prérempli), page du site, téléphone ou lien externe
+export const attributsLien = (b) => {
+  const v = String(b?.valeur || '').trim();
+  if (b?.type === 'whatsapp') return `data-wa="${echapper(v || 'Bonjour Nelly, je souhaite prendre rendez-vous pour une coiffure.')}" href="contact.html"`;
+  if (b?.type === 'telephone') return `href="tel:${formatsTelephone(v).international}"`;
+  if (b?.type === 'externe') return `href="${echapper(v)}" target="_blank" rel="noopener"`;
+  return `href="${echapper(v || 'contact.html')}"`;
+};
+
+const dates = (a, aujourdhui) => `${a.debut ? ` data-debut="${a.debut}"` : ''}${a.fin ? ` data-fin="${a.fin}"` : ''}${a.debut && a.debut > aujourdhui ? ' hidden' : ''}`;
+
+const imageAnnonce = (img, tailles) => {
+  if (!img?.src) return '';
+  const x = Number(img.x ?? 50); const y = Number(img.y ?? 50); const z = Number(img.zoom ?? 1);
+  const style = `object-position: ${x}% ${y}%${z !== 1 ? `; transform: scale(${z}); transform-origin: ${x}% ${y}%` : ''}`;
+  return `<img src="${img.src}.jpg" srcset="${img.src}-sm.jpg 800w, ${img.src}.jpg 1600w" sizes="${tailles}" width="${img.largeur || 1600}" height="${img.hauteur || 1200}" loading="lazy" alt="${echapper(img.alt || '')}" style="${style}">`;
+};
+
+const boutonAnnonce = (a, classe) => (String(a.bouton?.texte || '').trim()
+  ? `<a class="${classe}" ${attributsLien(a.bouton)}>${a.bouton.type === 'whatsapp' ? '<svg class="icon" aria-hidden="true"><use href="#i-whatsapp"/></svg> ' : ''}${echapper(a.bouton.texte.trim())} <svg class="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>`
+  : '');
+
+const rendrePromo = (a, aujourdhui, NL) => {
+  const etiquette = String(a.etiquette || '').trim();
+  const textes = [
+    etiquette && `<p class="eyebrow eyebrow--copper">${echapper(etiquette)}</p>`,
+    String(a.titre || '').trim() && `<h2 class="title">${echapper(a.titre.trim())}</h2>`,
+    String(a.texte || '').trim() && `<p class="body">${echapper(a.texte.trim()).replace(/\n/g, '<br>')}</p>`,
+    boutonAnnonce(a, 'btn btn--dark btn--shine'),
+  ].filter(Boolean);
+  const avecImage = a.format !== 'encadre' && a.image?.src;
+  const tailles = a.format === 'carte' ? '(min-width: 768px) 260px, 100vw' : '(min-width: 1025px) 45vw, 100vw';
+  return [
+    `    <section class="promo promo--${a.format}${avecImage ? '' : ' promo--sans-image'}" aria-label="${echapper(a.titre || etiquette || 'Annonce')}"${dates(a, aujourdhui)}>`,
+    '      <div class="container">',
+    '        <div class="promo__inner reveal">',
+    avecImage && `          <div class="promo__media">${imageAnnonce(a.image, tailles)}</div>`,
+    '          <div class="promo__texte">',
+    ...textes.map((t) => `            ${t}`),
+    '          </div>',
+    '        </div>',
+    '      </div>',
+    '    </section>',
+  ].filter(Boolean).join(NL);
+};
+
+const rendrePromos = (contenu, fichier, aujourdhui, NL) => {
+  const liste = annoncesVisibles(contenu, fichier, aujourdhui).filter((a) => a.format !== 'bandeau');
+  return liste.length ? `${NL}${liste.map((a) => rendrePromo(a, aujourdhui, NL)).join(NL)}${NL}` : NL;
+};
+
+const rendreAnnonce = (contenu, fichier, aujourdhui, NL) => {
+  const liste = annoncesVisibles(contenu, fichier, aujourdhui).filter((a) => a.format === 'bandeau');
+  if (!liste.length) return NL;
+  return `${NL}${liste.map((a) => {
+    const texte = echapper(String(a.texte || a.titre || '').trim());
+    const lien = String(a.bouton?.texte || '').trim() ? ` <a ${attributsLien(a.bouton)}>${echapper(a.bouton.texte.trim())}</a>` : '';
+    return `    <div class="annonce" role="note"${dates(a, aujourdhui)}><p>${texte}${lien}</p></div>`;
+  }).join(NL)}${NL}`;
+};
+
+// --- Réseaux sociaux --------------------------------------------------------------
+
+export const RESEAUX_NOMS = { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat' };
+const reseauxDe = (contenu) => contenu.reseaux || { instagram: RESEAUX[0], tiktok: RESEAUX[1], facebook: RESEAUX[2], snapchat: RESEAUX[3] };
+const pseudo = (url) => (String(url).match(/(?:instagram\.com\/|tiktok\.com\/@)([A-Za-z0-9._]+)/) || [])[1];
+
+// Les liens apparaissent à plusieurs endroits (pied de page, Contact, Réalisations) : on remplace l'ancienne adresse
+// complète par la nouvelle. Les pseudos affichés sont repérés par data-reseau="instagram|tiktok…" : chacun suit son réseau
+// (Instagram et TikTok peuvent avoir le même pseudo, un remplacement global les mélangerait).
+const remplacerReseaux = (t, contenu, ancien) => {
+  const n = reseauxDe(contenu);
+  if (ancien) {
+    const a = reseauxDe(ancien);
+    for (const cle of Object.keys(RESEAUX_NOMS)) {
+      if (!a[cle] || !n[cle] || a[cle] === n[cle]) continue;
+      t = t.split(echapper(a[cle])).join(echapper(n[cle]));
+      if (echapper(a[cle]) !== a[cle]) t = t.split(a[cle]).join(n[cle]);
+    }
+  }
+  return t.replace(/(<(?:small|span) data-reseau="([a-z]+)">)@?[^<]*(<\/(?:small|span)>)/g, (m, ouv, cle, fin) => {
+    const p = pseudo(n[cle]);
+    return p ? `${ouv}@${p}${fin}` : `${ouv}${RESEAUX_NOMS[cle] || cle}${fin}`;
+  });
 };
 
 // Horaires pour Google : jours consécutifs aux mêmes heures regroupés
@@ -252,13 +358,13 @@ const salonGoogle = (contenu) => ({
       itemOffered: { '@type': 'Service', name: s.nom, serviceType: 'Coiffure afro', areaServed: 'Marseille' },
     })),
   },
-  ...(RESEAUX.length || FICHE_GOOGLE ? { sameAs: [...RESEAUX, FICHE_GOOGLE].filter(Boolean) } : {}),
+  sameAs: [...Object.values(reseauxDe(contenu)), FICHE_GOOGLE].filter(Boolean),
 });
 
 // --- Étapes ---------------------------------------------------------------------
 
-// Contenu modifiable (coiffures, galerie, horaires, annonce, prix, téléphones)
-const appliquerContenu = (h, fichier, contenu, ancien) => {
+// Contenu modifiable (coiffures, galerie, horaires, annonces, prix, téléphones, réseaux)
+const appliquerContenu = (h, fichier, contenu, ancien, aujourdhui) => {
   const NL = h.includes('\r\n') ? '\r\n' : '\n';
   if (fichier === 'coiffures.html') {
     h = zone(h, 'coiffures', `${NL}${visibles(contenu).map((s) => carteCoiffure(s, contenu, NL)).join(NL)}${NL}`);
@@ -269,13 +375,14 @@ const appliquerContenu = (h, fichier, contenu, ancien) => {
     h = zone(h, 'galerie', `${NL}${rendreGalerie(contenu, NL)}${NL}`);
   }
   if (fichier === 'contact.html') h = zone(h, 'horaires', `${NL}${rendreHoraires(contenu, NL)}${NL}`);
-  h = zone(h, 'annonce', rendreAnnonce(contenu, NL));
+  h = zone(h, 'annonce', rendreAnnonce(contenu, fichier, aujourdhui, NL));
+  h = zone(h, 'promos', rendrePromos(contenu, fichier, aujourdhui, NL));
   // Prix repris dans les textes : seul le nombre change, la mise en forme (espace insécable…) reste
   h = h.replace(/(<span data-prix="([a-z0-9 -]+)">)([^<]*?)(\d+)([^<]*<\/span>)/g, (m, ouv, cles, avant, nb, apres) => {
     const p = prixDe(contenu, cles.trim().split(/\s+/));
     return p === null ? m : `${ouv}${avant}${p}${apres}`;
   });
-  return remplacerTelephones(h, contenu, ancien);
+  return remplacerReseaux(remplacerTelephones(h, contenu, ancien), contenu, ancien);
 };
 
 const remplacerTelephones = (t, contenu, ancien) => {
@@ -395,10 +502,10 @@ export function regenerer(fichiers, contenu, { ancien, aujourdhui = new Date().t
   const sortie = { ...fichiers };
   for (const f of [...Object.keys(PAGES), 'tarifs.html']) {
     if (sortie[f] === undefined) continue;
-    sortie[f] = appliquerContenu(sortie[f], f, contenu, ancien);
+    sortie[f] = appliquerContenu(sortie[f], f, contenu, ancien, aujourdhui);
     if (PAGES[f]) sortie[f] = appliquerSeo(sortie[f], f, contenu, aujourdhui);
   }
-  if (sortie['js/main.js'] !== undefined) sortie['js/main.js'] = remplacerTelephones(sortie['js/main.js'], contenu, ancien);
+  if (sortie['js/main.js'] !== undefined) sortie['js/main.js'] = remplacerReseaux(remplacerTelephones(sortie['js/main.js'], contenu, ancien), contenu, ancien);
 
   // Version du CSS et du JS dans leurs adresses : chaque modification force les téléphones à recharger la nouvelle version
   const versions = {};
@@ -445,5 +552,44 @@ export function verifierContenu(c) {
   if (!Array.isArray(c.photos)) erreurs.push('Liste de photos illisible.');
   else c.photos.forEach((p) => { if (!/^img\/realisations\/catalogue\/[a-z0-9-]+$/.test(p.image || '')) erreurs.push('Photo invalide.'); });
   if (String(c.annonce?.texte || '').length > 160) erreurs.push('L’annonce est trop longue (160 caractères maximum).');
+  erreurs.push(...verifierAnnonces(c.annonces));
+  if (c.reseaux !== undefined) {
+    for (const [cle, nom] of Object.entries(RESEAUX_NOMS)) {
+      if (!urlValide(c.reseaux?.[cle])) erreurs.push(`Le lien ${nom} doit être une adresse complète commençant par https://`);
+    }
+  }
+  return erreurs;
+}
+
+export const urlValide = (u) => { try { const x = new URL(String(u || '').trim()); return x.protocol === 'https:' || x.protocol === 'http:'; } catch { return false; } };
+const PAGES_PUBLIQUES = new Set(Object.keys(PAGES).filter((f) => !PAGES[f].robots));
+
+// Chaque annonce : format connu, texte présent, bouton complet, pages existantes, dates cohérentes
+export function verifierAnnonces(annonces) {
+  if (annonces === undefined) return [];
+  if (!Array.isArray(annonces)) return ['Liste d’annonces illisible.'];
+  const erreurs = [];
+  const date = /^\d{4}-\d{2}-\d{2}$/;
+  annonces.forEach((a, i) => {
+    const nom = String(a.titre || a.texte || '').trim().slice(0, 30) || `n° ${i + 1}`;
+    if (!/^[a-z0-9-]+$/.test(a.id || '')) erreurs.push(`Annonce « ${nom} » : identifiant invalide.`);
+    if (!FORMATS_ANNONCE.includes(a.format)) erreurs.push(`Annonce « ${nom} » : choisissez une présentation.`);
+    if (a.format === 'bandeau' ? !String(a.texte || '').trim() : !String(a.titre || '').trim()) erreurs.push(`Annonce « ${nom} » : ${a.format === 'bandeau' ? 'le texte' : 'le titre'} est obligatoire.`);
+    if (String(a.titre || '').length > 90) erreurs.push(`Annonce « ${nom} » : titre trop long (90 caractères maximum).`);
+    if (String(a.texte || '').length > (a.format === 'bandeau' ? 160 : 400)) erreurs.push(`Annonce « ${nom} » : texte trop long.`);
+    if (String(a.etiquette || '').length > 40) erreurs.push(`Annonce « ${nom} » : petit titre trop long (40 caractères maximum).`);
+    if (!Array.isArray(a.pages) || !a.pages.length || !a.pages.every((p) => p === 'toutes' || PAGES_PUBLIQUES.has(p))) erreurs.push(`Annonce « ${nom} » : choisissez au moins une page.`);
+    if ((a.debut && !date.test(a.debut)) || (a.fin && !date.test(a.fin))) erreurs.push(`Annonce « ${nom} » : date invalide.`);
+    if (a.debut && a.fin && a.fin < a.debut) erreurs.push(`Annonce « ${nom} » : la date de fin est avant la date de début.`);
+    if (a.image && !/^img\/annonces\/[a-z0-9-]+$/.test(a.image.src || '')) erreurs.push(`Annonce « ${nom} » : image invalide.`);
+    if (String(a.bouton?.texte || '').trim()) {
+      const b = a.bouton;
+      if (String(b.texte).length > 40) erreurs.push(`Annonce « ${nom} » : texte du bouton trop long (40 caractères maximum).`);
+      if (b.type === 'externe' && !urlValide(b.valeur)) erreurs.push(`Annonce « ${nom} » : le lien du bouton doit commencer par https://`);
+      if (b.type === 'page' && !PAGES_PUBLIQUES.has(String(b.valeur || '').split('#')[0])) erreurs.push(`Annonce « ${nom} » : choisissez la page de destination du bouton.`);
+      if (b.type === 'telephone' && !/^0[1-9](?:[ .]?\d{2}){4}$/.test(String(b.valeur || '').trim())) erreurs.push(`Annonce « ${nom} » : numéro de téléphone invalide.`);
+      if (!['whatsapp', 'page', 'externe', 'telephone'].includes(b.type)) erreurs.push(`Annonce « ${nom} » : choisissez où mène le bouton.`);
+    }
+  });
   return erreurs;
 }
