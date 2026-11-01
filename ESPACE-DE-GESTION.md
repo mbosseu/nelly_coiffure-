@@ -5,6 +5,7 @@ Une application installable sur le téléphone de Nelly pour modifier elle-même
 | Onglet | Ce qu'elle peut faire |
 |---|---|
 | **Annonces** | Créer des annonces au choix : grande section (image + texte + bouton), carte, encadré ou bandeau ; choisir les pages, les dates de début et de fin, l'image et son cadrage, le bouton et sa destination (WhatsApp, page du site, appel, autre site) |
+| **Pages** | Pour chaque page : modifier tous les textes (titres, paragraphes, questions…), remplacer les images (cadre d'origine conservé, cadrage par glisser, agrandir, réduire, recentrer, retour à l'image d'origine), modifier le texte et la destination des boutons, changer l'ordre des sections, masquer / réafficher une section |
 | **Coiffures** | Changer prix, nom, catégorie, description et photo ; masquer, ajouter, supprimer, réordonner une coiffure |
 | **Photos** | Ajouter des réalisations depuis la galerie du téléphone (recadrage et allègement automatiques), changer leur coiffure, les retirer |
 | **Infos** | Horaires jour par jour, les deux numéros de téléphone, les liens Instagram, TikTok, Facebook et Snapchat (remplacés partout sur le site) |
@@ -77,6 +78,25 @@ puis ouvrir http://localhost:5174/admin/ (mot de passe d'essai : `essai`). Le si
 - **Mon compte** : voir le site, installer l'application (Android), se déconnecter (le cookie de session est supprimé ; toute action privée est ensuite refusée).
 - **Annuler / Rétablir** (↶ ↷) dans la barre de publication, en plus de « Tout annuler ».
 - **Aperçu** : la page est générée par le même générateur que la publication, avec les images pas encore envoyées, en taille mobile, tablette ou ordinateur. Les problèmes bloquants (lien incomplet, numéro invalide…) sont signalés avant de publier.
+
+## Pages (1er novembre 2026)
+
+- `site/api/_lib/pages.mjs` repère dans `<main>` les sections (`data-s`), textes (`data-t`), images (`data-i`, avec l'image d'origine gardée dans `data-i-src`) et boutons (`data-b`). Les modifications sont dans `contenu/site.json` → `pages[fichier]` : `textes`, `images`, `boutons`, `ordre`, `masquees`.
+- Le titre H1 (lié au référencement), les prix, les pseudos et les zones gérées par les autres onglets ne sont pas modifiables ici.
+- Une image remplacée garde le cadre et les proportions d'origine (`object-fit: cover` + `aspect-ratio`), sans déformation ; les images envoyées sont dans `site/img/pages/`.
+- En-tête de page fixe ; les autres sections se déplacent et se masquent.
+- Annonces avec image : disposition « Image à gauche », « Image à droite » ou « Image au-dessus ».
+
+## Test de simplicité avec Nelly (scénario 7, à faire avec elle)
+
+Sans lui expliquer l'application, lui demander, sur son téléphone :
+1. Changer le titre d'une section de l'accueil.
+2. Remplacer la photo de la section « Plus qu'une coiffure… » et la recadrer.
+3. Faire mener un bouton vers WhatsApp.
+4. Créer une annonce « Congés » sur la page Contact.
+5. Masquer puis réafficher une section.
+6. Regarder l'aperçu sur mobile, puis publier.
+Noter chaque hésitation (où elle cherche, ce qu'elle ne comprend pas) : ce sont les points à simplifier.
 
 ## Limites connues
 - Les 3 cartes mises en avant sur l'accueil (knotless, tresses couchées, nattes collées) gardent leur nom et leur photo ; seuls leurs prix suivent.

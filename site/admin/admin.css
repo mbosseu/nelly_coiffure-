@@ -63,7 +63,7 @@ textarea { resize: vertical; min-height: 80px; }
 .barre .bouton { min-height: 40px; font-size: .85rem; color: var(--cream); }
 .contenu { padding: 18px 16px calc(210px + var(--bas)); max-width: 720px; margin: 0 auto; }
 
-.onglets { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, 1fr); background: #fff; border-top: 1px solid var(--line); padding-bottom: var(--bas); }
+.onglets { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(6, 1fr); background: #fff; border-top: 1px solid var(--line); padding-bottom: var(--bas); }
 .onglets button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 9px 2px 10px; border: 0; background: none; font-size: .68rem; color: var(--text); cursor: pointer; }
 .onglets button span { font-size: 1.2rem; line-height: 1.2; filter: grayscale(1); opacity: .7; }
 .onglets button[aria-current="page"] { color: var(--ink); font-weight: 600; }
@@ -212,3 +212,18 @@ textarea { resize: vertical; min-height: 80px; }
 .apercu__pied { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px calc(10px + var(--bas)); }
 .apercu__pied .aide { color: var(--cream); opacity: .8; margin: 0; }
 @media (max-width: 420px) { .formats, .pages { grid-template-columns: 1fr; } }
+
+/* --- Pages : sections, images, boutons ; dispositions des annonces --- */
+.onglets button { font-size: .64rem; }
+.icone-sombre { width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; border: 1px solid var(--line); background: #fff; cursor: pointer; font-size: 1rem; }
+.bloc-image { background: var(--cream-card); border: 1px solid var(--line); border-radius: 16px; padding: 12px; margin-bottom: 12px; }
+.bloc-image .cadre-page { max-height: 320px; margin: 0 auto 10px; max-width: 100%; }
+.bloc-bouton { border: 1px solid var(--line); border-radius: 16px; padding: 4px 14px 14px; margin: 0 0 12px; background: var(--cream-card); }
+.bloc-bouton legend { font-weight: 600; font-size: .85rem; color: var(--ink); padding: 0 6px; }
+.bloc-bouton label { margin-top: 10px; }
+.bloc-bouton label input, .bloc-bouton label select { margin-top: 6px; font-weight: 400; }
+.dispositions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+.dispositions button { display: flex; flex-direction: column; gap: 4px; align-items: stretch; padding: 8px; border-radius: 14px; border: 2px solid var(--line); background: #fff; cursor: pointer; font-size: .76rem; color: var(--ink); }
+.dispositions button[aria-checked="true"] { border-color: var(--copper); background: var(--cream-card); }
+.mini--droite { grid-template-columns: 1.2fr .8fr; }
+.mini--dessus { grid-template-rows: 1fr .8fr; }

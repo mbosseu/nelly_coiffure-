@@ -112,6 +112,7 @@ function normaliser(c) {
     c.annonces = String(a.texte || '').trim() ? [{ id: 'annonce-1', active: !!a.active, format: 'bandeau', titre: '', texte: a.texte, pages: ['toutes'] }] : [];
   }
   delete c.annonce;
+  c.pages = c.pages && typeof c.pages === 'object' ? c.pages : {};
   c.reseaux = c.reseaux || {
     instagram: 'https://www.instagram.com/nellycoiffure237/', tiktok: 'https://www.tiktok.com/@nellycoiffure237',
     facebook: 'https://www.facebook.com/share/1CFM1XgV6n/', snapchat: 'https://snapchat.com/t/rsEMEsWo',
@@ -126,6 +127,7 @@ function retirerImagesPerdues() {
   etat.contenu.photos = etat.contenu.photos.filter((p) => !perdues.includes(p.image));
   etat.contenu.services = etat.contenu.services.filter((s) => !perdues.includes(s.photo));
   etat.contenu.annonces.forEach((a) => { if (a.image && perdues.includes(a.image.src)) a.image = null; });
+  Object.values(etat.contenu.pages).forEach((p) => Object.keys(p.images || {}).forEach((id) => { if (perdues.includes(p.images[id].src)) delete p.images[id]; }));
   return true;
 }
 
@@ -217,6 +219,7 @@ function resumeModifications() {
   if (JSON.stringify(a.horaires) !== JSON.stringify(b.horaires)) lignes.push('Horaires');
   if (JSON.stringify(a.telephones) !== JSON.stringify(b.telephones)) lignes.push('Téléphones');
   for (const [cle, nom] of Object.entries(RESEAUX)) if (a.reseaux[cle] !== b.reseaux[cle]) lignes.push(`Lien ${nom}`);
+  for (const [f, n] of PAGES) if (JSON.stringify(a.pages[f] || {}) !== JSON.stringify(b.pages[f] || {})) lignes.push(`Page ${n} modifiée`);
   for (const s of b.services) {
     const avant = a.services.find((x) => x.cle === s.cle);
     if (!avant) lignes.push(`Nouvelle coiffure : ${s.nom}`);
@@ -241,7 +244,7 @@ $('#annuler-tout').addEventListener('click', () => {
 
 // --- Onglets ---------------------------------------------------------------------
 
-const TITRES = { annonces: 'Annonces', coiffures: 'Coiffures et prix', photos: 'Photos', infos: 'Infos et liens', historique: 'Historique' };
+const TITRES = { pages: 'Pages du site', annonces: 'Annonces', coiffures: 'Coiffures et prix', photos: 'Photos', infos: 'Infos et liens', historique: 'Historique' };
 $$('.onglets button').forEach((b) => b.addEventListener('click', () => ouvrirOnglet(b.dataset.cible)));
 
 function ouvrirOnglet(nom) {
@@ -250,6 +253,7 @@ function ouvrirOnglet(nom) {
   $$('.onglets button').forEach((b) => (b.dataset.cible === nom ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
   $('#titre-onglet').textContent = TITRES[nom];
   if (nom === 'historique') afficherHistorique();
+  if (nom === 'pages') chargerSections();
   window.scrollTo(0, 0);
 }
 
@@ -266,7 +270,7 @@ function toutAfficher({ garderPile = false } = {}) {
 // --- Outils ----------------------------------------------------------------------
 
 const urlImage = (img, petit = true) => etat.nouvelles.get(img)?.apercu || `/${img}${petit ? '-sm' : ''}.jpg`;
-const imagesUtilisees = (c) => [...new Set([...c.services.map((s) => s.photo), ...c.photos.map((p) => p.image), ...(c.annonces || []).map((a) => a.image?.src).filter(Boolean)])];
+const imagesUtilisees = (c) => [...new Set([...c.services.map((s) => s.photo), ...c.photos.map((p) => p.image), ...(c.annonces || []).map((a) => a.image?.src).filter(Boolean), ...Object.values(c.pages || {}).flatMap((p) => Object.values(p.images || {}).map((im) => im.src))])];
 const echapper = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const versCle = (nom) => nom.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'element';
 const urlValide = (u) => { try { const x = new URL(String(u || '').trim()); return x.protocol === 'https:' || x.protocol === 'http:'; } catch { return false; } };
@@ -424,6 +428,7 @@ function ouvrirAnnonce(index) {
 function majFicheAnnonce() {
   const a = ficheAnnonce.a;
   $$('#a-formats button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.format === a.format)));
+  $$('#a-dispositions button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.disposition === (a.disposition || 'gauche'))));
   const bandeau = a.format === 'bandeau';
   const avecImage = a.format === 'section' || a.format === 'carte';
   $('#a-bloc-etiquette').hidden = bandeau;
@@ -446,7 +451,7 @@ function majFicheAnnonce() {
   $('#a-image-retirer').hidden = !img;
   $('#a-image-bouton').firstChild.textContent = img ? 'Remplacer l’image' : 'Ajouter une image';
   if (img) {
-    const ratios = a.format === 'carte' ? ['1 / 1', '16 / 10'] : ['4 / 5', '4 / 3'];
+    const ratios = a.disposition === 'dessus' ? ['16 / 7', '4 / 3'] : a.format === 'carte' ? ['1 / 1', '16 / 10'] : ['4 / 5', '4 / 3'];
     $$('.cadreur__cadre').forEach((cadre, i) => {
       cadre.style.aspectRatio = ratios[i];
       const im = $('img', cadre);
@@ -458,6 +463,13 @@ function majFicheAnnonce() {
     });
   }
 }
+
+$('#a-dispositions').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-disposition]');
+  if (!b) return;
+  ficheAnnonce.a.disposition = b.dataset.disposition;
+  majFicheAnnonce();
+});
 
 $('#a-formats').addEventListener('click', (e) => {
   const b = e.target.closest('[data-format]');
@@ -882,6 +894,271 @@ $('#liste-historique').addEventListener('click', async (e) => {
   }
 });
 
+// --- Pages : sections, textes, images, boutons ------------------------------------
+
+$('#page-choix').innerHTML = PAGES.map(([f, n]) => `<option value="${f}">${n}</option>`).join('');
+let sections = []; // structure de la page affichée (fournie par le serveur, avec les modifications en cours)
+// Adresse d'une image de page : depuis l'appareil si elle n'est pas encore publiée
+const srcPage = (src) => etat.nouvelles.get(src.replace(/\.jpg$/, ''))?.apercu || `/${src}`;
+const pageEnCours = () => $('#page-choix').value;
+const modifsPage = (f = pageEnCours()) => {
+  etat.contenu.pages[f] = etat.contenu.pages[f] || {};
+  return etat.contenu.pages[f];
+};
+const nettoyerPage = (f = pageEnCours()) => {
+  const p = etat.contenu.pages[f];
+  if (!p) return;
+  for (const k of ['textes', 'images', 'boutons']) if (p[k] && !Object.keys(p[k]).length) delete p[k];
+  for (const k of ['ordre', 'masquees']) if (p[k] && !p[k].length) delete p[k];
+  if (!Object.keys(p).length) delete etat.contenu.pages[f];
+};
+
+async function chargerSections() {
+  const msg = $('#page-message');
+  msg.className = 'message'; msg.hidden = false;
+  msg.innerHTML = '<span class="chargement"></span> Chargement de la page…';
+  try {
+    const { sections: liste } = await api('apercu', { methode: 'POST', corps: { contenu: etat.contenu, page: pageEnCours() } });
+    sections = liste;
+    msg.hidden = true;
+    afficherSections();
+  } catch (err) {
+    msg.className = 'message message--erreur';
+    msg.textContent = err.message;
+  }
+}
+
+function afficherSections() {
+  const ul = $('#liste-sections');
+  ul.innerHTML = sections.map((s, i) => {
+    const img = s.images[0];
+    const vignette = img ? `<img class="liste__image" src="${srcPage(img.src)}" alt="">` : '<span class="liste__icone" aria-hidden="true">¶</span>';
+    const details = [s.textes.length && `${s.textes.length} texte${s.textes.length > 1 ? 's' : ''}`, s.images.length && `${s.images.length} image${s.images.length > 1 ? 's' : ''}`, s.boutons.length && `${s.boutons.length} bouton${s.boutons.length > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
+    return `
+      <li class="${s.masquee ? 'est-masque' : ''}">
+        ${vignette}
+        <button type="button" class="liste__texte" data-section="${i}">
+          <strong>${echapper(s.titre)}${s.masquee ? '<span class="badge">masquée</span>' : ''}</strong>
+          <small>${details || 'Section décorative'}</small>
+        </button>
+        ${s.premiere ? '<span class="pastille pastille--gris">fixe</span>' : `
+        <button type="button" class="icone-sombre" data-masquer="${i}" aria-label="${s.masquee ? 'Réafficher' : 'Masquer'} la section ${echapper(s.titre)}" title="${s.masquee ? 'Réafficher' : 'Masquer'}">${s.masquee ? '◌' : '👁'}</button>
+        <span class="liste__ordre">
+          <button type="button" data-s-monter="${i}" aria-label="Monter la section" ${i <= 1 ? 'disabled' : ''}>▲</button>
+          <button type="button" data-s-descendre="${i}" aria-label="Descendre la section" ${i === sections.length - 1 ? 'disabled' : ''}>▼</button>
+        </span>`}
+      </li>`;
+  }).join('');
+}
+
+$('#page-choix').addEventListener('change', chargerSections);
+$('#page-apercu').addEventListener('click', async () => {
+  $('#apercu-page').value = pageEnCours();
+  $('#fiche-apercu').showModal();
+  await chargerApercu();
+});
+
+$('#liste-sections').addEventListener('click', (e) => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.section !== undefined) return ouvrirSection(Number(b.dataset.section));
+  const p = modifsPage();
+  if (b.dataset.masquer !== undefined) {
+    const s = sections[Number(b.dataset.masquer)];
+    const m = new Set(p.masquees || []);
+    if (s.masquee) m.delete(s.id); else m.add(s.id);
+    p.masquees = [...m];
+    s.masquee = !s.masquee;
+  } else {
+    const i = Number(b.dataset.sMonter ?? b.dataset.sDescendre);
+    const j = b.dataset.sMonter !== undefined ? i - 1 : i + 1;
+    [sections[i], sections[j]] = [sections[j], sections[i]];
+    p.ordre = sections.filter((s) => !s.premiere).map((s) => s.id);
+  }
+  nettoyerPage();
+  afficherSections();
+  changement();
+});
+
+let ficheSection = null; // { section, images: { id: {src,x,y,zoom,alt} } }
+const LIBELLES = { titre: 'Titre', 'petit-titre': 'Petit titre', question: 'Question', texte: 'Texte' };
+
+function ouvrirSection(index) {
+  const s = sections[index];
+  const p = etat.contenu.pages[pageEnCours()] || {};
+  ficheSection = { section: s, images: structuredClone(p.images || {}) };
+  $('#section-titre').textContent = s.titre;
+  $('#section-erreur').hidden = true;
+  const textes = s.textes.map((t) => {
+    const valeur = p.textes?.[t.id] ?? t.texte;
+    const long = valeur.length > 60 || valeur.includes('\n');
+    return `<label for="champ-${t.id}">${LIBELLES[t.type]}</label>${long
+      ? `<textarea id="champ-${t.id}" data-texte="${t.id}" rows="${Math.min(6, Math.ceil(valeur.length / 45) + 1)}" maxlength="2000">${echapper(valeur)}</textarea>`
+      : `<input id="champ-${t.id}" data-texte="${t.id}" maxlength="300" value="${echapper(valeur)}">`}`;
+  }).join('');
+  const images = s.images.map((im) => `
+    <div class="bloc-image" data-image="${im.id}" data-ratio="${im.largeur} / ${im.hauteur}">
+      <div class="cadreur__cadre cadre-page" style="aspect-ratio: ${im.largeur} / ${im.hauteur}"><img alt=""></div>
+      <div class="cadreur__commandes">
+        <label class="bouton bouton--contour bouton--fichier">Remplacer<input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" data-remplacer="${im.id}"></label>
+        <button type="button" class="bouton bouton--contour" data-zoom="moins" aria-label="Réduire">－</button>
+        <button type="button" class="bouton bouton--contour" data-zoom="plus" aria-label="Agrandir">＋</button>
+        <button type="button" class="bouton bouton--discret" data-zoom="centre">Recentrer</button>
+        <button type="button" class="bouton bouton--danger" data-origine="${im.id}">Image d’origine</button>
+      </div>
+      <p class="aide aide--petite" data-aide-image>Image d’origine. « Remplacer » pour en choisir une autre : elle sera ajustée à ce cadre.</p>
+      <label for="alt-${im.id}">Description de l’image</label>
+      <input id="alt-${im.id}" data-alt="${im.id}" maxlength="120" value="${echapper(ficheSection.images[im.id]?.alt ?? im.alt)}">
+    </div>`).join('');
+  const boutons = s.boutons.map((b) => {
+    const m = p.boutons?.[b.id] || {};
+    const type = m.type || (b.wa ? 'whatsapp' : /^tel:/.test(b.href) ? 'telephone' : /^https?:/.test(b.href) ? 'externe' : 'page');
+    const valeur = m.valeur ?? (type === 'whatsapp' ? b.wa : type === 'telephone' ? b.href.replace(/^tel:\+33/, '0').replace(/(\d{2})(?=\d)/g, '$1 ') : b.href);
+    return `
+    <fieldset class="bloc-bouton" data-bouton="${b.id}">
+      <legend>Bouton « ${echapper(b.texte)} »</legend>
+      <label>Texte du bouton<input data-b-texte maxlength="60" value="${echapper(m.texte ?? b.texte)}"></label>
+      <label>Le bouton mène vers
+        <select data-b-type>
+          <option value="whatsapp" ${type === 'whatsapp' ? 'selected' : ''}>Une conversation WhatsApp avec moi</option>
+          <option value="page" ${type === 'page' ? 'selected' : ''}>Une page du site</option>
+          <option value="telephone" ${type === 'telephone' ? 'selected' : ''}>Un appel téléphonique</option>
+          <option value="externe" ${type === 'externe' ? 'selected' : ''}>Un autre site</option>
+        </select>
+      </label>
+      <label data-b-champ="whatsapp">Message prérempli<input data-b-valeur="whatsapp" maxlength="200" value="${echapper(type === 'whatsapp' ? valeur : '')}"></label>
+      <label data-b-champ="page">Page<select data-b-valeur="page">${PAGES.map(([f, n]) => `<option value="${f}" ${type === 'page' && valeur.split('#')[0] === f ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+      <label data-b-champ="telephone">Numéro<input data-b-valeur="telephone" type="tel" value="${echapper(type === 'telephone' ? valeur : etat.contenu.telephones.principal)}"></label>
+      <label data-b-champ="externe">Adresse du site<input data-b-valeur="externe" type="url" inputmode="url" placeholder="https://…" value="${echapper(type === 'externe' ? valeur : '')}"></label>
+    </fieldset>`;
+  }).join('');
+  $('#section-champs').innerHTML = [
+    textes && `<p class="etiquette">Textes</p>${textes}`,
+    images && `<p class="etiquette">Images</p>${images}`,
+    boutons && `<p class="etiquette">Boutons</p>${boutons}`,
+  ].filter(Boolean).join('') || '<p class="aide">Cette section est décorative : elle n’a pas de texte modifiable. Vous pouvez la déplacer ou la masquer depuis la liste.</p>';
+  $$('#section-champs .bloc-bouton').forEach(majBouton);
+  $$('#section-champs .bloc-image').forEach(majImage);
+  $('#fiche-section').showModal();
+  $('#fiche-section').scrollTop = 0;
+}
+
+function majBouton(bloc) {
+  const type = $('[data-b-type]', bloc).value;
+  $$('[data-b-champ]', bloc).forEach((l) => { l.hidden = l.dataset.bChamp !== type; });
+}
+
+function majImage(bloc) {
+  const id = bloc.dataset.image;
+  const s = ficheSection.section.images.find((x) => x.id === id);
+  const m = ficheSection.images[id];
+  const img = $('.cadre-page img', bloc);
+  const src = m ? (etat.nouvelles.get(m.src)?.apercu || `/${m.src}-sm.jpg`) : `/${s.origine || s.src}`;
+  if (img.getAttribute('src') !== src) img.src = src;
+  img.style.objectPosition = m ? `${m.x}% ${m.y}%` : '';
+  img.style.transform = m && m.zoom !== 1 ? `scale(${m.zoom})` : '';
+  img.style.transformOrigin = m ? `${m.x}% ${m.y}%` : '';
+  $$('[data-zoom]', bloc).forEach((b) => { b.hidden = !m; });
+  $('[data-origine]', bloc).hidden = !m;
+  $('[data-aide-image]', bloc).textContent = m ? 'Faites glisser l’image pour la placer dans le cadre. Le cadre est celui du site : l’image n’est jamais déformée.' : 'Image d’origine. « Remplacer » pour en choisir une autre : elle sera ajustée à ce cadre.';
+}
+
+$('#section-champs').addEventListener('change', async (e) => {
+  if (e.target.matches('[data-b-type]')) return majBouton(e.target.closest('.bloc-bouton'));
+  const id = e.target.dataset.remplacer;
+  if (!id) return;
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  try {
+    const image = await preparerImageLibre(f);
+    const src = nouveauNom('img/pages', `${pageEnCours().replace('.html', '')}-${id}`);
+    etat.nouvelles.set(src, image);
+    const alt = $(`[data-alt="${id}"]`).value;
+    ficheSection.images[id] = { src, x: 50, y: 50, zoom: 1, alt };
+    majImage(e.target.closest('.bloc-image'));
+  } catch (err) {
+    $('#section-erreur').textContent = err.message;
+    $('#section-erreur').hidden = false;
+  }
+});
+
+$('#section-champs').addEventListener('click', (e) => {
+  const bloc = e.target.closest('.bloc-image');
+  if (!bloc) return;
+  const id = bloc.dataset.image;
+  if (e.target.closest('[data-origine]')) { delete ficheSection.images[id]; return majImage(bloc); }
+  const z = e.target.closest('[data-zoom]')?.dataset.zoom;
+  const m = ficheSection.images[id];
+  if (!z || !m) return;
+  if (z === 'plus') m.zoom = Math.min(2.5, Math.round((m.zoom + 0.15) * 100) / 100);
+  if (z === 'moins') m.zoom = Math.max(1, Math.round((m.zoom - 0.15) * 100) / 100);
+  if (z === 'centre') Object.assign(m, { x: 50, y: 50, zoom: 1 });
+  majImage(bloc);
+});
+
+// Glisser l'image dans son cadre
+let glisse = null;
+$('#section-champs').addEventListener('pointerdown', (e) => {
+  const cadre = e.target.closest('.cadre-page');
+  if (!cadre) return;
+  const m = ficheSection.images[cadre.closest('.bloc-image').dataset.image];
+  if (!m) return;
+  glisse = { cadre, m, px: e.clientX, py: e.clientY, x: m.x, y: m.y };
+  cadre.setPointerCapture(e.pointerId);
+  cadre.classList.add('est-deplace');
+});
+$('#section-champs').addEventListener('pointermove', (e) => {
+  if (!glisse) return;
+  const r = glisse.cadre.getBoundingClientRect();
+  glisse.m.x = Math.round(Math.min(100, Math.max(0, glisse.x - ((e.clientX - glisse.px) / r.width) * 100 / glisse.m.zoom)));
+  glisse.m.y = Math.round(Math.min(100, Math.max(0, glisse.y - ((e.clientY - glisse.py) / r.height) * 100 / glisse.m.zoom)));
+  majImage(glisse.cadre.closest('.bloc-image'));
+});
+['pointerup', 'pointercancel'].forEach((t) => $('#section-champs').addEventListener(t, () => {
+  if (glisse) glisse.cadre.classList.remove('est-deplace');
+  glisse = null;
+}));
+
+$('#form-section').addEventListener('submit', (e) => {
+  if (e.submitter?.value !== 'valider') return;
+  const s = ficheSection.section;
+  const p = modifsPage();
+  const erreur = (m) => { e.preventDefault(); $('#section-erreur').textContent = m; $('#section-erreur').hidden = false; $('#section-erreur').scrollIntoView({ block: 'center' }); };
+  // Textes : seuls ceux qui diffèrent du texte affiché sont gardés comme modifications
+  const textes = { ...(p.textes || {}) };
+  for (const champ of $$('[data-texte]')) {
+    const t = s.textes.find((x) => x.id === champ.dataset.texte);
+    const v = champ.value.replace(/\r/g, '').trim();
+    if (!v) return erreur(`Le champ « ${LIBELLES[t.type]} » est vide. Écrivez un texte (ou fermez sans valider pour annuler).`);
+    if (v !== t.texte || textes[t.id] !== undefined) textes[t.id] = v;
+  }
+  // Boutons
+  const boutons = { ...(p.boutons || {}) };
+  for (const bloc of $$('[data-bouton]')) {
+    const b = s.boutons.find((x) => x.id === bloc.dataset.bouton);
+    const texte = $('[data-b-texte]', bloc).value.trim();
+    const type = $('[data-b-type]', bloc).value;
+    const valeur = $(`[data-b-valeur="${type}"]`, bloc).value.trim();
+    if (!texte) return erreur('Un bouton n’a plus de texte.');
+    if (type === 'externe' && !urlValide(valeur)) return erreur(`L’adresse du bouton « ${texte} » doit être complète et commencer par https://`);
+    if (type === 'telephone' && !TEL.test(valeur)) return erreur(`Le numéro du bouton « ${texte} » doit ressembler à 06 12 34 56 78.`);
+    const avant = { type: b.wa ? 'whatsapp' : /^tel:/.test(b.href) ? 'telephone' : /^https?:/.test(b.href) ? 'externe' : 'page', valeur: b.wa || b.href };
+    const change = texte !== b.texte || type !== avant.type || (type !== 'telephone' && valeur !== avant.valeur) || (type === 'telephone' && `tel:+33${valeur.replace(/\D/g, '').replace(/^0/, '')}` !== b.href);
+    if (change || boutons[b.id]) boutons[b.id] = { texte, type, valeur: valeur || (type === 'whatsapp' ? `Bonjour Nelly, ${texte.toLowerCase()}` : valeur) };
+  }
+  // Images (descriptions comprises)
+  const images = { ...(p.images || {}) };
+  for (const im of s.images) {
+    const m = ficheSection.images[im.id];
+    if (m) { m.alt = $(`[data-alt="${im.id}"]`).value.trim(); images[im.id] = m; } else delete images[im.id];
+  }
+  p.textes = textes; p.boutons = boutons; p.images = images;
+  nettoyerPage();
+  changement();
+  chargerSections();
+});
+
 // --- Aperçu ----------------------------------------------------------------------
 
 $('#apercu-page').innerHTML = PAGES.map(([f, n]) => `<option value="${f}">${n}</option>`).join('');
@@ -895,6 +1172,8 @@ function pageConseillee() {
     if (p && p !== 'toutes') return p;
     return 'index.html';
   }
+  const page = PAGES.find(([f]) => JSON.stringify(etat.base.pages[f] || {}) !== JSON.stringify(etat.contenu.pages[f] || {}));
+  if (page) return page[0];
   if (/photo/.test(a)) return 'realisations.html';
   if (/Horaires|Téléphones/.test(a)) return 'contact.html';
   if (/€|oiffure/.test(a)) return 'coiffures.html';

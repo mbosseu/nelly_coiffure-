@@ -53,6 +53,18 @@
         <button class="bouton bouton--plein bouton--large" id="ajouter-annonce" type="button">＋ Créer une annonce</button>
       </section>
 
+      <!-- Pages -->
+      <section class="onglet" data-onglet="pages" hidden>
+        <p class="aide">Choisissez une page, puis touchez une section pour modifier ses textes, ses images ou ses boutons. Les flèches changent l’ordre des sections ; l’œil les masque ou les réaffiche.</p>
+        <label for="page-choix" class="etiquette">Page</label>
+        <div class="champ-lien">
+          <select id="page-choix"></select>
+          <button class="bouton bouton--contour" id="page-apercu" type="button">Aperçu</button>
+        </div>
+        <p class="message" id="page-message" hidden></p>
+        <ul class="liste liste--sections" id="liste-sections"></ul>
+      </section>
+
       <!-- Coiffures et prix -->
       <section class="onglet" data-onglet="coiffures" hidden>
         <p class="aide">Touchez une coiffure pour changer son prix, son nom, sa description ou sa photo. Les flèches changent l’ordre d’affichage.</p>
@@ -120,6 +132,7 @@
 
     <nav class="onglets" aria-label="Sections">
       <button type="button" data-cible="annonces" aria-current="page"><span>📣</span>Annonces</button>
+      <button type="button" data-cible="pages"><span>📄</span>Pages</button>
       <button type="button" data-cible="coiffures"><span>✂️</span>Coiffures</button>
       <button type="button" data-cible="photos"><span>📷</span>Photos</button>
       <button type="button" data-cible="infos"><span>🕘</span>Infos</button>
@@ -169,6 +182,12 @@
       <p class="compteur"><span id="a-texte-compte">0</span> / <span id="a-texte-max">400</span></p>
 
       <div id="a-bloc-image">
+        <p class="etiquette">Disposition</p>
+        <div class="dispositions" id="a-dispositions" role="radiogroup" aria-label="Disposition de l’image">
+          <button type="button" role="radio" data-disposition="gauche"><span class="mini mini--section"><i></i><b></b></span>Image à gauche</button>
+          <button type="button" role="radio" data-disposition="droite"><span class="mini mini--droite"><b></b><i></i></span>Image à droite</button>
+          <button type="button" role="radio" data-disposition="dessus"><span class="mini mini--dessus"><i></i><b></b></span>Image au-dessus</button>
+        </div>
         <p class="etiquette">Image</p>
         <div class="cadreur" id="a-cadreur" hidden>
           <div class="cadreur__vues">
@@ -222,6 +241,21 @@
         <span></span>
         <button class="bouton bouton--discret" value="annuler" formnovalidate>Fermer</button>
         <button class="bouton bouton--plein" id="a-valider" value="valider">Valider</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- Section d'une page : textes, images, boutons -->
+  <dialog class="fiche fiche--grande" id="fiche-section">
+    <form method="dialog" id="form-section" novalidate>
+      <h2 id="section-titre">Modifier la section</h2>
+      <p class="aide aide--petite">Astuce : mettez un mot entre étoiles (*mot*) pour l’écrire en couleur, comme sur le site. Passez à la ligne avec Entrée.</p>
+      <div id="section-champs"></div>
+      <p class="message message--erreur" id="section-erreur" role="alert" hidden></p>
+      <div class="fiche__actions">
+        <span></span>
+        <button class="bouton bouton--discret" value="annuler" formnovalidate>Fermer</button>
+        <button class="bouton bouton--plein" id="section-valider" value="valider">Valider</button>
       </div>
     </form>
   </dialog>

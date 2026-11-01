@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { marquer, appliquerPages } from './pages.mjs';
 
 // Générateur commun du site : à partir du contenu modifiable (contenu/site.json) et des pages HTML actuelles,
 // produit les pages à jour. Utilisé par outils/seo.mjs (sur le poste) et par l'API de l'espace de gestion (sur Vercel),
@@ -258,13 +259,13 @@ const rendrePromo = (a, aujourdhui, NL) => {
   const textes = [
     etiquette && `<p class="eyebrow eyebrow--copper">${echapper(etiquette)}</p>`,
     String(a.titre || '').trim() && `<h2 class="title">${echapper(a.titre.trim())}</h2>`,
-    String(a.texte || '').trim() && `<p class="body">${echapper(a.texte.trim()).replace(/\n/g, '<br>')}</p>`,
+    String(a.texte || '').trim() && `<p class="body">${echapper(a.texte.trim()).replace(/[ \t]*\n[ \t]*/g, ' <br>')}</p>`,
     boutonAnnonce(a, 'btn btn--dark btn--shine'),
   ].filter(Boolean);
   const avecImage = a.format !== 'encadre' && a.image?.src;
   const tailles = a.format === 'carte' ? '(min-width: 768px) 260px, 100vw' : '(min-width: 1025px) 45vw, 100vw';
   return [
-    `    <section class="promo promo--${a.format}${avecImage ? '' : ' promo--sans-image'}" aria-label="${echapper(a.titre || etiquette || 'Annonce')}"${dates(a, aujourdhui)}>`,
+    `    <section class="promo promo--${a.format}${avecImage ? '' : ' promo--sans-image'}${avecImage && ['droite', 'dessus'].includes(a.disposition) ? ` promo--image-${a.disposition}` : ''}" aria-label="${echapper(a.titre || etiquette || 'Annonce')}"${dates(a, aujourdhui)}>`,
     '      <div class="container">',
     '        <div class="promo__inner reveal">',
     avecImage && `          <div class="promo__media">${imageAnnonce(a.image, tailles)}</div>`,
@@ -366,6 +367,7 @@ const salonGoogle = (contenu) => ({
 // Contenu modifiable (coiffures, galerie, horaires, annonces, prix, téléphones, réseaux)
 const appliquerContenu = (h, fichier, contenu, ancien, aujourdhui) => {
   const NL = h.includes('\r\n') ? '\r\n' : '\n';
+  if (PAGES[fichier] && !PAGES[fichier].robots) h = marquer(h);
   if (fichier === 'coiffures.html') {
     h = zone(h, 'coiffures', `${NL}${visibles(contenu).map((s) => carteCoiffure(s, contenu, NL)).join(NL)}${NL}`);
     h = h.replace(/(<h2 class="title reveal">)\d+( coiffures?)/, (m, a, b) => `${a}${visibles(contenu).length}${visibles(contenu).length > 1 ? ' coiffures' : ' coiffure'}`);
@@ -382,6 +384,7 @@ const appliquerContenu = (h, fichier, contenu, ancien, aujourdhui) => {
     const p = prixDe(contenu, cles.trim().split(/\s+/));
     return p === null ? m : `${ouv}${avant}${p}${apres}`;
   });
+  if (PAGES[fichier] && !PAGES[fichier].robots) h = appliquerPages(h, fichier, contenu, formatsTelephone);
   return remplacerReseaux(remplacerTelephones(h, contenu, ancien), contenu, ancien);
 };
 
@@ -553,6 +556,7 @@ export function verifierContenu(c) {
   else c.photos.forEach((p) => { if (!/^img\/realisations\/catalogue\/[a-z0-9-]+$/.test(p.image || '')) erreurs.push('Photo invalide.'); });
   if (String(c.annonce?.texte || '').length > 160) erreurs.push('L’annonce est trop longue (160 caractères maximum).');
   erreurs.push(...verifierAnnonces(c.annonces));
+  erreurs.push(...verifierPages(c.pages));
   if (c.reseaux !== undefined) {
     for (const [cle, nom] of Object.entries(RESEAUX_NOMS)) {
       if (!urlValide(c.reseaux?.[cle])) erreurs.push(`Le lien ${nom} doit être une adresse complète commençant par https://`);
@@ -564,6 +568,36 @@ export function verifierContenu(c) {
 export const urlValide = (u) => { try { const x = new URL(String(u || '').trim()); return x.protocol === 'https:' || x.protocol === 'http:'; } catch { return false; } };
 const PAGES_PUBLIQUES = new Set(Object.keys(PAGES).filter((f) => !PAGES[f].robots));
 
+// Modifications des pages : textes, images, boutons, ordre et sections masquées
+export function verifierPages(pages) {
+  if (pages === undefined) return [];
+  if (typeof pages !== 'object' || Array.isArray(pages)) return ['Modifications des pages illisibles.'];
+  const erreurs = [];
+  for (const [f, p] of Object.entries(pages)) {
+    const nom = PAGES_ANNONCES.find(([x]) => x === f)?.[1];
+    if (!nom) { erreurs.push('Page inconnue.'); continue; }
+    for (const [id, t] of Object.entries(p.textes || {})) {
+      if (!/^t\d+$/.test(id) || typeof t !== 'string') erreurs.push(`${nom} : texte illisible.`);
+      else if (!t.trim()) erreurs.push(`${nom} : un texte a été vidé. Écrivez quelque chose ou annulez la modification.`);
+      else if (t.length > 2000) erreurs.push(`${nom} : un texte est trop long.`);
+    }
+    for (const [id, im] of Object.entries(p.images || {})) {
+      if (!/^i\d+$/.test(id) || !/^img\/pages\/[a-z0-9-]+$/.test(im?.src || '')) erreurs.push(`${nom} : image invalide.`);
+    }
+    for (const [id, b] of Object.entries(p.boutons || {})) {
+      if (!/^b\d+$/.test(id)) { erreurs.push(`${nom} : bouton illisible.`); continue; }
+      if (String(b.texte || '').length > 60) erreurs.push(`${nom} : texte de bouton trop long (60 caractères maximum).`);
+      if (b.type === 'externe' && !urlValide(b.valeur)) erreurs.push(`${nom} : le lien du bouton « ${b.texte || ''} » doit commencer par https://`);
+      if (b.type === 'page' && !PAGES_PUBLIQUES.has(String(b.valeur || '').split('#')[0])) erreurs.push(`${nom} : choisissez la page de destination du bouton « ${b.texte || ''} ».`);
+      if (b.type === 'telephone' && !/^0[1-9](?:[ .]?\d{2}){4}$/.test(String(b.valeur || '').trim())) erreurs.push(`${nom} : numéro de téléphone invalide pour le bouton « ${b.texte || ''} ».`);
+      if (b.type && !['whatsapp', 'page', 'externe', 'telephone'].includes(b.type)) erreurs.push(`${nom} : destination de bouton inconnue.`);
+    }
+    if (p.ordre && !(Array.isArray(p.ordre) && p.ordre.every((id) => /^s\d+$/.test(id)))) erreurs.push(`${nom} : ordre des sections illisible.`);
+    if (p.masquees && !(Array.isArray(p.masquees) && p.masquees.every((id) => /^s\d+$/.test(id)))) erreurs.push(`${nom} : sections masquées illisibles.`);
+  }
+  return erreurs;
+}
+
 // Chaque annonce : format connu, texte présent, bouton complet, pages existantes, dates cohérentes
 export function verifierAnnonces(annonces) {
   if (annonces === undefined) return [];
@@ -574,6 +608,7 @@ export function verifierAnnonces(annonces) {
     const nom = String(a.titre || a.texte || '').trim().slice(0, 30) || `n° ${i + 1}`;
     if (!/^[a-z0-9-]+$/.test(a.id || '')) erreurs.push(`Annonce « ${nom} » : identifiant invalide.`);
     if (!FORMATS_ANNONCE.includes(a.format)) erreurs.push(`Annonce « ${nom} » : choisissez une présentation.`);
+    if (a.disposition && !['gauche', 'droite', 'dessus'].includes(a.disposition)) erreurs.push(`Annonce « ${nom} » : disposition inconnue.`);
     if (a.format === 'bandeau' ? !String(a.texte || '').trim() : !String(a.titre || '').trim()) erreurs.push(`Annonce « ${nom} » : ${a.format === 'bandeau' ? 'le texte' : 'le titre'} est obligatoire.`);
     if (String(a.titre || '').length > 90) erreurs.push(`Annonce « ${nom} » : titre trop long (90 caractères maximum).`);
     if (String(a.texte || '').length > (a.format === 'bandeau' ? 160 : 400)) erreurs.push(`Annonce « ${nom} » : texte trop long.`);

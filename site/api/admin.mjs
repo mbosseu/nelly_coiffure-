@@ -1,4 +1,5 @@
 import { regenerer, verifierContenu, FICHIERS, PAGES, DOMAINE } from './_lib/regenerer.mjs';
+import { structurePage } from './_lib/pages.mjs';
 import { createHash } from 'node:crypto';
 import { lireTexte, listerDossier, publier, historique, ErreurGithub } from './_lib/github.mjs';
 import { motDePasseValide, ouvrirSession, fermerSession, sessionValide } from './_lib/session.mjs';
@@ -9,7 +10,7 @@ import { motDePasseValide, ouvrirSession, fermerSession, sessionValide } from '.
 // et envoie le tout en un seul commit sur GitHub ; Vercel remet ensuite le site en ligne (environ une minute).
 
 const CONTENU = 'contenu/site.json';
-const PHOTO = /^img\/(realisations\/catalogue|annonces)\/[a-z0-9-]+(-sm)?\.jpg$/;
+const PHOTO = /^img\/(realisations\/catalogue|annonces|pages)\/[a-z0-9-]+(-sm)?\.jpg$/;
 const MAX_PHOTO = 900 * 1024;
 const INDEXNOW_CLE = '9854d7068bfd3aafaa6ed978dd241645';
 
@@ -96,7 +97,7 @@ async function apercu(req, res) {
   const fichiers = await lireFichiersSite({ frais: false });
   const ancien = JSON.parse((await lireTexte(CONTENU)).texte);
   const resultat = { ...fichiers, ...regenerer(fichiers, contenu, { ancien }) };
-  return json(res, 200, { html: resultat[page], avertissements: erreurs });
+  return json(res, 200, { html: resultat[page], avertissements: erreurs, sections: structurePage(resultat[page]) });
 }
 
 async function publierContenu(req, res) {
@@ -119,9 +120,10 @@ async function publierContenu(req, res) {
   const ancien = JSON.parse(actuel.texte);
 
   // Nouvelles photos dont le nom existe déjà sur le site : renommées pour ne jamais écraser une photo en ligne
-  const [enLigne, imagesAnnonces] = await Promise.all([
+  const [enLigne, imagesAnnonces, imagesPages] = await Promise.all([
     listerDossier('site/img/realisations/catalogue'),
     listerDossier('site/img/annonces').catch((e) => { if (e.statut === 404) return new Set(); throw e; }),
+    listerDossier('site/img/pages').catch((e) => { if (e.statut === 404) return new Set(); throw e; }),
   ]);
   const base = (chemin) => chemin.replace(/(-sm)?\.jpg$/, '');
   const nomsEnLigne = new Set([...enLigne].map((n) => n.replace(/(-sm)?\.jpg$/, '')));
@@ -156,6 +158,14 @@ async function publierContenu(req, res) {
     const nom = a.image.src.split('/').pop();
     const present = (envoyees.has(`${a.image.src}.jpg`) || imagesAnnonces.has(`${nom}.jpg`)) && (envoyees.has(`${a.image.src}-sm.jpg`) || imagesAnnonces.has(`${nom}-sm.jpg`));
     if (!present) return json(res, 400, { erreur: `L’image de l’annonce « ${a.titre || a.texte} » est introuvable. Ajoutez-la de nouveau.` });
+  }
+
+  for (const [f, p] of Object.entries(contenu.pages || {})) {
+    for (const im of Object.values(p.images || {})) {
+      const nom = im.src.split('/').pop();
+      const present = (envoyees.has(`${im.src}.jpg`) || imagesPages.has(`${nom}.jpg`)) && (envoyees.has(`${im.src}-sm.jpg`) || imagesPages.has(`${nom}-sm.jpg`));
+      if (!present) return json(res, 400, { erreur: `Une image modifiée de la page ${f} est introuvable. Ajoutez-la de nouveau.` });
+    }
   }
 
   // Régénération des pages à partir de la dernière version en ligne
