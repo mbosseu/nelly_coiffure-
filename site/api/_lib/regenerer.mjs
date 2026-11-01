@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { marquer, appliquerPages } from './pages.mjs';
+import { marquer, appliquerPages, retirerAjouts } from './pages.mjs';
 
 // Générateur commun du site : à partir du contenu modifiable (contenu/site.json) et des pages HTML actuelles,
 // produit les pages à jour. Utilisé par outils/seo.mjs (sur le poste) et par l'API de l'espace de gestion (sur Vercel),
@@ -212,7 +212,8 @@ const rendreHoraires = (contenu, NL) => [
 // Elle s'affiche sur les pages choisies, entre ses dates de début et de fin (vérifiées à la publication
 // et, pour les dates à venir, par js/main.js chez le visiteur).
 
-export const FORMATS_ANNONCE = ['section', 'carte', 'encadre', 'bandeau'];
+export const FORMATS_ANNONCE = ['section', 'carte', 'encadre', 'bandeau', 'cartes', 'appel'];
+export const FONDS = ['clair', 'transparent', 'sombre'];
 // Pages où une annonce peut apparaître (dans l'ordre du menu)
 export const PAGES_ANNONCES = [
   ['index.html', 'Accueil'], ['coiffures.html', 'Coiffures et tarifs'], ['realisations.html', 'Réalisations'],
@@ -228,9 +229,15 @@ export const annoncesDe = (contenu) => {
   return String(a.texte || '').trim() ? [{ id: 'annonce-1', active: !!a.active, format: 'bandeau', titre: '', texte: a.texte, pages: ['toutes'] }] : [];
 };
 
-const annoncesVisibles = (contenu, fichier, aujourdhui) => annoncesDe(contenu).filter((a) => a.active
+// Les sections ajoutées dans une page (emplacement choisi) sont placées par pages.mjs, pas dans la zone des annonces
+const annoncesVisibles = (contenu, fichier, aujourdhui) => annoncesDe(contenu).filter((a) => a.active && !a.emplacement
   && (a.pages || []).some((p) => p === 'toutes' || p === fichier)
   && !(a.fin && a.fin < aujourdhui));
+
+// Sections ajoutées à une page, avec leur emplacement : [{ apres, html }]
+const sectionsAjoutees = (contenu, fichier, aujourdhui, NL) => annoncesDe(contenu)
+  .filter((a) => a.active && a.emplacement?.page === fichier && !(a.fin && a.fin < aujourdhui))
+  .map((a) => ({ apres: a.emplacement.apres, html: rendrePromo(a, aujourdhui, NL, true) }));
 
 // Destination d'un bouton : WhatsApp (message prérempli), page du site, téléphone ou lien externe
 export const attributsLien = (b) => {
@@ -254,24 +261,43 @@ const boutonAnnonce = (a, classe) => (String(a.bouton?.texte || '').trim()
   ? `<a class="${classe}" ${attributsLien(a.bouton)}>${a.bouton.type === 'whatsapp' ? '<svg class="icon" aria-hidden="true"><use href="#i-whatsapp"/></svg> ' : ''}${echapper(a.bouton.texte.trim())} <svg class="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>`
   : '');
 
-const rendrePromo = (a, aujourdhui, NL) => {
+const paragraphe = (t, classe = 'body') => (String(t || '').trim() ? `<p class="${classe}">${echapper(t.trim()).replace(/[ \t]*\n[ \t]*/g, ' <br>')}</p>` : '');
+
+// Annonce ou section ajoutée. Formats : section (image + texte), carte, encadre (texte seul), cartes (grille de 2 ou 3),
+// appel (bande sombre). Fond : clair (carte crème), transparent ou sombre. ajout = section placée dans une page.
+const rendrePromo = (a, aujourdhui, NL, ajout = false) => {
   const etiquette = String(a.etiquette || '').trim();
+  const sombre = a.format === 'appel' || a.fond === 'sombre';
   const textes = [
     etiquette && `<p class="eyebrow eyebrow--copper">${echapper(etiquette)}</p>`,
-    String(a.titre || '').trim() && `<h2 class="title">${echapper(a.titre.trim())}</h2>`,
-    String(a.texte || '').trim() && `<p class="body">${echapper(a.texte.trim()).replace(/[ \t]*\n[ \t]*/g, ' <br>')}</p>`,
-    boutonAnnonce(a, 'btn btn--dark btn--shine'),
+    String(a.titre || '').trim() && `<h2 class="title${sombre ? ' title--light' : ''}">${echapper(a.titre.trim())}</h2>`,
+    paragraphe(a.texte, sombre ? 'body body--light' : 'body'),
+    boutonAnnonce(a, sombre ? 'btn btn--light btn--shine' : 'btn btn--dark btn--shine'),
   ].filter(Boolean);
-  const avecImage = a.format !== 'encadre' && a.image?.src;
+  const avecImage = ['section', 'carte'].includes(a.format) && a.image?.src;
   const tailles = a.format === 'carte' ? '(min-width: 768px) 260px, 100vw' : '(min-width: 1025px) 45vw, 100vw';
+  const classes = ['promo', `promo--${a.format}`, !avecImage && a.format !== 'cartes' && 'promo--sans-image',
+    avecImage && ['droite', 'dessus'].includes(a.disposition) && `promo--image-${a.disposition}`,
+    a.format !== 'appel' && a.fond && a.fond !== 'clair' && `promo--fond-${a.fond}`, ajout && 'promo--ajout'].filter(Boolean).join(' ');
+  const attributs = ajout ? ` data-ajout="${a.id}" data-s="a-${a.id}"` : '';
+  const cartes = a.format === 'cartes' ? (a.cartes || []).filter((c) => String(c.titre || '').trim()) : [];
   return [
-    `    <section class="promo promo--${a.format}${avecImage ? '' : ' promo--sans-image'}${avecImage && ['droite', 'dessus'].includes(a.disposition) ? ` promo--image-${a.disposition}` : ''}" aria-label="${echapper(a.titre || etiquette || 'Annonce')}"${dates(a, aujourdhui)}>`,
+    `    <section class="${classes}" aria-label="${echapper(a.titre || etiquette || 'Annonce')}"${attributs}${dates(a, aujourdhui)}>`,
     '      <div class="container">',
     '        <div class="promo__inner reveal">',
     avecImage && `          <div class="promo__media">${imageAnnonce(a.image, tailles)}</div>`,
-    '          <div class="promo__texte">',
+    textes.length && '          <div class="promo__texte">',
     ...textes.map((t) => `            ${t}`),
-    '          </div>',
+    textes.length && '          </div>',
+    cartes.length && `          <div class="promo__grille promo__grille--${cartes.length}">`,
+    ...cartes.map((c) => [
+      '            <article class="promo__carte">',
+      c.image?.src && `              <div class="promo__media">${imageAnnonce(c.image, '(min-width: 1025px) 30vw, 100vw')}</div>`,
+      `              <h3>${echapper(c.titre.trim())}</h3>`,
+      paragraphe(c.texte) && `              ${paragraphe(c.texte)}`,
+      '            </article>',
+    ].filter(Boolean).join(NL)),
+    cartes.length && '          </div>',
     '        </div>',
     '      </div>',
     '    </section>',
@@ -291,6 +317,18 @@ const rendreAnnonce = (contenu, fichier, aujourdhui, NL) => {
     const lien = String(a.bouton?.texte || '').trim() ? ` <a ${attributsLien(a.bouton)}>${echapper(a.bouton.texte.trim())}</a>` : '';
     return `    <div class="annonce" role="note"${dates(a, aujourdhui)}><p>${texte}${lien}</p></div>`;
   }).join(NL)}${NL}`;
+};
+
+// --- Couleurs du site (palettes chaudes accordées au design ; « cuivre » = d'origine) ------------------
+export const THEMES = {
+  cuivre: null,
+  'or-rose': { copper: '#B9806F', light: '#E3B5A6', accent: '#94584A' },
+  terracotta: { copper: '#B8653F', light: '#E4A27F', accent: '#8F4527' },
+  bronze: { copper: '#9C7A45', light: '#D3B47E', accent: '#75572B' },
+};
+const rendreTheme = (contenu, NL) => {
+  const t = THEMES[contenu.theme];
+  return t ? `${NL}  <style id="theme">:root { --copper: ${t.copper}; --copper-light: ${t.light}; --accent: ${t.accent}; }</style>${NL}` : NL;
 };
 
 // --- Réseaux sociaux --------------------------------------------------------------
@@ -367,7 +405,7 @@ const salonGoogle = (contenu) => ({
 // Contenu modifiable (coiffures, galerie, horaires, annonces, prix, téléphones, réseaux)
 const appliquerContenu = (h, fichier, contenu, ancien, aujourdhui) => {
   const NL = h.includes('\r\n') ? '\r\n' : '\n';
-  if (PAGES[fichier] && !PAGES[fichier].robots) h = marquer(h);
+  if (PAGES[fichier] && !PAGES[fichier].robots) h = marquer(retirerAjouts(h));
   if (fichier === 'coiffures.html') {
     h = zone(h, 'coiffures', `${NL}${visibles(contenu).map((s) => carteCoiffure(s, contenu, NL)).join(NL)}${NL}`);
     h = h.replace(/(<h2 class="title reveal">)\d+( coiffures?)/, (m, a, b) => `${a}${visibles(contenu).length}${visibles(contenu).length > 1 ? ' coiffures' : ' coiffure'}`);
@@ -384,7 +422,8 @@ const appliquerContenu = (h, fichier, contenu, ancien, aujourdhui) => {
     const p = prixDe(contenu, cles.trim().split(/\s+/));
     return p === null ? m : `${ouv}${avant}${p}${apres}`;
   });
-  if (PAGES[fichier] && !PAGES[fichier].robots) h = appliquerPages(h, fichier, contenu, formatsTelephone);
+  if (PAGES[fichier] && !PAGES[fichier].robots) h = appliquerPages(h, fichier, contenu, formatsTelephone, sectionsAjoutees(contenu, fichier, aujourdhui, NL));
+  h = zone(h, 'theme', rendreTheme(contenu, NL));
   return remplacerReseaux(remplacerTelephones(h, contenu, ancien), contenu, ancien);
 };
 
@@ -557,6 +596,7 @@ export function verifierContenu(c) {
   if (String(c.annonce?.texte || '').length > 160) erreurs.push('L’annonce est trop longue (160 caractères maximum).');
   erreurs.push(...verifierAnnonces(c.annonces));
   erreurs.push(...verifierPages(c.pages));
+  if (c.theme !== undefined && !(c.theme in THEMES)) erreurs.push('Couleurs du site inconnues.');
   if (c.reseaux !== undefined) {
     for (const [cle, nom] of Object.entries(RESEAUX_NOMS)) {
       if (!urlValide(c.reseaux?.[cle])) erreurs.push(`Le lien ${nom} doit être une adresse complète commençant par https://`);
@@ -592,8 +632,8 @@ export function verifierPages(pages) {
       if (b.type === 'telephone' && !/^0[1-9](?:[ .]?\d{2}){4}$/.test(String(b.valeur || '').trim())) erreurs.push(`${nom} : numéro de téléphone invalide pour le bouton « ${b.texte || ''} ».`);
       if (b.type && !['whatsapp', 'page', 'externe', 'telephone'].includes(b.type)) erreurs.push(`${nom} : destination de bouton inconnue.`);
     }
-    if (p.ordre && !(Array.isArray(p.ordre) && p.ordre.every((id) => /^s\d+$/.test(id)))) erreurs.push(`${nom} : ordre des sections illisible.`);
-    if (p.masquees && !(Array.isArray(p.masquees) && p.masquees.every((id) => /^s\d+$/.test(id)))) erreurs.push(`${nom} : sections masquées illisibles.`);
+    if (p.ordre && !(Array.isArray(p.ordre) && p.ordre.every((id) => /^(s\d+|a-[a-z0-9-]+)$/.test(id)))) erreurs.push(`${nom} : ordre des sections illisible.`);
+    if (p.masquees && !(Array.isArray(p.masquees) && p.masquees.every((id) => /^(s\d+|a-[a-z0-9-]+)$/.test(id)))) erreurs.push(`${nom} : sections masquées illisibles.`);
   }
   return erreurs;
 }
@@ -609,11 +649,22 @@ export function verifierAnnonces(annonces) {
     if (!/^[a-z0-9-]+$/.test(a.id || '')) erreurs.push(`Annonce « ${nom} » : identifiant invalide.`);
     if (!FORMATS_ANNONCE.includes(a.format)) erreurs.push(`Annonce « ${nom} » : choisissez une présentation.`);
     if (a.disposition && !['gauche', 'droite', 'dessus'].includes(a.disposition)) erreurs.push(`Annonce « ${nom} » : disposition inconnue.`);
+    if (a.fond && !FONDS.includes(a.fond)) erreurs.push(`Annonce « ${nom} » : fond inconnu.`);
+    if (a.emplacement && !(PAGES_PUBLIQUES.has(a.emplacement.page) && /^(s\d+|a-[a-z0-9-]+|fin)$/.test(a.emplacement.apres || ''))) erreurs.push(`Section « ${nom} » : emplacement invalide.`);
+    if (a.format === 'cartes') {
+      const cartes = (a.cartes || []).filter((c) => String(c.titre || '').trim());
+      if (cartes.length < 2 || cartes.length > 3) erreurs.push(`Section « ${nom} » : la grille doit contenir 2 ou 3 cartes avec un titre.`);
+      cartes.forEach((c) => {
+        if (String(c.titre).length > 60 || String(c.texte || '').length > 300) erreurs.push(`Section « ${nom} » : texte de carte trop long.`);
+        if (c.image && !/^img\/annonces\/[a-z0-9-]+$/.test(c.image.src || '')) erreurs.push(`Section « ${nom} » : image de carte invalide.`);
+      });
+    }
+    if (a.format === 'bandeau' && a.emplacement) erreurs.push(`Section « ${nom} » : le bandeau ne peut pas être placé dans une page.`);
     if (a.format === 'bandeau' ? !String(a.texte || '').trim() : !String(a.titre || '').trim()) erreurs.push(`Annonce « ${nom} » : ${a.format === 'bandeau' ? 'le texte' : 'le titre'} est obligatoire.`);
     if (String(a.titre || '').length > 90) erreurs.push(`Annonce « ${nom} » : titre trop long (90 caractères maximum).`);
     if (String(a.texte || '').length > (a.format === 'bandeau' ? 160 : 400)) erreurs.push(`Annonce « ${nom} » : texte trop long.`);
     if (String(a.etiquette || '').length > 40) erreurs.push(`Annonce « ${nom} » : petit titre trop long (40 caractères maximum).`);
-    if (!Array.isArray(a.pages) || !a.pages.length || !a.pages.every((p) => p === 'toutes' || PAGES_PUBLIQUES.has(p))) erreurs.push(`Annonce « ${nom} » : choisissez au moins une page.`);
+    if (!a.emplacement && (!Array.isArray(a.pages) || !a.pages.length) || !a.pages.every((p) => p === 'toutes' || PAGES_PUBLIQUES.has(p))) erreurs.push(`Annonce « ${nom} » : choisissez au moins une page.`);
     if ((a.debut && !date.test(a.debut)) || (a.fin && !date.test(a.fin))) erreurs.push(`Annonce « ${nom} » : date invalide.`);
     if (a.debut && a.fin && a.fin < a.debut) erreurs.push(`Annonce « ${nom} » : la date de fin est avant la date de début.`);
     if (a.image && !/^img\/annonces\/[a-z0-9-]+$/.test(a.image.src || '')) erreurs.push(`Annonce « ${nom} » : image invalide.`);

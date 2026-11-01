@@ -15,7 +15,7 @@ const PAGES = [
   ['locks-marseille.html', 'Locks'], ['tresses-enfant-marseille.html', 'Tresses enfant'],
   ['coiffure-afro-domicile-marseille.html', 'Coiffure à domicile'], ['conseils-tresses-africaines.html', 'Conseils tresses'],
 ];
-const FORMATS = { section: 'Grande section', carte: 'Carte', encadre: 'Encadré', bandeau: 'Bandeau' };
+const FORMATS = { section: 'Grande section', carte: 'Carte', encadre: 'Encadré', bandeau: 'Bandeau', cartes: 'Grille de cartes', appel: 'Bande d’appel' };
 
 const etat = {
   base: null, // contenu publié (dernière version chargée)
@@ -126,7 +126,7 @@ function retirerImagesPerdues() {
   if (!perdues.length) return false;
   etat.contenu.photos = etat.contenu.photos.filter((p) => !perdues.includes(p.image));
   etat.contenu.services = etat.contenu.services.filter((s) => !perdues.includes(s.photo));
-  etat.contenu.annonces.forEach((a) => { if (a.image && perdues.includes(a.image.src)) a.image = null; });
+  etat.contenu.annonces.forEach((a) => { if (a.image && perdues.includes(a.image.src)) a.image = null; (a.cartes || []).forEach((x) => { if (x.image && perdues.includes(x.image.src)) x.image = null; }); });
   Object.values(etat.contenu.pages).forEach((p) => Object.keys(p.images || {}).forEach((id) => { if (perdues.includes(p.images[id].src)) delete p.images[id]; }));
   return true;
 }
@@ -212,10 +212,12 @@ function resumeModifications() {
   const lignes = [];
   for (const x of b.annonces) {
     const avant = a.annonces.find((y) => y.id === x.id);
-    if (!avant) lignes.push(`Nouvelle annonce : ${x.titre || x.texte}`);
-    else if (JSON.stringify(avant) !== JSON.stringify(x)) lignes.push(`Annonce modifiée : ${x.titre || x.texte}`);
+    const genre = x.emplacement ? 'section' : 'annonce';
+    if (!avant) lignes.push(`Nouvelle ${genre} : ${x.titre || x.texte}`);
+    else if (JSON.stringify(avant) !== JSON.stringify(x)) lignes.push(`${genre === 'section' ? 'Section' : 'Annonce'} modifiée : ${x.titre || x.texte}`);
   }
-  for (const x of a.annonces) if (!b.annonces.some((y) => y.id === x.id)) lignes.push(`Annonce supprimée : ${x.titre || x.texte}`);
+  for (const x of a.annonces) if (!b.annonces.some((y) => y.id === x.id)) lignes.push(`${x.emplacement ? 'Section' : 'Annonce'} supprimée : ${x.titre || x.texte}`);
+  if ((a.theme || 'cuivre') !== (b.theme || 'cuivre')) lignes.push('Couleurs du site');
   if (JSON.stringify(a.horaires) !== JSON.stringify(b.horaires)) lignes.push('Horaires');
   if (JSON.stringify(a.telephones) !== JSON.stringify(b.telephones)) lignes.push('Téléphones');
   for (const [cle, nom] of Object.entries(RESEAUX)) if (a.reseaux[cle] !== b.reseaux[cle]) lignes.push(`Lien ${nom}`);
@@ -270,7 +272,7 @@ function toutAfficher({ garderPile = false } = {}) {
 // --- Outils ----------------------------------------------------------------------
 
 const urlImage = (img, petit = true) => etat.nouvelles.get(img)?.apercu || `/${img}${petit ? '-sm' : ''}.jpg`;
-const imagesUtilisees = (c) => [...new Set([...c.services.map((s) => s.photo), ...c.photos.map((p) => p.image), ...(c.annonces || []).map((a) => a.image?.src).filter(Boolean), ...Object.values(c.pages || {}).flatMap((p) => Object.values(p.images || {}).map((im) => im.src))])];
+const imagesUtilisees = (c) => [...new Set([...c.services.map((s) => s.photo), ...c.photos.map((p) => p.image), ...(c.annonces || []).flatMap((a) => [a.image?.src, ...(a.cartes || []).map((x) => x.image?.src)]).filter(Boolean), ...Object.values(c.pages || {}).flatMap((p) => Object.values(p.images || {}).map((im) => im.src))])];
 const echapper = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const versCle = (nom) => nom.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'element';
 const urlValide = (u) => { try { const x = new URL(String(u || '').trim()); return x.protocol === 'https:' || x.protocol === 'http:'; } catch { return false; } };
@@ -351,11 +353,13 @@ function statutAnnonce(a) {
 function afficherAnnonces() {
   const ul = $('#liste-annonces');
   const liste = etat.contenu.annonces;
-  if (!liste.length) {
+  const visibles = liste.map((a, i) => i).filter((i) => !liste[i].emplacement);
+  if (!visibles.length) {
     ul.innerHTML = '<li class="vide">Aucune annonce pour le moment. Créez-en une pour mettre en avant une offre ou une information.</li>';
     return;
   }
-  ul.innerHTML = liste.map((a, i) => {
+  ul.innerHTML = visibles.map((i, k) => {
+    const a = liste[i];
     const [statut, couleur] = statutAnnonce(a);
     const pages = a.pages.includes('toutes') ? 'Toutes les pages' : a.pages.map((p) => PAGES.find(([f]) => f === p)?.[1]).filter(Boolean).join(', ');
     const image = a.image?.src && a.format !== 'encadre' && a.format !== 'bandeau' ? `<img class="liste__image" src="${urlImage(a.image.src)}" alt="">` : `<span class="liste__icone" aria-hidden="true">${a.format === 'bandeau' ? '▬' : '✦'}</span>`;
@@ -368,8 +372,8 @@ function afficherAnnonces() {
           <span class="pastille pastille--${couleur}">${statut}</span>
         </button>
         <span class="liste__ordre">
-          <button type="button" data-a-monter="${i}" aria-label="Monter l’annonce" ${i === 0 ? 'disabled' : ''}>▲</button>
-          <button type="button" data-a-descendre="${i}" aria-label="Descendre l’annonce" ${i === liste.length - 1 ? 'disabled' : ''}>▼</button>
+          <button type="button" data-a-monter="${k}" aria-label="Monter l’annonce" ${k === 0 ? 'disabled' : ''}>▲</button>
+          <button type="button" data-a-descendre="${k}" aria-label="Descendre l’annonce" ${k === visibles.length - 1 ? 'disabled' : ''}>▼</button>
         </span>
       </li>`;
   }).join('');
@@ -380,8 +384,10 @@ $('#liste-annonces').addEventListener('click', (e) => {
   if (!b) return;
   const l = etat.contenu.annonces;
   if (b.dataset.annonce !== undefined) return ouvrirAnnonce(Number(b.dataset.annonce));
-  const i = Number(b.dataset.aMonter ?? b.dataset.aDescendre);
-  const j = b.dataset.aMonter !== undefined ? i - 1 : i + 1;
+  const visibles = l.map((a, x) => x).filter((x) => !l[x].emplacement);
+  const k = Number(b.dataset.aMonter ?? b.dataset.aDescendre);
+  const i = visibles[k];
+  const j = visibles[b.dataset.aMonter !== undefined ? k - 1 : k + 1];
   [l[i], l[j]] = [l[j], l[i]];
   afficherAnnonces();
   changement();
@@ -394,14 +400,22 @@ $('#a-pages').innerHTML = PAGES.map(([f, n]) => `<label class="case"><input type
 
 let ficheAnnonce = null; // { index, a }
 
-function ouvrirAnnonce(index) {
+function ouvrirAnnonce(index, { page } = {}) {
   const a = index >= 0 ? structuredClone(etat.contenu.annonces[index]) : {
-    id: `annonce-${Date.now().toString(36)}`, active: true, format: 'section', etiquette: '', titre: '', texte: '',
-    image: null, bouton: { texte: '', type: 'whatsapp', valeur: '' }, pages: ['index.html'], debut: '', fin: '',
+    id: `${page ? 'section' : 'annonce'}-${Date.now().toString(36)}`, active: true, format: 'section', etiquette: '', titre: '', texte: '',
+    image: null, bouton: { texte: '', type: 'whatsapp', valeur: '' }, pages: [page || 'index.html'], debut: '', fin: '', fond: 'clair',
+    ...(page ? { emplacement: { page, apres: sections.filter((x) => !x.premiere).slice(-2, -1)[0]?.id || 'fin' } } : {}),
   };
   a.bouton = a.bouton || { texte: '', type: 'whatsapp', valeur: '' };
+  if (a.format === 'cartes' && !a.cartes) a.cartes = [];
   ficheAnnonce = { index, a };
-  $('#annonce-titre-fiche').textContent = index >= 0 ? 'Modifier l’annonce' : 'Nouvelle annonce';
+  const section = Boolean(a.emplacement);
+  $('#annonce-titre-fiche').textContent = section ? (index >= 0 ? 'Modifier la section' : 'Nouvelle section') : (index >= 0 ? 'Modifier l’annonce' : 'Nouvelle annonce');
+  // Emplacement : « après » une des sections de la page (sauf elle-même)
+  if (section) {
+    $('#a-apres').innerHTML = sections.filter((x) => x.id !== `a-${a.id}`).map((x) => `<option value="${x.id}">${echapper(x.titre)}</option>`).join('') + '<option value="fin">Tout en bas de la page</option>';
+    $('#a-apres').value = [...$('#a-apres').options].some((o) => o.value === a.emplacement.apres) ? a.emplacement.apres : 'fin';
+  }
   $('#a-etiquette').value = a.etiquette || '';
   $('#a-titre').value = a.titre || '';
   $('#a-texte').value = a.texte || '';
@@ -429,6 +443,15 @@ function majFicheAnnonce() {
   const a = ficheAnnonce.a;
   $$('#a-formats button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.format === a.format)));
   $$('#a-dispositions button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.disposition === (a.disposition || 'gauche'))));
+  $$('#a-fonds button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.fond === (a.fond || 'clair'))));
+  const section = Boolean(a.emplacement);
+  $('[data-format="bandeau"]').hidden = section;
+  $('#a-bloc-pages').hidden = section;
+  $('#a-bloc-emplacement').hidden = !section;
+  $('#a-active-texte').textContent = section ? 'Section visible sur le site' : 'Annonce active';
+  $('#a-bloc-fond').hidden = a.format === 'bandeau' || a.format === 'appel';
+  $('#a-bloc-cartes').hidden = a.format !== 'cartes';
+  if (a.format === 'cartes') afficherCartes();
   const bandeau = a.format === 'bandeau';
   const avecImage = a.format === 'section' || a.format === 'carte';
   $('#a-bloc-etiquette').hidden = bandeau;
@@ -475,7 +498,82 @@ $('#a-formats').addEventListener('click', (e) => {
   const b = e.target.closest('[data-format]');
   if (!b) return;
   ficheAnnonce.a.format = b.dataset.format;
+  if (b.dataset.format === 'cartes' && !(ficheAnnonce.a.cartes || []).length) ficheAnnonce.a.cartes = [{ titre: '', texte: '', image: null }, { titre: '', texte: '', image: null }];
   majFicheAnnonce();
+});
+$('#a-fonds').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-fond]');
+  if (!b) return;
+  ficheAnnonce.a.fond = b.dataset.fond;
+  majFicheAnnonce();
+});
+
+// Grille de cartes : 2 ou 3 cartes (titre, texte, image recadrable)
+function afficherCartes() {
+  const cartes = ficheAnnonce.a.cartes;
+  $('#a-cartes').innerHTML = cartes.map((c, i) => `
+    <fieldset class="bloc-bouton" data-carte="${i}">
+      <legend>Carte ${i + 1}</legend>
+      <label>Titre<input data-c-champ="titre" maxlength="60" value="${echapper(c.titre || '')}"></label>
+      <label>Texte<textarea data-c-champ="texte" maxlength="300" rows="2">${echapper(c.texte || '')}</textarea></label>
+      ${c.image ? `<div class="cadreur__cadre cadre-carte" style="aspect-ratio: 4 / 3"><img alt="" src="${etat.nouvelles.get(c.image.src)?.apercu || `/${c.image.src}-sm.jpg`}" style="object-position: ${c.image.x}% ${c.image.y}%"></div>` : ''}
+      <div class="ligne-boutons">
+        <label class="bouton bouton--contour bouton--fichier">${c.image ? 'Remplacer l’image' : 'Ajouter une image'}<input type="file" data-c-image accept="image/jpeg,image/png,image/webp,image/heic,image/heif"></label>
+        ${c.image ? '<button type="button" class="bouton bouton--discret" data-c-centre>Recentrer</button><button type="button" class="bouton bouton--danger" data-c-sans-image>Sans image</button>' : ''}
+        ${cartes.length > 2 ? '<button type="button" class="bouton bouton--danger" data-c-retirer>Retirer la carte</button>' : ''}
+      </div>
+    </fieldset>`).join('');
+  $('#a-carte-ajouter').hidden = cartes.length >= 3;
+}
+$('#a-cartes').addEventListener('input', (e) => {
+  const champ = e.target.dataset.cChamp;
+  if (champ) ficheAnnonce.a.cartes[Number(e.target.closest('[data-carte]').dataset.carte)][champ] = e.target.value;
+});
+$('#a-cartes').addEventListener('change', async (e) => {
+  if (!e.target.matches('[data-c-image]')) return;
+  const i = Number(e.target.closest('[data-carte]').dataset.carte);
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  try {
+    const image = await preparerImageLibre(f);
+    const src = nouveauNom('img/annonces', `carte-${i + 1}`);
+    etat.nouvelles.set(src, image);
+    ficheAnnonce.a.cartes[i].image = { src, x: 50, y: 50, zoom: 1, largeur: image.largeur, hauteur: image.hauteur, alt: ficheAnnonce.a.cartes[i].titre || '' };
+    afficherCartes();
+  } catch (err) { $('#a-erreur').textContent = err.message; $('#a-erreur').hidden = false; }
+});
+$('#a-cartes').addEventListener('click', (e) => {
+  const bloc = e.target.closest('[data-carte]');
+  if (!bloc) return;
+  const i = Number(bloc.dataset.carte);
+  const c = ficheAnnonce.a.cartes[i];
+  if (e.target.closest('[data-c-retirer]')) ficheAnnonce.a.cartes.splice(i, 1);
+  else if (e.target.closest('[data-c-sans-image]')) c.image = null;
+  else if (e.target.closest('[data-c-centre]')) Object.assign(c.image, { x: 50, y: 50 });
+  else return;
+  afficherCartes();
+});
+let glisseCarte = null;
+$('#a-cartes').addEventListener('pointerdown', (e) => {
+  const cadre = e.target.closest('.cadre-carte');
+  if (!cadre) return;
+  const c = ficheAnnonce.a.cartes[Number(cadre.closest('[data-carte]').dataset.carte)];
+  glisseCarte = { cadre, c, px: e.clientX, py: e.clientY, x: c.image.x, y: c.image.y };
+  cadre.setPointerCapture(e.pointerId);
+});
+$('#a-cartes').addEventListener('pointermove', (e) => {
+  if (!glisseCarte) return;
+  const r = glisseCarte.cadre.getBoundingClientRect();
+  const im = glisseCarte.c.image;
+  im.x = Math.round(Math.min(100, Math.max(0, glisseCarte.x - ((e.clientX - glisseCarte.px) / r.width) * 100)));
+  im.y = Math.round(Math.min(100, Math.max(0, glisseCarte.y - ((e.clientY - glisseCarte.py) / r.height) * 100)));
+  $('img', glisseCarte.cadre).style.objectPosition = `${im.x}% ${im.y}%`;
+});
+['pointerup', 'pointercancel'].forEach((t) => $('#a-cartes').addEventListener(t, () => { glisseCarte = null; }));
+$('#a-carte-ajouter').addEventListener('click', () => {
+  if (ficheAnnonce.a.cartes.length < 3) ficheAnnonce.a.cartes.push({ titre: '', texte: '', image: null });
+  afficherCartes();
 });
 ['#a-texte', '#a-bouton-texte', '#a-titre'].forEach((s) => $(s).addEventListener('input', majFicheAnnonce));
 ['#a-bouton-type', '#a-toutes'].forEach((s) => $(s).addEventListener('change', majFicheAnnonce));
@@ -540,11 +638,17 @@ $('#form-annonce').addEventListener('submit', (e) => {
   const type = $('#a-bouton-type').value;
   const valeurs = { whatsapp: $('#a-bouton-wa').value.trim() || $('#a-bouton-wa').placeholder, page: $('#a-bouton-page').value, telephone: $('#a-bouton-tel').value.trim(), externe: $('#a-bouton-url').value.trim() };
   a.bouton = { texte: $('#a-bouton-texte').value.trim(), type, valeur: valeurs[type] };
-  a.pages = $('#a-toutes').checked ? ['toutes'] : $$('#a-pages input:checked').map((c) => c.value);
+  if (a.emplacement) {
+    a.emplacement = { page: a.emplacement.page, apres: $('#a-apres').value };
+    a.pages = [a.emplacement.page];
+  } else a.pages = $('#a-toutes').checked ? ['toutes'] : $$('#a-pages input:checked').map((c) => c.value);
+  if (a.format === 'cartes') a.cartes = a.cartes.filter((c) => String(c.titre || '').trim() || String(c.texte || '').trim() || c.image).map((c) => ({ ...c, titre: String(c.titre || '').trim(), texte: String(c.texte || '').trim() }));
+  else delete a.cartes;
+  if (a.format === 'bandeau' || a.format === 'appel') delete a.fond;
   a.debut = $('#a-debut').value;
   a.fin = $('#a-fin').value;
   a.active = $('#a-active').checked;
-  if (a.format === 'encadre' || a.format === 'bandeau') a.image = null;
+  if (!['section', 'carte'].includes(a.format)) a.image = null;
   const erreur = verifierAnnonce(a);
   if (erreur) {
     e.preventDefault();
@@ -557,16 +661,22 @@ $('#form-annonce').addEventListener('submit', (e) => {
   else etat.contenu.annonces[ficheAnnonce.index] = a;
   afficherAnnonces();
   changement();
+  if (a.emplacement) chargerSections();
 });
 
 function verifierAnnonce(a) {
-  if (a.format === 'bandeau' ? !a.texte : !a.titre) return a.format === 'bandeau' ? 'Écrivez le message du bandeau.' : 'Donnez un titre à l’annonce.';
+  if (a.format === 'bandeau' ? !a.texte : !a.titre) return a.format === 'bandeau' ? 'Écrivez le message du bandeau.' : `Donnez un titre ${a.emplacement ? 'à la section' : 'à l’annonce'}.`;
+  if (a.format === 'cartes') {
+    const cartes = (a.cartes || []).filter((c) => String(c.titre || '').trim());
+    if ((a.cartes || []).some((c) => !String(c.titre || '').trim())) return 'Chaque carte a besoin d’un titre (ou retirez la carte vide).';
+    if (cartes.length < 2) return 'La grille a besoin d’au moins 2 cartes.';
+  }
   if ((a.format === 'section') && !a.image) return 'La grande section a besoin d’une image. Ajoutez-en une, ou choisissez « Encadré ».';
   if (a.bouton.texte) {
     if (a.bouton.type === 'externe' && !urlValide(a.bouton.valeur)) return 'L’adresse du bouton doit être complète et commencer par https:// (copiez-la depuis votre navigateur).';
     if (a.bouton.type === 'telephone' && !TEL.test(a.bouton.valeur)) return 'Le numéro du bouton doit ressembler à 06 12 34 56 78.';
   }
-  if (!a.pages.length) return 'Choisissez au moins une page où afficher l’annonce.';
+  if (!a.emplacement && !a.pages.length) return 'Choisissez au moins une page où afficher l’annonce.';
   if (a.debut && a.fin && a.fin < a.debut) return 'La date de fin est avant la date de début.';
   if (a.fin && a.fin < aujourdhui()) return 'La date de fin est déjà passée : l’annonce ne serait pas affichée.';
   return '';
@@ -574,11 +684,12 @@ function verifierAnnonce(a) {
 
 $('#a-supprimer').addEventListener('click', () => {
   const a = etat.contenu.annonces[ficheAnnonce.index];
-  if (!confirm(`Supprimer l’annonce « ${a.titre || a.texte} » ?\n\nAstuce : pour la retirer temporairement, décochez plutôt « Annonce active ».`)) return;
+  if (!confirm(`Supprimer ${a.emplacement ? 'la section' : 'l’annonce'} « ${a.titre || a.texte} » ?\n\nAstuce : pour la retirer temporairement, décochez plutôt « Annonce active ».`)) return;
   etat.contenu.annonces.splice(ficheAnnonce.index, 1);
   $('#fiche-annonce').close();
   afficherAnnonces();
   changement();
+  if (a.emplacement) chargerSections();
 });
 
 // --- Coiffures -------------------------------------------------------------------
@@ -796,7 +907,19 @@ $('#p-supprimer').addEventListener('click', () => {
 
 // --- Infos : horaires, téléphones, réseaux ----------------------------------------
 
+function afficherPalettes() {
+  $$('#palettes button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.theme === (etat.contenu.theme || 'cuivre'))));
+}
+$('#palettes').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-theme]');
+  if (!b) return;
+  if (b.dataset.theme === 'cuivre') delete etat.contenu.theme; else etat.contenu.theme = b.dataset.theme;
+  afficherPalettes();
+  changement();
+});
+
 function afficherInfos() {
+  afficherPalettes();
   $('#liste-horaires').innerHTML = etat.contenu.horaires.map((j, i) => `
     <div class="jour">
       <strong>${j.jour}</strong>
@@ -939,7 +1062,7 @@ function afficherSections() {
         ${vignette}
         <button type="button" class="liste__texte" data-section="${i}">
           <strong>${echapper(s.titre)}${s.masquee ? '<span class="badge">masquée</span>' : ''}</strong>
-          <small>${details || 'Section décorative'}</small>
+          <small>${s.ajout ? `${FORMATS[etat.contenu.annonces.find((a) => a.id === s.ajout)?.format] || 'Section'} · ajoutée par vous` : details || 'Section décorative'}</small>
         </button>
         ${s.premiere ? '<span class="pastille pastille--gris">fixe</span>' : `
         <button type="button" class="icone-sombre" data-masquer="${i}" aria-label="${s.masquee ? 'Réafficher' : 'Masquer'} la section ${echapper(s.titre)}" title="${s.masquee ? 'Réafficher' : 'Masquer'}">${s.masquee ? '◌' : '👁'}</button>
@@ -952,6 +1075,7 @@ function afficherSections() {
 }
 
 $('#page-choix').addEventListener('change', chargerSections);
+$('#ajouter-section').addEventListener('click', () => ouvrirAnnonce(-1, { page: pageEnCours() }));
 $('#page-apercu').addEventListener('click', async () => {
   $('#apercu-page').value = pageEnCours();
   $('#fiche-apercu').showModal();
@@ -961,7 +1085,11 @@ $('#page-apercu').addEventListener('click', async () => {
 $('#liste-sections').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
-  if (b.dataset.section !== undefined) return ouvrirSection(Number(b.dataset.section));
+  if (b.dataset.section !== undefined) {
+    const s = sections[Number(b.dataset.section)];
+    if (s.ajout) return ouvrirAnnonce(etat.contenu.annonces.findIndex((a) => a.id === s.ajout));
+    return ouvrirSection(Number(b.dataset.section));
+  }
   const p = modifsPage();
   if (b.dataset.masquer !== undefined) {
     const s = sections[Number(b.dataset.masquer)];

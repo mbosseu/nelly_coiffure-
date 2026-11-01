@@ -1369,3 +1369,29 @@ main > section[hidden] { display: none !important; }
 /* Petit titre centré quand l'annonce est centrée (image au-dessus, encadré) */
 .promo--image-dessus .promo__texte .eyebrow, .promo--sans-image .promo__texte .eyebrow { justify-content: center; }
 .promo--image-dessus .promo__texte .eyebrow::after, .promo--sans-image .promo__texte .eyebrow::after { content: ""; flex-shrink: 0; width: 38px; height: 1px; background: linear-gradient(270deg, transparent, var(--copper)); }
+
+/* Sections ajoutées (espace de gestion) : grille de cartes, bande d'appel, fonds */
+.promo--cartes .promo__inner { grid-template-columns: minmax(0, 1fr); text-align: center; }
+.promo--cartes .promo__texte { max-width: 720px; margin-inline: auto; }
+.promo--cartes .promo__texte .eyebrow { justify-content: center; }
+.promo--cartes .promo__texte .body { margin-inline: auto; }
+.promo__grille { display: grid; gap: clamp(14px, 2vw, 24px); text-align: left; }
+.promo__grille--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.promo__grille--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.promo__carte { background: #FFFBF7; border: 1px solid rgba(181, 122, 80, .18); border-radius: 20px; padding: 14px 14px 20px; }
+.promo__carte .promo__media { aspect-ratio: 4 / 3; border-radius: 14px; margin-bottom: 14px; }
+.promo__carte h3 { font-family: var(--serif); font-weight: 400; font-size: 1.35rem; color: var(--ink); margin: 0 4px 6px; }
+.promo__carte .body { font-size: .92rem; line-height: 1.7; margin: 0 4px; }
+.promo--fond-transparent .promo__inner { background: transparent; box-shadow: none; border-color: transparent; }
+.promo--fond-sombre .promo__inner, .promo--appel .promo__inner { background: var(--ink); border-color: transparent; box-shadow: 0 30px 60px -40px rgba(30, 15, 8, .8); color: var(--cream); }
+.promo--fond-sombre .promo__carte { background: rgba(255, 255, 255, .05); border-color: rgba(221, 174, 134, .2); }
+.promo--fond-sombre .promo__carte h3 { color: var(--cream); }
+.promo--appel .promo__inner { grid-template-columns: minmax(0, 1fr); text-align: center; padding: clamp(36px, 6vw, 72px) clamp(22px, 5vw, 64px); }
+.promo--appel .promo__texte { max-width: 760px; margin-inline: auto; }
+.promo--appel .eyebrow, .promo--fond-sombre.promo--sans-image .eyebrow { justify-content: center; }
+.promo--appel .body { margin-inline: auto; }
+.promo--fond-sombre.promo--encadre .promo__inner::before, .promo--appel .promo__inner::before { color: var(--copper-light); }
+@media (max-width: 860px) { .promo__grille--3 { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) { .promo__grille--2 { grid-template-columns: minmax(0, 1fr); } }
+.promo--fond-sombre .promo__carte .body, .promo--fond-sombre .body { color: rgba(246, 236, 226, .78); }
+.promo--fond-sombre .title { color: var(--cream); }

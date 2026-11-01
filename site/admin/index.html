@@ -63,6 +63,7 @@
         </div>
         <p class="message" id="page-message" hidden></p>
         <ul class="liste liste--sections" id="liste-sections"></ul>
+        <button class="bouton bouton--plein bouton--large" id="ajouter-section" type="button">＋ Ajouter une section à cette page</button>
       </section>
 
       <!-- Coiffures et prix -->
@@ -101,6 +102,16 @@
           <label for="tel-secondaire">Second téléphone</label>
           <input id="tel-secondaire" type="tel" inputmode="tel" placeholder="06 12 34 56 78">
           <p class="message message--erreur" id="erreur-tel-secondaire" hidden></p>
+        </div>
+        <h2 class="sous-titre">Couleurs du site</h2>
+        <div class="carte">
+          <p class="aide aide--carte">La couleur des petits titres, des lignes et des détails. Toutes les palettes s’accordent avec les photos et le logo.</p>
+          <div class="palettes" id="palettes" role="radiogroup" aria-label="Couleurs du site">
+            <button type="button" role="radio" data-theme="cuivre"><span style="--a:#B57A50;--b:#DDAE86;--c:#8E5B3C"></span>Cuivre<small>d’origine</small></button>
+            <button type="button" role="radio" data-theme="or-rose"><span style="--a:#B9806F;--b:#E3B5A6;--c:#94584A"></span>Or rose</button>
+            <button type="button" role="radio" data-theme="terracotta"><span style="--a:#B8653F;--b:#E4A27F;--c:#8F4527"></span>Terracotta</button>
+            <button type="button" role="radio" data-theme="bronze"><span style="--a:#9C7A45;--b:#D3B47E;--c:#75572B"></span>Bronze</button>
+          </div>
         </div>
         <h2 class="sous-titre">Réseaux sociaux</h2>
         <div class="carte" id="liste-reseaux">
@@ -166,6 +177,17 @@
         <button type="button" role="radio" data-format="carte"><span class="mini mini--carte"><i></i><b></b></span><strong>Carte</strong><small>Plus compacte, avec une petite image.</small></button>
         <button type="button" role="radio" data-format="encadre"><span class="mini mini--encadre"><b></b></span><strong>Encadré</strong><small>Texte seul, élégant. Pour une information.</small></button>
         <button type="button" role="radio" data-format="bandeau"><span class="mini mini--bandeau"><b></b></span><strong>Bandeau</strong><small>Une ligne tout en haut des pages. Pour un message court et urgent.</small></button>
+        <button type="button" role="radio" data-format="cartes"><span class="mini mini--cartes"><i></i><i></i><i></i></span><strong>Grille de cartes</strong><small>2 ou 3 cartes côte à côte (engagements, services…).</small></button>
+        <button type="button" role="radio" data-format="appel"><span class="mini mini--appel"><b></b></span><strong>Bande d’appel</strong><small>Bloc sombre et centré pour inviter à réserver.</small></button>
+      </div>
+
+      <div id="a-bloc-fond">
+        <p class="etiquette">Fond</p>
+        <div class="dispositions" id="a-fonds" role="radiogroup" aria-label="Fond de la section">
+          <button type="button" role="radio" data-fond="clair"><span class="mini mini--fond-clair"><b></b></span>Clair</button>
+          <button type="button" role="radio" data-fond="transparent"><span class="mini mini--fond-transparent"><b></b></span>Sans fond</button>
+          <button type="button" role="radio" data-fond="sombre"><span class="mini mini--fond-sombre"><b></b></span>Sombre</button>
+        </div>
       </div>
 
       <p class="etiquette">2. Contenu</p>
@@ -209,6 +231,12 @@
         </div>
       </div>
 
+      <div id="a-bloc-cartes" hidden>
+        <p class="etiquette">Cartes (2 ou 3)</p>
+        <div id="a-cartes"></div>
+        <button type="button" class="bouton bouton--contour" id="a-carte-ajouter">＋ Ajouter une carte</button>
+      </div>
+
       <p class="etiquette">3. Bouton (facultatif)</p>
       <label for="a-bouton-texte">Texte du bouton</label>
       <input id="a-bouton-texte" maxlength="40" placeholder="Ex. : Je réserve sur WhatsApp">
@@ -227,13 +255,19 @@
       </div>
 
       <p class="etiquette">4. Où et quand</p>
-      <label class="interrupteur"><input type="checkbox" id="a-toutes"><span>Sur toutes les pages</span></label>
-      <div class="pages" id="a-pages"></div>
+      <div id="a-bloc-pages">
+        <label class="interrupteur"><input type="checkbox" id="a-toutes"><span>Sur toutes les pages</span></label>
+        <div class="pages" id="a-pages"></div>
+      </div>
+      <div id="a-bloc-emplacement" hidden>
+        <label for="a-apres">Placer cette section après</label>
+        <select id="a-apres"></select>
+      </div>
       <div class="deux-colonnes">
         <div><label for="a-debut">À partir du (facultatif)</label><input id="a-debut" type="date"></div>
         <div><label for="a-fin">Jusqu’au (facultatif)</label><input id="a-fin" type="date"></div>
       </div>
-      <label class="interrupteur"><input type="checkbox" id="a-active"><span>Annonce active</span></label>
+      <label class="interrupteur"><input type="checkbox" id="a-active"><span id="a-active-texte">Annonce active</span></label>
 
       <p class="message message--erreur" id="a-erreur" role="alert" hidden></p>
       <div class="fiche__actions">

@@ -87,6 +87,12 @@ puis ouvrir http://localhost:5174/admin/ (mot de passe d'essai : `essai`). Le si
 - En-tête de page fixe ; les autres sections se déplacent et se masquent.
 - Annonces avec image : disposition « Image à gauche », « Image à droite » ou « Image au-dessus ».
 
+## Phase 3 (1er novembre 2026) : nouvelles sections et couleurs
+
+- **Ajouter une section** (onglet Pages → « Ajouter une section à cette page ») : grande section image + texte (à gauche, à droite, au-dessus), carte, encadré, grille de 2 ou 3 cartes, bande d'appel ; fond clair, sans fond ou sombre ; placée après la section de son choix ; déplaçable, masquable, supprimable. Techniquement, c'est une annonce avec `emplacement: { page, apres }`, insérée par `pages.mjs` (`data-ajout`) et retirée/replacée à chaque génération.
+- **Couleurs du site** (onglet Infos) : 4 palettes chaudes accordées au design (Cuivre d'origine, Or rose, Terracotta, Bronze). Elles redéfinissent `--copper`, `--copper-light` et `--accent` dans la zone `<!-- cms:theme -->` de chaque page.
+- Revenir à Cuivre et supprimer les sections ajoutées redonne exactement les pages d'origine.
+
 ## Test de simplicité avec Nelly (scénario 7, à faire avec elle)
 
 Sans lui expliquer l'application, lui demander, sur son téléphone :

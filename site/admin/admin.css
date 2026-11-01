@@ -227,3 +227,19 @@ textarea { resize: vertical; min-height: 80px; }
 .dispositions button[aria-checked="true"] { border-color: var(--copper); background: var(--cream-card); }
 .mini--droite { grid-template-columns: 1.2fr .8fr; }
 .mini--dessus { grid-template-rows: 1fr .8fr; }
+
+/* --- Phase 3 : nouvelles sections, fonds, couleurs du site --- */
+.mini--cartes { grid-template-columns: repeat(3, 1fr); padding: 10px 8px; }
+.mini--appel { padding: 10px 18px; background: var(--ink); }
+.mini--appel b { background: repeating-linear-gradient(transparent 0 6px, rgba(246, 236, 226, .5) 6px 9px); }
+.mini--fond-clair { padding: 8px 14px; background: var(--cream-card); border: 1px solid var(--line); }
+.mini--fond-transparent { padding: 8px 14px; background: transparent; border: 1px dashed var(--line); }
+.mini--fond-sombre { padding: 8px 14px; background: var(--ink); }
+.mini--fond-sombre b { background: repeating-linear-gradient(transparent 0 6px, rgba(246, 236, 226, .5) 6px 9px); }
+.cadre-carte { max-width: 260px; margin: 8px 0; }
+.palettes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+.palettes button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border-radius: 14px; border: 2px solid var(--line); background: #fff; cursor: pointer; font-size: .78rem; color: var(--ink); }
+.palettes button[aria-checked="true"] { border-color: var(--ink); box-shadow: 0 0 0 3px rgba(30, 20, 14, .1); }
+.palettes span { width: 44px; height: 44px; border-radius: 50%; background: conic-gradient(var(--a) 0 33%, var(--b) 0 66%, var(--c) 0); }
+.palettes small { font-size: .65rem; color: var(--text); }
+@media (max-width: 420px) { .palettes { grid-template-columns: repeat(2, 1fr); } }

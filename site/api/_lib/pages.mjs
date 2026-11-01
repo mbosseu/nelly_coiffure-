@@ -86,9 +86,29 @@ const lienBouton = (b, formatsTelephone) => {
 
 const decouperBouton = (contenu) => contenu.match(/^(\s*(?:<svg[\s\S]*?<\/svg>\s*)?)([\s\S]*?)(\s*(?:<svg[\s\S]*?<\/svg>)?\s*)$/);
 
-export function appliquerPages(h, fichier, contenu, formatsTelephone) {
-  const p = contenu.pages?.[fichier];
-  if (!p || !bornes(h)) return h;
+// Sections ajoutées depuis l'espace de gestion (data-ajout) : retirées avant chaque génération, puis replacées
+export const retirerAjouts = (h) => h.replace(/^ {4}<section\b[^>]*\bdata-ajout="[^"]*"[\s\S]*?^ {4}<\/section>\r?\n/gm, '');
+
+const insererAjouts = (h, ajouts) => {
+  const NL = h.includes('\r\n') ? '\r\n' : '\n';
+  for (const { apres, html } of ajouts) {
+    const b = bornes(h);
+    const main = h.slice(b.debut, b.fin);
+    const blocs = [...main.matchAll(/^ {4}<section\b[\s\S]*?^ {4}<\/section>\r?\n?/gm)].filter((m) => attr(m[0].slice(0, m[0].indexOf('>')), 'data-s'));
+    const cible = blocs.find((m) => attr(m[0].slice(0, m[0].indexOf('>')), 'data-s') === apres) || blocs[blocs.length - 1];
+    if (!cible) continue;
+    let fin = cible.index + cible[0].length;
+    if (!/\n$/.test(cible[0])) fin = cible.index + cible[0].length;
+    const insertion = `${/\n$/.test(cible[0]) ? '' : NL}${html}${NL}`;
+    h = h.slice(0, b.debut) + main.slice(0, fin) + insertion + main.slice(fin) + h.slice(b.fin);
+  }
+  return h;
+};
+
+export function appliquerPages(h, fichier, contenu, formatsTelephone, ajouts = []) {
+  if (!bornes(h)) return h;
+  if (ajouts.length) h = insererAjouts(h, ajouts);
+  const p = contenu.pages?.[fichier] || {};
   const textes = p.textes || {}; const images = p.images || {}; const boutons = p.boutons || {};
   if (Object.keys(textes).length) {
     h = remplacerDansMain(h, TEXTES, (m, tag, attrs, html) => {
@@ -142,7 +162,8 @@ function ordonner(h, p) {
   const masquees = new Set(p.masquees || []);
   const visibilite = (t, id) => {
     const ouv = t.slice(0, t.indexOf('>') + 1);
-    let n = ouv.replace(/\s(hidden|data-masquee="1")(?=[\s>])(="[^"]*")?/g, '');
+    // Seul le masquage posé ici est retiré (une annonce programmée garde son « hidden » de date)
+    let n = ouv.replace(/ hidden data-masquee="1"/g, '');
     if (masquees.has(id)) n = n.replace(/>$/, ' hidden data-masquee="1">');
     return n + t.slice(ouv.length);
   };
@@ -182,7 +203,7 @@ export function structurePage(h) {
     const boutons = [...t.matchAll(BOUTONS)].filter((x) => !dansZone(zonesT, x.index) && attr(x[1], 'data-b'))
       .map((x) => ({ id: attr(x[1], 'data-b'), texte: versSaisie((decouperBouton(x[2]) || [])[2] || ''), href: decoder(attr(x[1], 'href') || ''), wa: decoder(attr(x[1], 'data-wa') || '') }));
     const titre = textes.find((x) => x.type === 'titre')?.texte || textes.find((x) => x.type !== 'petit-titre')?.texte || `Section ${i + 1}`;
-    const nom = i === 0 ? 'En-tête de la page' : titre.replace(/\*/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 70);
-    return { id: attr(ouv, 'data-s'), premiere: i === 0, masquee: /\shidden[\s>=]/.test(`${ouv}>`), titre: nom, textes, images, boutons };
+    const nom = i === 0 ? 'En-tête de la page' : attr(ouv, 'data-ajout') ? decoder(attr(ouv, 'aria-label') || 'Section ajoutée') : titre.replace(/\*/g, '').replace(/\n/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 70);
+    return { id: attr(ouv, 'data-s'), ajout: attr(ouv, 'data-ajout') || null, premiere: i === 0, masquee: /data-masquee="1"/.test(ouv), titre: nom, textes, images, boutons };
   });
 }
