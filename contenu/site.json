@@ -1,30 +1,5 @@
 {
-  "annonces": [
-    {
-      "id": "section-mvxiotv7",
-      "active": true,
-      "format": "encadre",
-      "etiquette": "Test2",
-      "titre": "Test",
-      "texte": "Décembre",
-      "image": null,
-      "bouton": {
-        "texte": "",
-        "type": "whatsapp",
-        "valeur": "Bonjour Nelly, je suis intéressée par : Test."
-      },
-      "pages": [
-        "index.html"
-      ],
-      "debut": "",
-      "fin": "",
-      "fond": "clair",
-      "emplacement": {
-        "page": "index.html",
-        "apres": "s7"
-      }
-    }
-  ],
+  "annonces": [],
   "reseaux": {
     "instagram": "https://www.instagram.com/nellycoiffure237/",
     "tiktok": "https://www.tiktok.com/@nellycoiffure237",
