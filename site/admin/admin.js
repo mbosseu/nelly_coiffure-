@@ -166,6 +166,23 @@ $('#deconnexion').addEventListener('click', async () => {
   }
   afficherConnexion('Vous êtes déconnectée.');
 });
+$('#deconnecter-partout').addEventListener('click', async () => {
+  if (!confirm('Déconnecter tous les autres appareils (téléphone, tablette, ordinateur) ? Ils devront retaper le mot de passe. Cet appareil reste connecté.')) return;
+  const bouton = $('#deconnecter-partout');
+  const message = $('#message-compte');
+  bouton.disabled = true;
+  try {
+    await api('deconnecter-partout', { methode: 'POST', corps: {} });
+    message.className = 'message message--ok';
+    message.textContent = 'C’est fait : les autres appareils seront déconnectés d’ici une minute.';
+  } catch (err) {
+    message.className = 'message message--erreur';
+    message.textContent = err.message;
+  } finally {
+    message.hidden = false;
+    bouton.disabled = false;
+  }
+});
 
 // --- Brouillon, annuler / rétablir, barre de publication ---------------------------
 

@@ -3,10 +3,10 @@ import { structurePage } from './_lib/pages.mjs';
 import { NAVIGATION_DEFAUT } from './_lib/navigation.mjs';
 import { createHash } from 'node:crypto';
 import { lireTexte, listerDossier, publier, historique, ErreurGithub } from './_lib/github.mjs';
-import { motDePasseValide, ouvrirSession, fermerSession, sessionValide } from './_lib/session.mjs';
+import { motDePasseValide, ouvrirSession, fermerSession, sessionEmise } from './_lib/session.mjs';
 
 // API de l'espace de gestion de Nelly (/admin). Une seule fonction, l'action est passée dans ?action=
-// connexion, deconnexion, contenu, historique, version, publier.
+// connexion, deconnexion, deconnecter-partout, contenu, historique, version, publier, apercu.
 // Une publication régénère les pages à partir du contenu (même générateur que outils/seo.mjs)
 // et envoie le tout en un seul commit sur GitHub ; Vercel remet ensuite le site en ligne (environ une minute).
 
@@ -52,7 +52,17 @@ export default async function handler(req, res) {
       return json(res, 200, { ok: true });
     }
 
-    if (!sessionValide(req)) return json(res, 401, { erreur: 'Session expirée, reconnectez-vous.' });
+    const emis = sessionEmise(req);
+    if (emis === null || emis < await revoqueesAvant()) return json(res, 401, { erreur: 'Session expirée, reconnectez-vous.' });
+
+    // Déconnecte tous les appareils : les jetons créés avant maintenant sont refusés, cet appareil reçoit un nouveau jeton
+    if (action === 'deconnecter-partout' && req.method === 'POST') {
+      const maintenant = Math.floor(Date.now() / 1000);
+      await publier([{ chemin: SESSIONS, texte: `${JSON.stringify({ revoqueesAvant: maintenant })}\n` }], 'Espace Nelly : déconnexion de tous les appareils');
+      revocation = { quand: Date.now(), avant: maintenant };
+      ouvrirSession(res, maintenant);
+      return json(res, 200, { ok: true });
+    }
 
     if (action === 'contenu' && req.method === 'GET') {
       const { texte, sha } = await lireTexte(CONTENU);
@@ -75,6 +85,19 @@ export default async function handler(req, res) {
     const message = e instanceof ErreurGithub ? 'Le site n’a pas pu être mis à jour (GitHub). Réessayez dans un instant.' : 'Erreur inattendue. Réessayez dans un instant.';
     return json(res, 500, { erreur: message });
   }
+}
+
+// Date avant laquelle les connexions sont refusées (contenu/sessions.json, hors du site public).
+// Relue au plus une fois par minute : un appareil déconnecté l'est partout en une minute au plus.
+const SESSIONS = 'contenu/sessions.json';
+let revocation = { quand: 0, avant: 0 };
+async function revoqueesAvant() {
+  if (Date.now() - revocation.quand < 60 * 1000) return revocation.avant;
+  let avant = 0;
+  try { avant = Number(JSON.parse((await lireTexte(SESSIONS)).texte).revoqueesAvant) || 0; }
+  catch (e) { if (e.statut !== 404) throw e; }
+  revocation = { quand: Date.now(), avant };
+  return avant;
 }
 
 // Pages actuelles du site (dernière version sur GitHub), gardées une minute pour enchaîner les aperçus rapidement

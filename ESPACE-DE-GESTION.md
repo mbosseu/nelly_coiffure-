@@ -113,8 +113,12 @@ Sans lui expliquer l'application, lui demander, sur son téléphone :
 6. Regarder l'aperçu sur mobile, puis publier.
 Noter chaque hésitation (où elle cherche, ce qu'elle ne comprend pas) : ce sont les points à simplifier.
 
+## Déconnecter tous les appareils
+
+Mon compte → « Déconnecter tous les autres appareils ». Le jeton de connexion porte sa date de création ; l'action enregistre la date du moment dans `contenu/sessions.json` (hors du site public, un commit « Espace Nelly : déconnexion de tous les appareils ») et tout jeton plus ancien est refusé. L'appareil qui fait la demande reçoit un nouveau jeton et reste connecté. La date est relue au plus une fois par minute par l'API. Changer `ADMIN_SECRET` dans Vercel déconnecte aussi tout le monde.
+
 ## Limites connues
 - Les 3 cartes mises en avant sur l'accueil (knotless, tresses couchées, nattes collées) gardent leur nom et leur photo ; seuls leurs prix suivent.
-- La mention « Du lundi au samedi, sur rendez-vous » du pied de page ne suit pas les horaires.
-- Les textes de présentation (accueil, À propos, questions fréquentes) et les avis ne sont pas encore modifiables : prévus pour la version 2 si besoin.
+- La mention « Du lundi au samedi, sur rendez-vous » du pied de page ne suit pas les horaires automatiquement (elle se modifie dans « Menu et pied de page »).
+- Le mot de passe se change dans Vercel (variable `ADMIN_PASSWORD`), pas depuis l'application.
 - Modifier les pages à la main reste possible : relancer ensuite `node outils/seo.mjs`, qui applique aussi le contenu de `contenu/site.json`.

@@ -1,6 +1,6 @@
 // Service worker de l'espace de gestion : rend l'application installable et permet de l'ouvrir sans réseau.
 // Toujours la version en ligne en priorité ; l'API n'est jamais mise en cache.
-const CACHE = 'gestion-nelly-v5';
+const CACHE = 'gestion-nelly-v6';
 const COQUILLE = ['/admin/', '/admin/admin.css', '/admin/admin.js', '/admin/manifest.webmanifest', '/img/marque/logo.webp'];
 
 self.addEventListener('install', (e) => {
