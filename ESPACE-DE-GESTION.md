@@ -97,6 +97,8 @@ puis ouvrir http://localhost:5174/admin/ (mot de passe d'essai : `essai`). Le si
 
 - Onglet Infos → « Modifier le menu et le pied de page » : liens du menu (2 à 7, nom, page, ordre), textes du bouton « Prendre rendez-vous » et son message WhatsApp, phrase d'invitation et présentation du pied de page, colonnes de liens (jusqu'à 3 × 10, vers une page du site ou un autre site), lignes d'informations. « Revenir à l'origine » remet le site d'origine.
 - Stocké dans `contenu.navigation` (absent = valeurs par défaut de `api/_lib/navigation.mjs`, qui reproduisent le site d'origine) ; appliqué à toutes les pages par `appliquerNavigation`.
+- Logo (onglet Infos → « Logo et image de fond ») : l'image choisie est recadrée au plus près, son fond uni est retiré (option), et une version claire est créée pour le pied de page (parties foncées → crème, comme `outils/logo-clair.mjs`). Fichiers `img/marque/logo-<n>.png` et `-clair.png`, référencés dans `contenu.marque.logo` ; remplacent le logo de l'en-tête, du pied de page, de l'écran d'ouverture (zone `cms:theme`) et des données Google. Les icônes de l'application et du navigateur (favicon) ne changent pas.
+- Image de fond de la bande « Prendre rendez-vous » : `contenu.fonds.cta` (`img/pages/…`, .jpg et -sm.jpg), appliquée par la zone `cms:theme`.
 - Réseaux : YouTube ajouté ; seul Instagram est obligatoire, un réseau laissé vide disparaît du pied de page et de la liste « Me suivre » de Contact (`<!-- cms:reseaux -->`).
 
 ## Test de simplicité avec Nelly (scénario 7, à faire avec elle)

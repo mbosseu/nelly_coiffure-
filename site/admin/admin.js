@@ -132,6 +132,8 @@ function retirerImagesPerdues() {
   etat.contenu.services = etat.contenu.services.filter((s) => !perdues.includes(s.photo));
   etat.contenu.annonces.forEach((a) => { if (a.image && perdues.includes(a.image.src)) a.image = null; (a.cartes || []).forEach((x) => { if (x.image && perdues.includes(x.image.src)) x.image = null; }); });
   Object.values(etat.contenu.pages).forEach((p) => Object.keys(p.images || {}).forEach((id) => { if (perdues.includes(p.images[id].src)) delete p.images[id]; }));
+  if (perdues.includes(etat.contenu.marque?.logo?.src)) delete etat.contenu.marque;
+  if (perdues.includes(etat.contenu.fonds?.cta)) delete etat.contenu.fonds;
   return true;
 }
 
@@ -222,6 +224,8 @@ function resumeModifications() {
   }
   for (const x of a.annonces) if (!b.annonces.some((y) => y.id === x.id)) lignes.push(`${x.emplacement ? 'Section' : 'Annonce'} supprimée : ${x.titre || x.texte}`);
   if ((a.theme || 'cuivre') !== (b.theme || 'cuivre')) lignes.push('Couleurs du site');
+  if (JSON.stringify(a.marque || null) !== JSON.stringify(b.marque || null)) lignes.push(b.marque ? 'Nouveau logo' : 'Logo d’origine');
+  if (JSON.stringify(a.fonds || null) !== JSON.stringify(b.fonds || null)) lignes.push(b.fonds ? 'Nouvelle image de fond' : 'Image de fond d’origine');
   if (JSON.stringify(a.horaires) !== JSON.stringify(b.horaires)) lignes.push('Horaires');
   if (JSON.stringify(a.telephones) !== JSON.stringify(b.telephones)) lignes.push('Téléphones');
   for (const [cle, nom] of Object.entries(RESEAUX)) if ((a.reseaux[cle] || '') !== (b.reseaux[cle] || '')) lignes.push(`Lien ${nom}`);
@@ -277,7 +281,7 @@ function toutAfficher({ garderPile = false } = {}) {
 // --- Outils ----------------------------------------------------------------------
 
 const urlImage = (img, petit = true) => etat.nouvelles.get(img)?.apercu || `/${img}${petit ? '-sm' : ''}.jpg`;
-const imagesUtilisees = (c) => [...new Set([...c.services.map((s) => s.photo), ...c.photos.map((p) => p.image), ...(c.annonces || []).flatMap((a) => [a.image?.src, ...(a.cartes || []).map((x) => x.image?.src)]).filter(Boolean), ...Object.values(c.pages || {}).flatMap((p) => Object.values(p.images || {}).map((im) => im.src))])];
+const imagesUtilisees = (c) => [...new Set([...c.services.map((s) => s.photo), ...c.photos.map((p) => p.image), ...(c.annonces || []).flatMap((a) => [a.image?.src, ...(a.cartes || []).map((x) => x.image?.src)]).filter(Boolean), ...Object.values(c.pages || {}).flatMap((p) => Object.values(p.images || {}).map((im) => im.src)), c.marque?.logo?.src, c.fonds?.cta].filter(Boolean))];
 const echapper = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const versCle = (nom) => nom.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'element';
 const urlValide = (u) => { try { const x = new URL(String(u || '').trim()); return x.protocol === 'https:' || x.protocol === 'http:'; } catch { return false; } };
@@ -910,6 +914,147 @@ $('#p-supprimer').addEventListener('click', () => {
   changement();
 });
 
+// --- Logo et image de fond ----------------------------------------------------------
+
+const CREME = [246, 230, 212];
+let logoCharge = null; // image choisie, gardée pour pouvoir changer l'option « retirer le fond » sans la recharger
+
+// Logo → PNG transparent recadré au plus près (600 px de large au plus) + version claire pour le fond sombre
+// (les parties foncées passent en crème, le cuivre est conservé : même règle que le logo d'origine)
+function traiterLogo(img, retirerFond) {
+  const echelle = Math.min(1, 1200 / img.naturalWidth);
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.naturalWidth * echelle)); c.height = Math.max(1, Math.round(img.naturalHeight * echelle));
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const donnees = ctx.getImageData(0, 0, c.width, c.height);
+  const d = donnees.data;
+  const px = (x, y) => (y * c.width + x) * 4;
+  const coins = [px(0, 0), px(c.width - 1, 0), px(0, c.height - 1), px(c.width - 1, c.height - 1)].map((i) => [d[i], d[i + 1], d[i + 2], d[i + 3]]);
+  const ecart = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  const fondUni = coins.every((x) => x[3] > 250 && ecart(x, coins[0]) < 25);
+  if (retirerFond && fondUni) {
+    const f = [0, 1, 2].map((k) => coins.reduce((t, x) => t + x[k], 0) / 4);
+    for (let i = 0; i < d.length; i += 4) {
+      const e = ecart([d[i], d[i + 1], d[i + 2]], f);
+      if (e < 28) d[i + 3] = 0;
+      else if (e < 60) d[i + 3] = Math.round(d[i + 3] * ((e - 28) / 32));
+    }
+  }
+  // Recadrage sur les parties visibles
+  let x0 = c.width; let y0 = c.height; let x1 = -1; let y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+    if (d[px(x, y) + 3] > 8) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) throw new Error('Le logo semble vide. Choisissez une autre image.');
+  ctx.putImageData(donnees, 0, 0);
+  let l = x1 - x0 + 1; const h = y1 - y0 + 1;
+  // Logo très haut : marges transparentes sur les côtés, pour garder une taille raisonnable dans l'en-tête
+  const lCadre = Math.max(l, Math.ceil(h / 0.85));
+  const rendre = (largeur, clair) => {
+    const k = largeur / lCadre;
+    const s = document.createElement('canvas');
+    s.width = largeur; s.height = Math.max(1, Math.round(h * k));
+    const sc = s.getContext('2d', { willReadFrequently: true });
+    sc.imageSmoothingQuality = 'high';
+    sc.drawImage(c, x0, y0, l, h, Math.round(((lCadre - l) / 2) * k), 0, Math.round(l * k), s.height);
+    if (clair) {
+      const im = sc.getImageData(0, 0, s.width, s.height);
+      const p = im.data;
+      for (let i = 0; i < p.length; i += 4) {
+        if (!p[i + 3]) continue;
+        const t = Math.max(0, Math.min(1, (120 - (0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2])) / 70));
+        if (t > 0) for (let q = 0; q < 3; q++) p[i + q] = Math.round(p[i + q] * (1 - t) + CREME[q] * t);
+      }
+      sc.putImageData(im, 0, 0);
+    }
+    return { url: s.toDataURL('image/png'), largeur: s.width, hauteur: s.height };
+  };
+  // Taille de fichier limitée : on réduit la largeur si besoin
+  for (const largeur of [Math.min(600, lCadre), 480, 360]) {
+    const grand = rendre(largeur, false);
+    const petit = rendre(largeur, true);
+    if ((grand.url.length + petit.url.length) * 0.75 < 1.4 * 1024 * 1024 || largeur === 360) {
+      return { grand: grand.url.split(',')[1], petit: petit.url.split(',')[1], apercu: grand.url, apercuClair: petit.url, ext: 'png', largeur: grand.largeur, hauteur: grand.hauteur, fondUni };
+    }
+  }
+}
+
+function appliquerLogoCharge() {
+  const logo = traiterLogo(logoCharge, $('#logo-retirer-fond').checked);
+  const actuel = etat.contenu.marque?.logo?.src;
+  const deja = etat.nouvelles.get(actuel);
+  if (tailleEnvoi() - (deja?.grand ? deja.grand.length + deja.petit.length : 0) + logo.grand.length + logo.petit.length > MAX_ENVOI) throw new Error('Trop d’images en attente : publiez d’abord vos modifications, puis changez le logo.');
+  const src = etat.contenu.marque?.logo?.src && etat.nouvelles.has(etat.contenu.marque.logo.src) ? etat.contenu.marque.logo.src : nouveauNom('img/marque', 'logo');
+  etat.nouvelles.set(src, logo);
+  etat.contenu.marque = { logo: { src, largeur: logo.largeur, hauteur: logo.hauteur } };
+  $('#logo-option-fond').hidden = !logo.fondUni;
+  afficherMarque();
+  changement();
+}
+
+$('#logo-fichier').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const erreur = $('#logo-erreur');
+  erreur.hidden = true;
+  try {
+    const { img } = await chargerImage(f);
+    logoCharge = img;
+    $('#logo-retirer-fond').checked = true;
+    appliquerLogoCharge();
+  } catch (err) {
+    erreur.textContent = err.message;
+    erreur.hidden = false;
+  }
+});
+$('#logo-retirer-fond').addEventListener('change', () => { if (logoCharge) appliquerLogoCharge(); });
+$('#logo-origine').addEventListener('click', () => {
+  delete etat.contenu.marque;
+  logoCharge = null;
+  $('#logo-option-fond').hidden = true;
+  afficherMarque();
+  changement();
+});
+
+$('#fond-fichier').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const erreur = $('#fond-erreur');
+  erreur.hidden = true;
+  try {
+    const image = await preparerImageLibre(f);
+    if (tailleEnvoi() + image.grand.length + image.petit.length > MAX_ENVOI) throw new Error('Trop d’images en attente : publiez d’abord vos modifications, puis changez l’image.');
+    const src = nouveauNom('img/pages', 'fond-rendez-vous');
+    etat.nouvelles.set(src, image);
+    etat.contenu.fonds = { cta: src };
+    afficherMarque();
+    changement();
+  } catch (err) {
+    erreur.textContent = err.message;
+    erreur.hidden = false;
+  }
+});
+$('#fond-origine').addEventListener('click', () => {
+  delete etat.contenu.fonds;
+  afficherMarque();
+  changement();
+});
+
+function afficherMarque() {
+  const logo = etat.contenu.marque?.logo;
+  const n = logo && etat.nouvelles.get(logo.src);
+  $('#logo-apercu').src = logo ? n?.apercu || `/${logo.src}.png` : '/img/marque/logo.webp';
+  $('#logo-apercu-clair').src = logo ? n?.apercuClair || `/${logo.src}-clair.png` : '/img/marque/logo-clair.webp';
+  $('#logo-origine').hidden = !logo;
+  if (!logo || !n) $('#logo-option-fond').hidden = true;
+  const fond = etat.contenu.fonds?.cta;
+  $('#fond-apercu').src = fond ? urlImage(fond) : '/img/maquette/cta-tresses-sm.webp';
+  $('#fond-origine').hidden = !fond;
+}
+
 // --- Infos : horaires, téléphones, réseaux ----------------------------------------
 
 function afficherPalettes() {
@@ -925,6 +1070,7 @@ $('#palettes').addEventListener('click', (e) => {
 
 function afficherInfos() {
   afficherPalettes();
+  afficherMarque();
   $('#liste-horaires').innerHTML = etat.contenu.horaires.map((j, i) => `
     <div class="jour">
       <strong>${j.jour}</strong>
@@ -1496,7 +1642,7 @@ async function chargerApercu() {
     const { html, avertissements } = await api('apercu', { methode: 'POST', corps: { contenu: etat.contenu, page: $('#apercu-page').value } });
     // Les images pas encore publiées sont affichées depuis l'appareil
     let page = html.replace('<head>', '<head><base href="/" target="_blank">');
-    for (const [img, p] of etat.nouvelles) if (p.apercu) page = page.split(`${img}-sm.jpg`).join(p.apercu).split(`${img}.jpg`).join(p.apercu);
+    for (const [img, p] of etat.nouvelles) if (p.apercu) page = page.split(`${img}-sm.jpg`).join(p.apercu).split(`${img}.jpg`).join(p.apercu).split(`${img}-clair.png`).join(p.apercuClair || p.apercu).split(`${img}.png`).join(p.apercu);
     cadre.srcdoc = page;
     cadre.onload = () => { chargement.hidden = true; cadre.style.visibility = 'visible'; ajusterApercu(); };
     alertes.hidden = !avertissements.length;
@@ -1550,7 +1696,9 @@ $('#fiche-publier').addEventListener('click', async (e) => {
   erreur.hidden = true;
   const utilisees = imagesUtilisees(etat.contenu);
   const photos = [...etat.nouvelles.entries()].filter(([img, p]) => p.grand && utilisees.includes(img))
-    .flatMap(([img, p]) => [{ chemin: `${img}.jpg`, base64: p.grand }, { chemin: `${img}-sm.jpg`, base64: p.petit }]);
+    .flatMap(([img, p]) => (p.ext === 'png'
+      ? [{ chemin: `${img}.png`, base64: p.grand }, { chemin: `${img}-clair.png`, base64: p.petit }]
+      : [{ chemin: `${img}.jpg`, base64: p.grand }, { chemin: `${img}-sm.jpg`, base64: p.petit }]));
   try {
     const r = await api('publier', { methode: 'POST', corps: { contenu: etat.contenu, photos, version: etat.version, resume: resumeModifications().join(', ') } });
     etat.base = normaliser(r.contenu || structuredClone(etat.contenu));
@@ -1560,7 +1708,7 @@ $('#fiche-publier').addEventListener('click', async (e) => {
     for (const [avant, apres] of Object.entries(r.renommees || {})) {
       if (etat.nouvelles.has(avant)) { etat.nouvelles.set(apres, etat.nouvelles.get(avant)); etat.nouvelles.delete(avant); }
     }
-    for (const [img, p] of etat.nouvelles) etat.nouvelles.set(img, { apercu: p.apercu });
+    for (const [img, p] of etat.nouvelles) etat.nouvelles.set(img, { apercu: p.apercu, apercuClair: p.apercuClair });
     try { localStorage.removeItem(CLE_BROUILLON); } catch { /* sans effet */ }
     etat.defaire = [];
     etat.refaire = [];

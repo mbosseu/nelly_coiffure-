@@ -327,9 +327,32 @@ export const THEMES = {
   terracotta: { copper: '#B8653F', light: '#E4A27F', accent: '#8F4527' },
   bronze: { copper: '#9C7A45', light: '#D3B47E', accent: '#75572B' },
 };
+// Couleurs, logo de l'écran d'ouverture et image de la bande de fin de page (adresses relatives : l'aperçu les remplace)
 const rendreTheme = (contenu, NL) => {
   const t = THEMES[contenu.theme];
-  return t ? `${NL}  <style id="theme">:root { --copper: ${t.copper}; --copper-light: ${t.light}; --accent: ${t.accent}; }</style>${NL}` : NL;
+  const css = [];
+  if (t) css.push(`:root { --copper: ${t.copper}; --copper-light: ${t.light}; --accent: ${t.accent}; }`);
+  const logo = logoDe(contenu);
+  if (logo) css.push(`body::before { background-image: url("${logo.src}.png"); }`);
+  const fond = fondDe(contenu);
+  if (fond) css.push(`.cta__texture { background-image: url("${fond}.jpg"); } @media (max-width: 760px) { .cta__texture { background-image: url("${fond}-sm.jpg"); } }`);
+  return css.length ? `${NL}  <style id="theme">${css.join(' ')}</style>${NL}` : NL;
+};
+
+// --- Logo et image de fond ----------------------------------------------------------
+// contenu.marque.logo = { src: 'img/marque/logo-…', largeur, hauteur } : fichiers ${src}.png et ${src}-clair.png (fond sombre)
+// contenu.fonds.cta = 'img/pages/…' : fichiers .jpg et -sm.jpg. Absents = logo et image d'origine.
+export const LOGO_SRC = /^img\/marque\/logo-[0-9]+$/;
+export const FOND_SRC = /^img\/pages\/[a-z0-9-]+$/;
+const logoDe = (contenu) => (LOGO_SRC.test(contenu.marque?.logo?.src || '') ? contenu.marque.logo : null);
+const fondDe = (contenu) => (FOND_SRC.test(contenu.fonds?.cta || '') ? contenu.fonds.cta : null);
+const appliquerLogo = (h, contenu) => {
+  const logo = logoDe(contenu);
+  const img = (l, defaut, hDefaut, suffixe) => (m, debut, milieu, fin) => (logo
+    ? `${debut}${logo.src}${suffixe}.png${milieu}${l}" height="${Math.round((l * logo.hauteur) / logo.largeur)}${fin}`
+    : `${debut}${defaut}${milieu}${l}" height="${hDefaut}${fin}`);
+  h = h.replace(/(<a [^>]*class="header__logo"[^>]*>\s*<img src=")[^"]*("[^>]*? width=")\d+" height="\d+(")/, img(200, 'img/marque/logo.webp', 121, ''));
+  return h.replace(/(<a [^>]*class="site-footer__logo"[^>]*><img src=")[^"]*("[^>]*? width=")\d+" height="\d+(")/, img(480, 'img/marque/logo-clair.webp', 291, '-clair'));
 };
 
 // --- Réseaux sociaux --------------------------------------------------------------
@@ -375,7 +398,7 @@ const salonGoogle = (contenu) => ({
   name: NOM,
   description: 'Coiffeuse spécialisée en tresses africaines à Marseille : knotless braids, tresses couchées, nattes collées, twists, locks et tissage, chez elle ou à domicile.',
   url: `${DOMAINE}/`,
-  logo: `${DOMAINE}/img/marque/logo.png`,
+  logo: `${DOMAINE}/${logoDe(contenu)?.src || 'img/marque/logo'}.png`,
   image: [IMAGE, `${DOMAINE}/img/nelly/hero-bouclees.webp`, `${DOMAINE}/img/nelly/portrait-nelly-rond.webp`],
   telephone: formatsTelephone(contenu.telephones.principal).international,
   founder: { '@type': 'Person', name: 'Nelly', jobTitle: 'Coiffeuse afro, spécialiste des tresses africaines', image: `${DOMAINE}/img/nelly/portrait-nelly-rond.webp` },
@@ -425,6 +448,7 @@ const appliquerContenu = (h, fichier, contenu, ancien, aujourdhui) => {
   });
   if (PAGES[fichier] && !PAGES[fichier].robots) h = appliquerPages(h, fichier, contenu, formatsTelephone, sectionsAjoutees(contenu, fichier, aujourdhui, NL));
   h = zone(h, 'theme', rendreTheme(contenu, NL));
+  h = appliquerLogo(h, contenu);
   if (PAGES[fichier]) h = appliquerNavigation(h, fichier, contenu, attributsLien, reseauxDe(contenu));
   return remplacerReseaux(remplacerTelephones(h, contenu, ancien), contenu, ancien);
 };
@@ -599,6 +623,10 @@ export function verifierContenu(c) {
   erreurs.push(...verifierAnnonces(c.annonces));
   erreurs.push(...verifierPages(c.pages));
   if (c.theme !== undefined && !(c.theme in THEMES)) erreurs.push('Couleurs du site inconnues.');
+  const logo = c.marque?.logo;
+  if (logo !== undefined && logo !== null && !(LOGO_SRC.test(logo.src || '') && Number.isInteger(logo.largeur) && Number.isInteger(logo.hauteur)
+    && logo.largeur > 0 && logo.hauteur > 0 && logo.hauteur / logo.largeur <= 0.85)) erreurs.push('Le logo est invalide.');
+  if (c.fonds?.cta !== undefined && c.fonds.cta !== null && !FOND_SRC.test(c.fonds.cta)) erreurs.push('L’image de fond est invalide.');
   if (c.reseaux !== undefined) {
     // Instagram est obligatoire (boutons de la page Réalisations) ; les autres réseaux peuvent être laissés vides
     for (const [cle, nom] of Object.entries(RESEAUX_NOMS)) {

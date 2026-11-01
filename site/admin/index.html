@@ -113,6 +113,30 @@
             <button type="button" role="radio" data-theme="bronze"><span style="--a:#9C7A45;--b:#D3B47E;--c:#75572B"></span>Bronze</button>
           </div>
         </div>
+        <h2 class="sous-titre">Logo et image de fond</h2>
+        <div class="carte">
+          <p class="aide aide--carte">Le logo apparaît en haut de chaque page, à l’ouverture du site et dans le pied de page (une version claire est créée automatiquement pour le fond sombre).</p>
+          <div class="logos">
+            <div class="logos__fond"><img id="logo-apercu" alt="Logo sur fond clair"></div>
+            <div class="logos__fond logos__fond--sombre"><img id="logo-apercu-clair" alt="Logo sur fond sombre"></div>
+          </div>
+          <label class="interrupteur" id="logo-option-fond" hidden><input type="checkbox" id="logo-retirer-fond"><span>Retirer le fond uni de l’image</span></label>
+          <p class="message message--erreur" id="logo-erreur" role="alert" hidden></p>
+          <div class="ligne-boutons">
+            <label class="bouton bouton--contour bouton--fichier">Changer le logo<input type="file" id="logo-fichier" accept="image/png,image/webp,image/jpeg,image/heic,image/heif"></label>
+            <button type="button" class="bouton bouton--danger" id="logo-origine" hidden>Logo d’origine</button>
+          </div>
+          <p class="aide aide--petite">Conseil : un fichier PNG sans fond donne le plus beau résultat.</p>
+        </div>
+        <div class="carte">
+          <p class="aide aide--carte">Image de fond de la bande sombre « Prendre rendez-vous », en bas de la plupart des pages.</p>
+          <div class="fond-cta"><img id="fond-apercu" alt=""></div>
+          <p class="message message--erreur" id="fond-erreur" role="alert" hidden></p>
+          <div class="ligne-boutons">
+            <label class="bouton bouton--contour bouton--fichier">Changer l’image<input type="file" id="fond-fichier" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"></label>
+            <button type="button" class="bouton bouton--danger" id="fond-origine" hidden>Image d’origine</button>
+          </div>
+        </div>
         <h2 class="sous-titre">Menu et pied de page</h2>
         <div class="carte">
           <p class="aide aide--carte">Les liens du menu en haut des pages, le bouton « Prendre rendez-vous » et le contenu du pied de page (présent sur toutes les pages).</p>

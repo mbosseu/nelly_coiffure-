@@ -11,7 +11,7 @@ import { motDePasseValide, ouvrirSession, fermerSession, sessionValide } from '.
 // et envoie le tout en un seul commit sur GitHub ; Vercel remet ensuite le site en ligne (environ une minute).
 
 const CONTENU = 'contenu/site.json';
-const PHOTO = /^img\/(realisations\/catalogue|annonces|pages)\/[a-z0-9-]+(-sm)?\.jpg$/;
+const PHOTO = /^img\/(realisations\/catalogue|annonces|pages)\/[a-z0-9-]+(-sm)?\.jpg$|^img\/marque\/logo-[0-9]+(-clair)?\.png$/;
 const MAX_PHOTO = 900 * 1024;
 const INDEXNOW_CLE = '9854d7068bfd3aafaa6ed978dd241645';
 
@@ -121,10 +121,11 @@ async function publierContenu(req, res) {
   const ancien = JSON.parse(actuel.texte);
 
   // Nouvelles photos dont le nom existe déjà sur le site : renommées pour ne jamais écraser une photo en ligne
-  const [enLigne, imagesAnnonces, imagesPages] = await Promise.all([
+  const [enLigne, imagesAnnonces, imagesPages, imagesMarque] = await Promise.all([
     listerDossier('site/img/realisations/catalogue'),
     listerDossier('site/img/annonces').catch((e) => { if (e.statut === 404) return new Set(); throw e; }),
     listerDossier('site/img/pages').catch((e) => { if (e.statut === 404) return new Set(); throw e; }),
+    listerDossier('site/img/marque'),
   ]);
   const base = (chemin) => chemin.replace(/(-sm)?\.jpg$/, '');
   const nomsEnLigne = new Set([...enLigne].map((n) => n.replace(/(-sm)?\.jpg$/, '')));
@@ -167,6 +168,16 @@ async function publierContenu(req, res) {
       const present = (envoyees.has(`${im.src}.jpg`) || imagesPages.has(`${nom}.jpg`)) && (envoyees.has(`${im.src}-sm.jpg`) || imagesPages.has(`${nom}-sm.jpg`));
       if (!present) return json(res, 400, { erreur: `Une image modifiée de la page ${f} est introuvable. Ajoutez-la de nouveau.` });
     }
+  }
+
+  const present = (chemin, dossier) => envoyees.has(chemin) || dossier.has(chemin.split('/').pop());
+  const logo = contenu.marque?.logo;
+  if (logo && !(present(`${logo.src}.png`, imagesMarque) && present(`${logo.src}-clair.png`, imagesMarque))) {
+    return json(res, 400, { erreur: 'Le nouveau logo est introuvable. Ajoutez-le de nouveau.' });
+  }
+  const fond = contenu.fonds?.cta;
+  if (fond && !(present(`${fond}.jpg`, imagesPages) && present(`${fond}-sm.jpg`, imagesPages))) {
+    return json(res, 400, { erreur: 'L’image de fond est introuvable. Ajoutez-la de nouveau.' });
   }
 
   // Régénération des pages à partir de la dernière version en ligne
