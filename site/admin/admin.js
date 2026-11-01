@@ -106,6 +106,7 @@ async function demarrer() {
   $('#connexion').hidden = true;
   $('#appli').hidden = false;
   toutAfficher();
+  accueillir();
 }
 
 // Contenu des anciennes versions (une seule annonce texte, pas de réseaux) → format actuel
@@ -207,10 +208,12 @@ function majBarre() {
   const n = resumeModifications().length;
   $('#barre-publier').hidden = !modifie() && !etat.defaire.length;
   $('#nb-modifs').textContent = modifie() ? `${n || 1} modification${n > 1 ? 's' : ''}` : 'Aucune modification';
+  $('#nb-modifs-court').textContent = modifie() ? `${n || 1} à publier` : '';
   $('#publier').disabled = !modifie();
   $('#ouvrir-apercu').disabled = !modifie();
   $('#defaire').disabled = !etat.defaire.length;
   $('#refaire').disabled = !etat.refaire.length;
+  ajusterEditeur();
 }
 
 function revenirA(texte) {
@@ -272,7 +275,7 @@ $('#annuler-tout').addEventListener('click', () => {
 
 // --- Onglets ---------------------------------------------------------------------
 
-const TITRES = { pages: 'Pages du site', annonces: 'Annonces', coiffures: 'Coiffures et prix', photos: 'Photos', infos: 'Infos et liens', historique: 'Historique' };
+const TITRES = { pages: 'Mes pages', annonces: 'Annonces', coiffures: 'Coiffures et prix', photos: 'Photos', infos: 'Infos et liens', historique: 'Historique' };
 $$('.onglets button').forEach((b) => b.addEventListener('click', () => ouvrirOnglet(b.dataset.cible)));
 
 function ouvrirOnglet(nom) {
@@ -281,7 +284,8 @@ function ouvrirOnglet(nom) {
   $$('.onglets button').forEach((b) => (b.dataset.cible === nom ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
   $('#titre-onglet').textContent = TITRES[nom];
   if (nom === 'historique') afficherHistorique();
-  if (nom === 'pages') chargerSections();
+  document.body.classList.toggle('mode-editeur', nom === 'pages');
+  if (nom === 'pages') { ajusterEditeur(); chargerSections(); }
   window.scrollTo(0, 0);
 }
 
@@ -1353,18 +1357,24 @@ const nettoyerPage = (f = pageEnCours()) => {
   if (!Object.keys(p).length) delete etat.contenu.pages[f];
 };
 
-async function chargerSections() {
+// La page s'affiche telle qu'elle sera publiée (même générateur que le site) dans l'éditeur visuel.
+// Un seul appel fournit la page et sa structure (sections, textes, images, boutons).
+let chargementPage = 0;
+async function chargerSections({ defiler = null } = {}) {
+  const n = ++chargementPage;
   const msg = $('#page-message');
-  msg.className = 'message'; msg.hidden = false;
-  msg.innerHTML = '<span class="chargement"></span> Chargement de la page…';
   try {
-    const { sections: liste } = await api('apercu', { methode: 'POST', corps: { contenu: etat.contenu, page: pageEnCours() } });
+    const { sections: liste, html } = await api('apercu', { methode: 'POST', corps: { contenu: etat.contenu, page: pageEnCours() } });
+    if (n !== chargementPage) return;
     sections = liste;
     msg.hidden = true;
     afficherSections();
+    await afficherEditeur(html, defiler);
   } catch (err) {
     msg.className = 'message message--erreur';
     msg.textContent = err.message;
+    msg.hidden = false;
+    $('#editeur-chargement').hidden = true;
   }
 }
 
@@ -1375,7 +1385,8 @@ function afficherSections() {
     const vignette = img ? `<img class="liste__image" src="${srcPage(img.src)}" alt="">` : '<span class="liste__icone" aria-hidden="true">¶</span>';
     const details = [s.textes.length && `${s.textes.length} texte${s.textes.length > 1 ? 's' : ''}`, s.images.length && `${s.images.length} image${s.images.length > 1 ? 's' : ''}`, s.boutons.length && `${s.boutons.length} bouton${s.boutons.length > 1 ? 's' : ''}`].filter(Boolean).join(' · ');
     return `
-      <li class="${s.masquee ? 'est-masque' : ''}">
+      <li class="${s.masquee ? 'est-masque' : ''}" data-i="${i}">
+        ${s.premiere ? '<span class="poignee poignee--fixe" aria-hidden="true"></span>' : `<span class="poignee" data-poignee="${i}" aria-hidden="true" title="Glisser pour déplacer">⠿</span>`}
         ${vignette}
         <button type="button" class="liste__texte" data-section="${i}">
           <strong>${echapper(s.titre)}${s.masquee ? '<span class="badge">masquée</span>' : ''}${s.inversee ? '<span class="badge">inversée</span>' : ''}</strong>
@@ -1391,38 +1402,79 @@ function afficherSections() {
   }).join('');
 }
 
-$('#page-choix').addEventListener('change', chargerSections);
-$('#ajouter-section').addEventListener('click', () => ouvrirAnnonce(-1, { page: pageEnCours() }));
-$('#page-apercu').addEventListener('click', async () => {
-  $('#apercu-page').value = pageEnCours();
-  $('#fiche-apercu').showModal();
-  await chargerApercu();
-});
+$('#page-choix').addEventListener('change', () => { ed.defilement = 0; chargerSections(); });
+$('#ajouter-section').addEventListener('click', () => { $('#fiche-plan').close(); ouvrirModeles(sections[sections.length - 1]?.id || 'fin'); });
+$('#editeur-plan').addEventListener('click', () => { afficherSections(); $('#fiche-plan').showModal(); });
+
+// Ordre et visibilité des sections (plan, barre d'outils de l'éditeur)
+function enregistrerOrdre(ids) {
+  modifsPage().ordre = ids.filter((id) => !sections.find((s) => s.id === id)?.premiere);
+  sections.sort((a, b) => (a.premiere ? -1 : b.premiere ? 1 : ids.indexOf(a.id) - ids.indexOf(b.id)));
+  nettoyerPage();
+  changement();
+}
+function basculerMasquee(s) {
+  const p = modifsPage();
+  const m = new Set(p.masquees || []);
+  if (s.masquee) m.delete(s.id); else m.add(s.id);
+  p.masquees = [...m];
+  s.masquee = !s.masquee;
+  nettoyerPage();
+  changement();
+}
 
 $('#liste-sections').addEventListener('click', (e) => {
   const b = e.target.closest('button');
   if (!b) return;
   if (b.dataset.section !== undefined) {
     const s = sections[Number(b.dataset.section)];
+    $('#fiche-plan').close();
     if (s.ajout) return ouvrirAnnonce(etat.contenu.annonces.findIndex((a) => a.id === s.ajout));
     return ouvrirSection(Number(b.dataset.section));
   }
-  const p = modifsPage();
-  if (b.dataset.masquer !== undefined) {
-    const s = sections[Number(b.dataset.masquer)];
-    const m = new Set(p.masquees || []);
-    if (s.masquee) m.delete(s.id); else m.add(s.id);
-    p.masquees = [...m];
-    s.masquee = !s.masquee;
-  } else {
+  if (b.dataset.masquer !== undefined) basculerMasquee(sections[Number(b.dataset.masquer)]);
+  else {
     const i = Number(b.dataset.sMonter ?? b.dataset.sDescendre);
     const j = b.dataset.sMonter !== undefined ? i - 1 : i + 1;
-    [sections[i], sections[j]] = [sections[j], sections[i]];
-    p.ordre = sections.filter((s) => !s.premiere).map((s) => s.id);
+    const ids = sections.map((s) => s.id);
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    enregistrerOrdre(ids);
   }
-  nettoyerPage();
   afficherSections();
-  changement();
+  chargerSections();
+});
+
+// Glisser-déposer dans le plan (doigt ou souris) : la ligne suit le pointeur, les autres s'écartent
+$('#liste-sections').addEventListener('pointerdown', (e) => {
+  const poignee = e.target.closest('[data-poignee]');
+  if (!poignee) return;
+  e.preventDefault();
+  const li = poignee.closest('li');
+  const ul = li.parentElement;
+  li.classList.add('en-deplacement');
+  try { poignee.setPointerCapture(e.pointerId); } catch { /* sans effet */ }
+  const bouger = (ev) => {
+    const autres = [...ul.children].filter((x) => x !== li && !x.querySelector('.poignee--fixe'));
+    const apres = autres.find((x) => { const r = x.getBoundingClientRect(); return ev.clientY < r.top + r.height / 2; });
+    if (apres) ul.insertBefore(li, apres); else ul.appendChild(li);
+    const zone = $('#fiche-plan');
+    const r = zone.getBoundingClientRect();
+    if (ev.clientY < r.top + 60) zone.scrollTop -= 12; else if (ev.clientY > r.bottom - 60) zone.scrollTop += 12;
+  };
+  const finir = () => {
+    document.removeEventListener('pointermove', bouger); document.removeEventListener('pointerup', finir); document.removeEventListener('pointercancel', finir);
+    li.classList.remove('en-deplacement');
+    const ids = [...ul.children].map((x) => sections[Number(x.dataset.i)].id);
+    if (ids.join() !== sections.map((s) => s.id).join()) {
+      enregistrerOrdre(ids);
+      chargerSections();
+      notifier('Ordre des sections modifié');
+    }
+    afficherSections();
+  };
+  document.addEventListener('pointermove', bouger);
+  document.addEventListener('pointerup', finir);
+  document.addEventListener('pointercancel', finir);
 });
 
 let ficheSection = null; // { section, images: { id: {src,x,y,zoom,alt} } }
@@ -1639,6 +1691,13 @@ function pageConseillee() {
   return 'index.html';
 }
 
+// Page générée → affichable ici : liens relatifs au site, images pas encore publiées affichées depuis l'appareil
+function preparerPage(html, extra = '') {
+  let page = html.replace('<head>', `<head><base href="/" target="_blank">${extra}`);
+  for (const [img, p] of etat.nouvelles) if (p.apercu) page = page.split(`${img}-sm.jpg`).join(p.apercu).split(`${img}.jpg`).join(p.apercu).split(`${img}-clair.png`).join(p.apercuClair || p.apercu).split(`${img}.png`).join(p.apercu);
+  return page;
+}
+
 async function ouvrirApercu() {
   $('#apercu-page').value = pageConseillee();
   $('#fiche-apercu').showModal();
@@ -1671,10 +1730,7 @@ async function chargerApercu() {
   cadre.style.visibility = 'hidden';
   try {
     const { html, avertissements } = await api('apercu', { methode: 'POST', corps: { contenu: etat.contenu, page: $('#apercu-page').value } });
-    // Les images pas encore publiées sont affichées depuis l'appareil
-    let page = html.replace('<head>', '<head><base href="/" target="_blank">');
-    for (const [img, p] of etat.nouvelles) if (p.apercu) page = page.split(`${img}-sm.jpg`).join(p.apercu).split(`${img}.jpg`).join(p.apercu).split(`${img}-clair.png`).join(p.apercuClair || p.apercu).split(`${img}.png`).join(p.apercu);
-    cadre.srcdoc = page;
+    cadre.srcdoc = preparerPage(html);
     cadre.onload = () => { chargement.hidden = true; cadre.style.visibility = 'visible'; ajusterApercu(); };
     alertes.hidden = !avertissements.length;
     alertes.innerHTML = avertissements.map((a) => `<li>⚠️ ${echapper(a)}</li>`).join('');
@@ -1691,6 +1747,10 @@ function verifierAvantPublication() {
   verifierTelephones();
   for (const cle of ['principal', 'secondaire']) if (!TEL.test(String(etat.contenu.telephones[cle]).trim())) problemes.push(`Téléphone ${cle === 'principal' ? 'principal' : 'secondaire'} incomplet (onglet Infos).`);
   for (const [cle, nom] of Object.entries(RESEAUX)) if (!reseauValide(cle, etat.contenu.reseaux[cle])) problemes.push(`Lien ${nom} incomplet (onglet Infos).`);
+  for (const a of etat.contenu.annonces) {
+    const exemples = [a.titre, a.texte, ...(a.cartes || []).flatMap((c) => [c.titre, c.texte])].filter((t) => TEXTES_EXEMPLE.has(t));
+    if (a.active && exemples.length) problemes.push(`La section « ${a.titre} » contient encore un texte d’exemple : touchez-le sur la page pour écrire le vôtre.`);
+  }
   for (const a of etat.contenu.annonces) { const e = verifierAnnonce(a); if (e && !(a.fin && a.fin < aujourdhui())) problemes.push(`Annonce « ${a.titre || a.texte} » : ${e}`); }
   return problemes;
 }
@@ -1758,6 +1818,503 @@ $('#fiche-publier').addEventListener('click', async (e) => {
     bouton.textContent = 'Réessayer';
   }
 });
+
+// --- Éditeur visuel -------------------------------------------------------------------
+// La page s'affiche comme sur le site. On touche un texte pour l'écrire sur place, une photo ou un bouton pour
+// ouvrir sa fiche, le fond d'une section pour la déplacer (flèches ou glisser), « ＋ » pour en ajouter une.
+// Les modifications utilisent les mêmes données que les fiches (contenu.pages, annonces) : rien de spécial à publier.
+
+const ed = { ecran: 'mobile', defilement: 0, choisie: null };
+
+// Styles ajoutés à la page dans l'éditeur seulement (jamais publiés)
+const STYLE_EDITEUR = `<style id="style-editeur">
+  html { scroll-behavior: auto !important; }
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+  body::before { display: none !important; }
+  .reveal, [data-stagger] > *, .reveal-script span, .intro, .line > span, .page-hero__script span, .hero__script span { opacity: 1 !important; transform: none !important; clip-path: none !important; }
+  .wa-float, .sticky-cta { display: none !important; }
+  .header { position: absolute !important; }
+  [data-t], [data-champ] { outline: 1.5px dashed rgba(181, 122, 80, .7); outline-offset: 3px; border-radius: 3px; cursor: text; }
+  [data-t]:hover, [data-champ]:hover { outline-style: solid; background: rgba(181, 122, 80, .08); }
+  [contenteditable="true"] { outline: 2.5px solid #B57A50 !important; background: rgba(255, 252, 248, .92) !important; color: #1E140E !important; -webkit-text-fill-color: #1E140E !important; }
+  img[data-i], [data-ajout] img, a[data-b] { cursor: pointer; }
+  main > section { cursor: pointer; position: relative; }
+  main > section[hidden] { display: block !important; opacity: .4; }
+  main > section[hidden]::after { content: "Masquée : invisible pour vos clientes"; position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 60; padding: 6px 14px; border-radius: 99px; background: #1E140E; color: #F6ECE2; font: 600 13px/1.3 Poppins, sans-serif; white-space: nowrap; }
+  main > section.ed-choisie { outline: 3px solid #B57A50; outline-offset: -3px; }
+  main > section.ed-glisse { opacity: .35; }
+  .ed-plus { position: relative; z-index: 55; height: 0; display: flex; justify-content: center; align-items: center; }
+  .ed-plus button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 2px solid #fff; border-radius: 99px; background: #B57A50; color: #fff; font: 600 13px/1 Poppins, sans-serif; box-shadow: 0 6px 18px rgba(60, 30, 15, .35); cursor: pointer; }
+  .ed-ligne { position: absolute; left: 0; right: 0; height: 4px; background: #B57A50; z-index: 70; pointer-events: none; box-shadow: 0 0 0 3px rgba(255,255,255,.8); }
+  .ed-outils, .ed-texte { position: fixed; left: 8px; right: 8px; z-index: 2000; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; padding: 8px; border-radius: 18px; background: #1E140E; box-shadow: 0 10px 30px rgba(0,0,0,.35); font: 500 13px/1.2 Poppins, sans-serif; }
+  .ed-outils { bottom: 8px; }
+  .ed-texte { top: 8px; }
+  .ed-outils p, .ed-texte p { width: 100%; text-align: center; color: #DDAE86; font-size: 12px; margin: 0 0 2px; }
+  .ed-outils button, .ed-texte button { min-height: 36px; padding: 0 11px; border: 0; border-radius: 99px; background: #F6ECE2; color: #1E140E; font: inherit; cursor: pointer; touch-action: none; }
+  .ed-outils button:disabled { opacity: .35; }
+  .ed-outils .ed-principal, .ed-texte .ed-principal { background: #B57A50; color: #fff; }
+</style>`;
+
+// Taille de l'écran simulé : téléphone (largeur réelle sur téléphone) ou ordinateur (réduit pour tenir)
+function ajusterEditeur() {
+  const zone = $('#editeur-zone');
+  const cadre = $('#editeur-cadre');
+  if (!zone || $('[data-onglet="pages"]').hidden) return;
+  const haut = zone.getBoundingClientRect().top;
+  const bas = ($('#barre-publier').hidden ? 0 : $('#barre-publier').offsetHeight + 8) + $('.onglets').offsetHeight + 8;
+  zone.style.height = `${Math.max(320, window.innerHeight - haut - bas)}px`;
+  const largeur = ed.ecran === 'ordinateur' ? 1280 : Math.min(430, zone.clientWidth);
+  const echelle = Math.min(1, zone.clientWidth / largeur);
+  cadre.style.width = `${largeur}px`;
+  cadre.style.height = `${zone.clientHeight / echelle}px`;
+  cadre.style.transform = echelle < 1 ? `scale(${echelle})` : '';
+}
+window.addEventListener('resize', ajusterEditeur);
+$$('[data-ed-ecran]').forEach((b) => b.addEventListener('click', () => {
+  ed.ecran = b.dataset.edEcran;
+  $$('[data-ed-ecran]').forEach((x) => x.setAttribute('aria-checked', String(x === b)));
+  ajusterEditeur();
+}));
+
+function afficherEditeur(html, defiler) {
+  const cadre = $('#editeur-cadre');
+  try { ed.defilement = cadre.contentWindow?.scrollY || ed.defilement; } catch { /* page pas encore chargée */ }
+  const premier = !cadre.srcdoc;
+  $('#editeur-chargement').hidden = !premier;
+  if (premier) cadre.style.visibility = 'hidden';
+  return new Promise((fin) => {
+    cadre.onload = () => {
+      const doc = cadre.contentDocument;
+      installerEditeur(doc);
+      const cible = defiler && doc.querySelector(`main > section[data-s="${defiler}"]`);
+      if (cible) { cible.scrollIntoView({ block: 'center' }); choisirSection(doc, cible); } else cadre.contentWindow.scrollTo(0, ed.defilement);
+      cadre.style.visibility = 'visible';
+      $('#editeur-chargement').hidden = true;
+      ajusterEditeur();
+      fin();
+    };
+    cadre.srcdoc = preparerPage(html, STYLE_EDITEUR);
+  });
+}
+
+const sectionDe = (el) => sections.find((s) => s.id === el.dataset.s);
+const annonceDe = (s) => etat.contenu.annonces.find((a) => a.id === s.ajout);
+
+// Éléments du site qui se modifient ailleurs : un message simple et un raccourci
+const AILLEURS = [
+  ['[data-prix], .services-grid, .tarifs, .style__prix', 'Les coiffures et leurs prix se modifient dans l’onglet Coiffures.', 'coiffures', 'Ouvrir Coiffures'],
+  ['.gallery, .gallery__item, .mosaic, .filters', 'Les photos de réalisations se gèrent dans l’onglet Photos.', 'photos', 'Ouvrir Photos'],
+  ['.promo:not([data-ajout]), .annonce', 'Cette annonce se modifie dans l’onglet Annonces.', 'annonces', 'Ouvrir Annonces'],
+  ['.hours, .horaires, [data-horaires]', 'Les horaires se modifient dans l’onglet Infos.', 'infos', 'Ouvrir Infos'],
+  ['header, .site-footer, .nav', 'Le menu, le logo et le pied de page se modifient dans l’onglet Infos.', 'infos', 'Ouvrir Infos'],
+  ['h1', 'Le grand titre de la page est protégé : il compte beaucoup pour Google.', '', ''],
+];
+
+function installerEditeur(doc) {
+  const win = doc.defaultView;
+  const main = doc.querySelector('main');
+  if (!main) return;
+  // Boutons « ＋ » entre les sections (et à la fin)
+  const placerPlus = () => {
+    doc.querySelectorAll('.ed-plus').forEach((x) => x.remove());
+    for (const s of main.querySelectorAll(':scope > section[data-s]')) {
+      const plus = doc.createElement('div');
+      plus.className = 'ed-plus';
+      plus.innerHTML = '<button type="button">＋ Ajouter une section ici</button>';
+      plus.dataset.apres = s.dataset.s;
+      s.after(plus);
+    }
+  };
+  placerPlus();
+  ed.placerPlus = placerPlus;
+
+  // Les liens ne quittent pas l'éditeur ; chaque toucher est interprété
+  doc.addEventListener('click', (e) => {
+    const lien = e.target.closest('a');
+    if (lien) e.preventDefault();
+    if (e.target.closest('.ed-outils, .ed-texte, [contenteditable="true"]')) return;
+    const plus = e.target.closest('.ed-plus');
+    if (plus) return ouvrirModeles(plus.dataset.apres);
+    const sectionEl = e.target.closest('main > section[data-s]');
+    const s = sectionEl && sectionDe(sectionEl);
+    const texte = e.target.closest('[data-t], [data-champ]');
+    if (texte && s) return modifierTexte(doc, texte, s);
+    const image = e.target.closest('img');
+    const bouton = e.target.closest('a[data-b], [data-ajout] a.btn');
+    if (s && (image?.matches('[data-i]') || (image && s.ajout) || bouton)) return ouvrirElement(s, image?.dataset.i, bouton?.dataset.b);
+    for (const [selecteur, message, onglet, libelle] of AILLEURS) {
+      if (e.target.closest(selecteur) && !(sectionEl && e.target.closest(selecteur) === sectionEl && !s)) {
+        if (e.target.closest(selecteur).contains(sectionEl) && s) break;
+        return notifier(message, onglet ? { libelle, action: () => ouvrirOnglet(onglet) } : null);
+      }
+    }
+    if (sectionEl && s) choisirSection(doc, sectionEl);
+    else if (!sectionEl) fermerOutils(doc);
+  }, true);
+  win.addEventListener('scroll', () => { ed.defilement = win.scrollY; }, { passive: true });
+}
+
+function ouvrirElement(s, image, bouton) {
+  if (s.ajout) return ouvrirAnnonce(etat.contenu.annonces.findIndex((a) => a.id === s.ajout));
+  ouvrirSection(sections.indexOf(s));
+  const cible = image ? $(`#section-champs [data-image="${image}"]`) : bouton ? $(`#section-champs [data-bouton="${bouton}"]`) : null;
+  if (cible) setTimeout(() => cible.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
+}
+
+// --- Texte modifié sur place
+const versSaisieDom = (el) => [...el.childNodes].map((n) => {
+  if (n.nodeType === 3) return n.nodeValue;
+  if (n.nodeName === 'BR') return '\n';
+  if (/^(EM|I)$/.test(n.nodeName)) { const t = versSaisieDom(n); return t.trim() ? `*${t}*` : t; }
+  if (/^(DIV|P)$/.test(n.nodeName)) return `\n${versSaisieDom(n)}`;
+  return versSaisieDom(n);
+}).join('');
+const nettoyerSaisie = (t) => t.replace(/\r/g, '').replace(/\*\*/g, '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+
+function valeurChamp(a, champ) {
+  const m = champ.match(/^carte-(\d+)-(titre|texte)$/);
+  return m ? a.cartes?.[Number(m[1])]?.[m[2]] ?? '' : a[champ] ?? '';
+}
+function ecrireChamp(a, champ, v) {
+  const m = champ.match(/^carte-(\d+)-(titre|texte)$/);
+  if (m) a.cartes[Number(m[1])][m[2]] = v; else a[champ] = v;
+}
+
+function modifierTexte(doc, el, s) {
+  fermerOutils(doc);
+  const unique = /^(H2|H3|H4|SUMMARY|LI|SMALL|SPAN|DT)$/.test(el.nodeName) || el.classList.contains('eyebrow');
+  const avant = el.innerHTML;
+  el.contentEditable = 'true';
+  el.focus();
+  const barre = doc.createElement('div');
+  barre.className = 'ed-texte';
+  barre.innerHTML = `<p>Écrivez directement. ${unique ? '' : 'Entrée = nouvelle ligne. '}Sélectionnez un mot puis ✦ pour le mettre en couleur.</p>
+    <button type="button" data-ed="couleur">✦ Couleur</button><button type="button" data-ed="annuler">Annuler</button><button type="button" class="ed-principal" data-ed="ok">✓ Terminé</button>`;
+  doc.body.appendChild(barre);
+  let fini = false;
+  const terminer = (garder) => {
+    if (fini) return;
+    fini = true;
+    barre.remove();
+    el.removeAttribute('contenteditable');
+    if (!garder) { el.innerHTML = avant; return; }
+    const v = nettoyerSaisie(versSaisieDom(el));
+    if (!v) { el.innerHTML = avant; notifier('Un texte ne peut pas être vide : le texte précédent est remis. Pour retirer toute la section, utilisez « Masquer ».'); return; }
+    if (s.ajout) {
+      const a = annonceDe(s);
+      if (!a || valeurChamp(a, el.dataset.champ) === v) return;
+      ecrireChamp(a, el.dataset.champ, v);
+      afficherAnnonces();
+    } else {
+      const t = s.textes.find((x) => x.id === el.dataset.t);
+      if (!t || t.texte === v) return;
+      const p = modifsPage();
+      p.textes = { ...(p.textes || {}), [t.id]: v };
+      t.texte = v;
+    }
+    changement();
+    notifier('✓ Texte modifié (pas encore en ligne)');
+  };
+  barre.addEventListener('pointerdown', (e) => e.preventDefault()); // garde la sélection dans le texte
+  barre.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ed]');
+    if (!b) return;
+    if (b.dataset.ed === 'couleur') { doc.execCommand('italic'); return; }
+    terminer(b.dataset.ed === 'ok');
+  });
+  el.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') terminer(false);
+    if (e.key === 'Enter') { e.preventDefault(); if (unique) terminer(true); else doc.execCommand('insertLineBreak'); }
+  });
+  el.addEventListener('paste', (e) => { e.preventDefault(); doc.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
+  el.addEventListener('blur', () => setTimeout(() => { if (doc.activeElement !== el) terminer(true); }, 150), { once: true });
+}
+
+// --- Section choisie : barre d'outils
+function fermerOutils(doc) {
+  doc.querySelectorAll('.ed-outils').forEach((x) => x.remove());
+  doc.querySelectorAll('.ed-choisie').forEach((x) => x.classList.remove('ed-choisie'));
+  ed.choisie = null;
+}
+
+function choisirSection(doc, el) {
+  fermerOutils(doc);
+  const s = sectionDe(el);
+  if (!s) return;
+  ed.choisie = s.id;
+  el.classList.add('ed-choisie');
+  const ordre = [...doc.querySelectorAll('main > section[data-s]')];
+  const i = ordre.indexOf(el);
+  const outils = doc.createElement('div');
+  outils.className = 'ed-outils';
+  outils.innerHTML = `<p>${echapper(s.titre)}${s.premiere ? ' · reste en haut de la page' : ''}</p>
+    ${s.premiere ? '' : `<button type="button" data-ed="monter" ${i <= 1 ? 'disabled' : ''}>↑ Monter</button>
+    <button type="button" data-ed="descendre" ${i >= ordre.length - 1 ? 'disabled' : ''}>↓ Descendre</button>
+    <button type="button" data-ed="glisser" title="Maintenir et glisser">⠿ Glisser</button>
+    <button type="button" data-ed="masquer">${s.masquee ? 'Réafficher' : 'Masquer'}</button>`}
+    ${s.inversible ? `<button type="button" data-ed="inverser">⇄ Inverser</button>` : ''}
+    <button type="button" class="ed-principal" data-ed="modifier">✎ ${s.ajout ? 'Modifier' : 'Tout modifier'}</button>
+    <button type="button" data-ed="fermer" aria-label="Fermer">✕</button>`;
+  doc.body.appendChild(outils);
+  outils.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-ed]');
+    if (!b || b.dataset.ed === 'glisser') return;
+    actionSection(doc, el, s, b.dataset.ed);
+  });
+  outils.querySelector('[data-ed="glisser"]')?.addEventListener('pointerdown', (e) => glisserSection(doc, el, e));
+}
+
+function actionSection(doc, el, s, action) {
+  const main = doc.querySelector('main');
+  if (action === 'fermer') return fermerOutils(doc);
+  if (action === 'modifier') return ouvrirElement(s);
+  if (action === 'masquer') {
+    basculerMasquee(s);
+    el.hidden = s.masquee;
+    notifier(s.masquee ? 'Section masquée : vos clientes ne la verront plus. Touchez-la pour la réafficher.' : 'Section réaffichée');
+    return choisirSection(doc, el);
+  }
+  if (action === 'inverser') {
+    const p = modifsPage();
+    const inv = new Set(p.inversees || []);
+    s.inversee = !s.inversee;
+    if (s.inversee) inv.add(s.id); else inv.delete(s.id);
+    p.inversees = [...inv];
+    nettoyerPage();
+    changement();
+    if (s.inversee) el.setAttribute('data-inverse', '1'); else el.removeAttribute('data-inverse');
+    notifier(ed.ecran === 'mobile' ? 'Image et texte inversés : visible sur ordinateur (choisissez « Ordinateur » en haut pour voir).' : 'Image et texte inversés');
+    return;
+  }
+  const ordre = [...main.querySelectorAll(':scope > section[data-s]')];
+  const i = ordre.indexOf(el);
+  const j = action === 'monter' ? i - 1 : i + 1;
+  if (j < 1 || j >= ordre.length) return;
+  if (action === 'monter') ordre[j].before(el); else ordre[j].after(el);
+  appliquerOrdreDom(doc);
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  choisirSection(doc, el);
+}
+
+function appliquerOrdreDom(doc) {
+  enregistrerOrdre([...doc.querySelectorAll('main > section[data-s]')].map((x) => x.dataset.s));
+  ed.placerPlus?.();
+  afficherSections();
+}
+
+// Glisser une section : une ligne indique où elle sera posée ; la page défile près des bords
+function glisserSection(doc, el, e) {
+  e.preventDefault();
+  const win = doc.defaultView;
+  const bouton = e.target;
+  try { bouton.setPointerCapture(e.pointerId); } catch { /* sans effet */ }
+  el.classList.add('ed-glisse');
+  const ligne = doc.createElement('div');
+  ligne.className = 'ed-ligne';
+  doc.body.appendChild(ligne);
+  let cible = null;
+  let y = e.clientY;
+  const calculer = () => {
+    const autres = [...doc.querySelectorAll('main > section[data-s]')].slice(1).filter((x) => x !== el);
+    cible = autres.find((x) => { const r = x.getBoundingClientRect(); return y < r.top + r.height / 2; }) || null;
+    const ref = cible || autres[autres.length - 1];
+    if (!ref) return;
+    const r = ref.getBoundingClientRect();
+    ligne.style.top = `${(cible ? r.top : r.bottom) + win.scrollY - 2}px`;
+  };
+  const defiler = setInterval(() => {
+    if (y < 90) win.scrollBy(0, -18); else if (y > win.innerHeight - 140) win.scrollBy(0, 18); else return;
+    calculer();
+  }, 30);
+  const bouger = (ev) => { y = ev.clientY; calculer(); };
+  const finir = () => {
+    clearInterval(defiler);
+    doc.removeEventListener('pointermove', bouger); doc.removeEventListener('pointerup', finir); doc.removeEventListener('pointercancel', finir);
+    ligne.remove();
+    el.classList.remove('ed-glisse');
+    const main = doc.querySelector('main');
+    const avant = [...main.querySelectorAll(':scope > section[data-s]')].map((x) => x.dataset.s).join();
+    if (cible) cible.before(el);
+    else { const toutes = [...main.querySelectorAll(':scope > section[data-s]')]; toutes[toutes.length - 1].after(el); }
+    const apres = [...main.querySelectorAll(':scope > section[data-s]')].map((x) => x.dataset.s).join();
+    if (apres !== avant) { appliquerOrdreDom(doc); notifier('Section déplacée'); }
+    el.scrollIntoView({ block: 'center' });
+    choisirSection(doc, el);
+  };
+  calculer();
+  doc.addEventListener('pointermove', bouger);
+  doc.addEventListener('pointerup', finir);
+  doc.addEventListener('pointercancel', finir);
+}
+
+// --- Ajouter une section à partir d'un modèle (texte d'exemple à remplacer sur la page)
+const MODELES = [
+  { cle: 'promo', nom: 'Photo et texte', aide: 'Une belle photo à côté d’un texte. Idéal pour une offre.', photo: true,
+    a: { format: 'section', etiquette: 'Offre du moment', titre: 'Le titre de votre offre', texte: 'Décrivez votre offre en une ou deux phrases : ce qui est inclus, jusqu’à quand…', bouton: { texte: 'J’en profite', type: 'whatsapp', valeur: 'Bonjour Nelly, je suis intéressée par votre offre.' } } },
+  { cle: 'carte', nom: 'Petite carte avec photo', aide: 'Plus discrète : une petite photo et un court texte.', photo: true,
+    a: { format: 'carte', etiquette: 'Nouveauté', titre: 'Votre titre ici', texte: 'Un court texte pour présenter la nouveauté.', bouton: { texte: '', type: 'whatsapp', valeur: '' } } },
+  { cle: 'info', nom: 'Texte seul', aide: 'Un encadré élégant, pour une information (congés, nouveauté…).',
+    a: { format: 'encadre', etiquette: 'Information', titre: 'Votre titre ici', texte: 'Votre message ici. Touchez ce texte pour l’écrire.', bouton: { texte: '', type: 'whatsapp', valeur: '' } } },
+  { cle: 'points', nom: 'Trois points forts', aide: 'Trois petites cartes côte à côte.',
+    a: { format: 'cartes', etiquette: 'Pourquoi me choisir', titre: 'Votre titre ici', texte: '', bouton: { texte: '', type: 'whatsapp', valeur: '' },
+      cartes: [{ titre: 'Premier point', texte: 'Une phrase pour l’expliquer.' }, { titre: 'Deuxième point', texte: 'Une phrase pour l’expliquer.' }, { titre: 'Troisième point', texte: 'Une phrase pour l’expliquer.' }] } },
+  { cle: 'appel', nom: 'Bande « Réservez »', aide: 'Une bande sombre qui invite à prendre rendez-vous.',
+    a: { format: 'appel', etiquette: '', titre: 'Envie d’une nouvelle coiffure ?', texte: 'Écrivez-moi sur WhatsApp, je vous réponds rapidement.', bouton: { texte: 'Prendre rendez-vous', type: 'whatsapp', valeur: 'Bonjour Nelly, je souhaite prendre rendez-vous pour une coiffure.' } } },
+];
+const TEXTES_EXEMPLE = new Set(MODELES.flatMap((m) => [m.a.titre, m.a.texte, ...(m.a.cartes || []).flatMap((c) => [c.titre, c.texte])]).filter((t) => t && !/^(Envie d’une nouvelle coiffure \?|Écrivez-moi sur WhatsApp, je vous réponds rapidement\.)$/.test(t)));
+let modeleApres = 'fin';
+
+function ouvrirModeles(apres) {
+  modeleApres = apres;
+  $('#modeles').innerHTML = MODELES.map((m) => `
+    <${m.photo ? 'label' : 'button type="button"'} class="modele" data-modele="${m.cle}">
+      <span class="mini mini--${m.a.format}">${{ section: '<i></i><b></b>', carte: '<i></i><b></b>', encadre: '<b></b>', cartes: '<i></i><i></i><i></i>', appel: '<b></b>' }[m.a.format]}</span>
+      <strong>${m.nom}</strong><small>${m.aide}${m.photo ? '<br><em>Choisissez la photo pour commencer.</em>' : ''}</small>
+      ${m.photo ? `<input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" data-modele-photo="${m.cle}">` : ''}
+    </${m.photo ? 'label' : 'button'}>`).join('');
+  $('#fiche-modeles').showModal();
+}
+
+async function creerDepuisModele(cle, fichier) {
+  const m = MODELES.find((x) => x.cle === cle);
+  const a = { id: `section-${Date.now().toString(36)}`, active: true, pages: [pageEnCours()], debut: '', fin: '', fond: 'clair', image: null, ...structuredClone(m.a), emplacement: { page: pageEnCours(), apres: modeleApres } };
+  if (fichier) {
+    const image = await preparerImageLibre(fichier);
+    if (tailleEnvoi() + image.grand.length + image.petit.length > MAX_ENVOI) throw new Error('Trop d’images en attente : publiez d’abord vos modifications, puis ajoutez la section.');
+    const src = nouveauNom('img/annonces', 'section');
+    etat.nouvelles.set(src, image);
+    a.image = { src, x: 50, y: 50, zoom: 1, alt: '', largeur: image.largeur, hauteur: image.hauteur };
+  }
+  etat.contenu.annonces.push(a);
+  afficherAnnonces();
+  changement();
+  $('#fiche-modeles').close();
+  await chargerSections({ defiler: `a-${a.id}` });
+  notifier('Section ajoutée ✓ Touchez ses textes pour les remplacer par les vôtres.');
+}
+
+$('#modeles').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-modele]');
+  if (b) creerDepuisModele(b.dataset.modele).catch((err) => notifier(err.message));
+});
+$('#modeles').addEventListener('change', (e) => {
+  const f = e.target.files?.[0];
+  if (f) creerDepuisModele(e.target.dataset.modelePhoto, f).catch((err) => notifier(err.message));
+  e.target.value = '';
+});
+
+// --- Message bref (avec un raccourci éventuel)
+let minuterieToast = null;
+function notifier(message, raccourci = null) {
+  const t = $('#toast');
+  t.innerHTML = `<span>${echapper(message)}</span>${raccourci ? `<button type="button">${echapper(raccourci.libelle)}</button>` : ''}`;
+  if (raccourci) t.querySelector('button').onclick = () => { t.hidden = true; raccourci.action(); };
+  t.hidden = false;
+  clearTimeout(minuterieToast);
+  minuterieToast = setTimeout(() => { t.hidden = true; }, raccourci ? 6000 : 3200);
+}
+
+// --- Accueil « Que voulez-vous faire ? » et visite guidée
+const CLE_ACCUEIL = 'nc_accueil_masque';
+const CLE_VISITE = 'nc_visite_faite';
+// Icônes fines (trait), dans l'esprit du site
+const svg = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICONES = {
+  plume: svg('<path d="M20 4c-6 0-11 5-12 11l-2 5 5-2c6-1 11-6 11-12z"/><path d="M8 16l6-6"/>'),
+  plus: svg('<rect x="3.5" y="3.5" width="17" height="17" rx="3"/><path d="M12 8v8M8 12h8"/>'),
+  annonce: svg('<path d="M4 10v4l11 5V5L4 10z"/><path d="M15 9a3 3 0 010 6"/><path d="M7 15l1 4"/>'),
+  ciseaux: svg('<circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8.2 8.3L20 18M8.2 15.7L20 6"/>'),
+  photo: svg('<rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/>'),
+  horloge: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  palette: svg('<path d="M12 3.5a8.5 8.5 0 100 17c1.2 0 1.8-.8 1.8-1.7 0-1.2-1-1.6-1-2.6 0-.9.7-1.5 1.7-1.5H17a3.5 3.5 0 003.5-3.5c0-4.4-3.8-7.7-8.5-7.7z"/><circle cx="8" cy="11" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/>'),
+};
+
+const TACHES = [
+  ['plume', 'Modifier un texte ou une photo', 'Directement sur vos pages', () => ouvrirOnglet('pages')],
+  ['plus', 'Ajouter une section à une page', 'Promo, information, points forts…', () => { ouvrirOnglet('pages'); setTimeout(() => ouvrirModeles(sections[sections.length - 1]?.id || 'fin'), 400); }],
+  ['annonce', 'Annoncer une promo ou une info', 'Sur une ou plusieurs pages, avec des dates', () => { ouvrirOnglet('annonces'); $('#ajouter-annonce').click(); }],
+  ['ciseaux', 'Changer un prix ou une coiffure', 'Onglet Coiffures', () => ouvrirOnglet('coiffures')],
+  ['photo', 'Ajouter des photos de mes réalisations', 'Recadrées automatiquement', () => ouvrirOnglet('photos')],
+  ['horloge', 'Horaires, téléphone, réseaux', 'Onglet Infos', () => ouvrirOnglet('infos')],
+  ['palette', 'Couleurs, logo, menu', 'L’allure générale du site', () => { ouvrirOnglet('infos'); setTimeout(() => $('#palettes').scrollIntoView({ block: 'center' }), 100); }],
+];
+$('#taches').innerHTML = TACHES.map(([icone, titre, aide], i) => `<button type="button" class="tache" data-tache="${i}"><span class="tache__icone">${ICONES[icone]}</span><strong>${titre}</strong><small>${aide}</small></button>`).join('');
+$('#taches').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tache]');
+  if (!b) return;
+  $('#fiche-accueil').close();
+  TACHES[Number(b.dataset.tache)][3]();
+});
+$('#accueil-masquer').addEventListener('change', (e) => { try { localStorage.setItem(CLE_ACCUEIL, e.target.checked ? '1' : ''); } catch { /* sans effet */ } });
+function ouvrirAccueil() {
+  try { $('#accueil-masquer').checked = localStorage.getItem(CLE_ACCUEIL) === '1'; } catch { /* sans effet */ }
+  $('#fiche-accueil').showModal();
+}
+$('#ouvrir-accueil')?.addEventListener('click', () => { $('#fiche-compte').close(); ouvrirAccueil(); });
+$('#ouvrir-visite')?.addEventListener('click', () => { $('#fiche-compte').close(); lancerVisite(); });
+$('#lancer-visite').addEventListener('click', () => { $('#fiche-accueil').close(); lancerVisite(); });
+$('#editeur-aide').addEventListener('click', () => lancerVisite(VISITE_EDITEUR));
+const CLE_CONSEIL = 'nc_conseil_vu';
+try { $('#editeur-conseil').hidden = localStorage.getItem(CLE_CONSEIL) === '1'; } catch { /* sans effet */ }
+$('#conseil-compris').addEventListener('click', () => {
+  $('#editeur-conseil').hidden = true;
+  try { localStorage.setItem(CLE_CONSEIL, '1'); } catch { /* sans effet */ }
+  ajusterEditeur();
+});
+
+// Premier démarrage : visite guidée ; ensuite l'écran d'accueil (sauf s'il a été masqué)
+function accueillir() {
+  let visite = ''; let masque = '';
+  try { visite = localStorage.getItem(CLE_VISITE); masque = localStorage.getItem(CLE_ACCUEIL); } catch { /* sans effet */ }
+  if (!visite) { ouvrirAccueil(); return; }
+  if (!masque) ouvrirAccueil();
+}
+
+const VISITE = [
+  ['.onglets', 'En bas, chaque bouton ouvre une partie de votre site. Vous pouvez y aller dans l’ordre que vous voulez.'],
+  ['.onglets [data-cible="pages"]', '« Mes pages » montre votre site tel qu’il est. Touchez un texte pour l’écrire, une photo pour la changer, ou « ＋ » pour ajouter une section.'],
+  ['.onglets [data-cible="annonces"]', '« Annonces » sert à mettre en avant une promo ou une information, avec une date de début et de fin si vous voulez.'],
+  ['#ouvrir-compte', 'Tout ce que vous faites reste en brouillon sur cet appareil. Une barre apparaît en bas avec « Aperçu », « ↶ » pour annuler et « Publier » pour mettre en ligne. Rien ne part sans votre accord.'],
+  ['#ouvrir-compte', 'Retrouvez ici l’écran « Que voulez-vous faire ? », cette visite, et la déconnexion. Bonne découverte !'],
+];
+const VISITE_EDITEUR = [
+  ['#editeur-zone', 'Voici votre page, comme vos clientes la voient. Les textes entourés de pointillés s’écrivent directement : touchez-en un.'],
+  ['#editeur-zone', 'Touchez une photo ou un bouton pour le changer. Touchez le fond d’une section : une barre apparaît pour la monter, la descendre, la glisser ou la masquer.'],
+  ['#editeur-zone', 'Les boutons « ＋ Ajouter une section ici », entre les sections, proposent des modèles prêts à remplir.'],
+  ['#editeur-plan', '« Plan » montre toutes les sections de la page en liste : faites-les glisser par la poignée ⠿ pour changer l’ordre.'],
+  ['.editeur__ecrans', 'Passez de « Téléphone » à « Ordinateur » pour vérifier le rendu sur les deux.'],
+];
+let visite = null;
+function lancerVisite(etapes = VISITE) {
+  visite = { etapes, i: 0 };
+  $('#visite').hidden = false;
+  afficherEtape();
+}
+function afficherEtape() {
+  const [selecteur, texte] = visite.etapes[visite.i];
+  const cible = $(selecteur);
+  $$('.visite-cible').forEach((x) => x.classList.remove('visite-cible'));
+  const visible = cible && cible.getClientRects().length > 0;
+  if (visible) { cible.classList.add('visite-cible'); cible.scrollIntoView({ block: 'nearest' }); }
+  $('#visite').classList.toggle('visite--sans-cible', !visible);
+  $('#visite-etape').textContent = `Étape ${visite.i + 1} sur ${visite.etapes.length}`;
+  $('#visite-texte').textContent = texte;
+  $('#visite-suivant').textContent = visite.i === visite.etapes.length - 1 ? 'Terminer' : 'Suivant';
+  const bulle = $('.visite__bulle');
+  // Bulle sous la cible, ou au-dessus si la cible est en bas de l'écran ; au centre sans cible
+  const r = visible ? cible.getBoundingClientRect() : null;
+  const dessus = r && r.top > window.innerHeight / 2;
+  bulle.style.top = !r ? '30%' : dessus ? 'auto' : `${Math.min(window.innerHeight - 220, r.bottom + 14)}px`;
+  bulle.style.bottom = dessus ? `${window.innerHeight - r.top + 14}px` : 'auto';
+}
+function finirVisite() {
+  $('#visite').hidden = true;
+  $$('.visite-cible').forEach((x) => x.classList.remove('visite-cible'));
+  try { localStorage.setItem(CLE_VISITE, '1'); } catch { /* sans effet */ }
+  visite = null;
+}
+$('#visite-suivant').addEventListener('click', () => { if (++visite.i >= visite.etapes.length) finirVisite(); else afficherEtape(); });
+$('#visite-fin').addEventListener('click', finirVisite);
 
 // Prévenir avant de quitter avec des images non publiées (elles ne sont pas gardées sur l'appareil)
 window.addEventListener('beforeunload', (e) => { if (modifie() && [...etat.nouvelles.values()].some((p) => p.grand)) { e.preventDefault(); e.returnValue = ''; } });

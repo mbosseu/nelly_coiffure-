@@ -262,17 +262,19 @@ const boutonAnnonce = (a, classe) => (String(a.bouton?.texte || '').trim()
   ? `<a class="${classe}" ${attributsLien(a.bouton)}>${a.bouton.type === 'whatsapp' ? '<svg class="icon" aria-hidden="true"><use href="#i-whatsapp"/></svg> ' : ''}${echapper(a.bouton.texte.trim())} <svg class="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>`
   : '');
 
-const paragraphe = (t, classe = 'body') => (String(t || '').trim() ? `<p class="${classe}">${echapper(t.trim()).replace(/[ \t]*\n[ \t]*/g, ' <br>')}</p>` : '');
+const paragraphe = (t, classe = 'body', champ = '') => (String(t || '').trim() ? `<p class="${classe}"${champ}>${echapper(t.trim()).replace(/[ \t]*\n[ \t]*/g, ' <br>')}</p>` : '');
 
 // Annonce ou section ajoutée. Formats : section (image + texte), carte, encadre (texte seul), cartes (grille de 2 ou 3),
 // appel (bande sombre). Fond : clair (carte crème), transparent ou sombre. ajout = section placée dans une page.
 const rendrePromo = (a, aujourdhui, NL, ajout = false) => {
   const etiquette = String(a.etiquette || '').trim();
   const sombre = a.format === 'appel' || a.fond === 'sombre';
+  // Sections ajoutées : chaque texte indique son champ, pour que l'éditeur visuel le modifie sur place
+  const champ = (nom) => (ajout ? ` data-champ="${nom}"` : '');
   const textes = [
-    etiquette && `<p class="eyebrow eyebrow--copper">${echapper(etiquette)}</p>`,
-    String(a.titre || '').trim() && `<h2 class="title${sombre ? ' title--light' : ''}">${echapper(a.titre.trim())}</h2>`,
-    paragraphe(a.texte, sombre ? 'body body--light' : 'body'),
+    etiquette && `<p class="eyebrow eyebrow--copper"${champ('etiquette')}>${echapper(etiquette)}</p>`,
+    String(a.titre || '').trim() && `<h2 class="title${sombre ? ' title--light' : ''}"${champ('titre')}>${echapper(a.titre.trim())}</h2>`,
+    paragraphe(a.texte, sombre ? 'body body--light' : 'body', champ('texte')),
     boutonAnnonce(a, sombre ? 'btn btn--light btn--shine' : 'btn btn--dark btn--shine'),
   ].filter(Boolean);
   const avecImage = ['section', 'carte'].includes(a.format) && a.image?.src;
@@ -281,7 +283,7 @@ const rendrePromo = (a, aujourdhui, NL, ajout = false) => {
     avecImage && ['droite', 'dessus'].includes(a.disposition) && `promo--image-${a.disposition}`,
     a.format !== 'appel' && a.fond && a.fond !== 'clair' && `promo--fond-${a.fond}`, ajout && 'promo--ajout'].filter(Boolean).join(' ');
   const attributs = ajout ? ` data-ajout="${a.id}" data-s="a-${a.id}"` : '';
-  const cartes = a.format === 'cartes' ? (a.cartes || []).filter((c) => String(c.titre || '').trim()) : [];
+  const cartes = a.format === 'cartes' ? (a.cartes || []).map((c, i) => ({ ...c, i })).filter((c) => String(c.titre || '').trim()) : [];
   return [
     `    <section class="${classes}" aria-label="${echapper(a.titre || etiquette || 'Annonce')}"${attributs}${dates(a, aujourdhui)}>`,
     '      <div class="container">',
@@ -294,8 +296,8 @@ const rendrePromo = (a, aujourdhui, NL, ajout = false) => {
     ...cartes.map((c) => [
       '            <article class="promo__carte">',
       c.image?.src && `              <div class="promo__media">${imageAnnonce(c.image, '(min-width: 1025px) 30vw, 100vw')}</div>`,
-      `              <h3>${echapper(c.titre.trim())}</h3>`,
-      paragraphe(c.texte) && `              ${paragraphe(c.texte)}`,
+      `              <h3${champ(`carte-${c.i}-titre`)}>${echapper(c.titre.trim())}</h3>`,
+      paragraphe(c.texte) && `              ${paragraphe(c.texte, 'body', champ(`carte-${c.i}-texte`))}`,
       '            </article>',
     ].filter(Boolean).join(NL)),
     cartes.length && '          </div>',

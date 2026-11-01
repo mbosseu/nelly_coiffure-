@@ -113,6 +113,16 @@ Sans lui expliquer l'application, lui demander, sur son téléphone :
 6. Regarder l'aperçu sur mobile, puis publier.
 Noter chaque hésitation (où elle cherche, ce qu'elle ne comprend pas) : ce sont les points à simplifier.
 
+## Éditeur visuel et accompagnement (1er novembre 2026)
+
+Suite au retour de Nelly (manque de visibilité, interface difficile à prendre en main) :
+
+- **« Mes pages » est un éditeur visuel** : la page s'affiche telle qu'elle sera publiée (même générateur, aperçu serveur) dans un cadre, en version Téléphone ou Ordinateur. On touche un texte entouré de pointillés pour l'écrire sur place (✦ met un mot en couleur), une photo ou un bouton pour ouvrir sa fiche, le fond d'une section pour une barre d'outils (monter, descendre, glisser, masquer, inverser, tout modifier). Les éléments gérés ailleurs (prix, photos de réalisations, annonces, menu…) affichent un message avec un raccourci vers le bon onglet.
+- **« ＋ Ajouter une section ici »** entre chaque section : 5 modèles avec texte d'exemple (photo et texte, petite carte, texte seul, trois points forts, bande « Réservez »). Le texte d'exemple se remplace sur place ; la publication est refusée tant qu'il en reste. Les sections ajoutées portent `data-champ` sur leurs textes (sans effet pour les visiteurs).
+- **Plan de la page** : liste des sections à réordonner par glisser-déposer (poignée ⠿).
+- **Accueil « Que voulez-vous faire ? »** à l'ouverture (7 tâches courantes), **visite guidée** au premier lancement et depuis Mon compte, aide de l'éditeur (bouton « Aide »), messages brefs après chaque action.
+- Le code est dans `admin/admin.js` (section « Éditeur visuel ») ; les styles propres à l'éditeur sont injectés dans le cadre et jamais publiés.
+
 ## Déconnecter tous les appareils
 
 Mon compte → « Déconnecter tous les autres appareils ». Le jeton de connexion porte sa date de création ; l'action enregistre la date du moment dans `contenu/sessions.json` (hors du site public, un commit « Espace Nelly : déconnexion de tous les appareils ») et tout jeton plus ancien est refusé. L'appareil qui fait la demande reçoit un nouveau jeton et reste connecté. La date est relue au plus une fois par minute par l'API. Changer `ADMIN_SECRET` dans Vercel déconnecte aussi tout le monde.
