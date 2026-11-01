@@ -1,7 +1,7 @@
 {
   "annonce": {
-    "active": false,
-    "texte": ""
+    "active": true,
+    "texte": "Test"
   },
   "telephones": {
     "principal": "06 04 02 32 90",
