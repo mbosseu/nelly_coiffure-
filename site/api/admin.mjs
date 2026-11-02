@@ -1,6 +1,7 @@
 import { regenerer, verifierContenu, FICHIERS, PAGES, DOMAINE } from './_lib/regenerer.mjs';
 import { structurePage } from './_lib/pages.mjs';
 import { NAVIGATION_DEFAUT } from './_lib/navigation.mjs';
+import { statsActives, tableauDeBord } from './_lib/stats.mjs';
 import { createHash } from 'node:crypto';
 import { lireTexte, listerDossier, publier, historique, ErreurGithub } from './_lib/github.mjs';
 import { motDePasseValide, ouvrirSession, fermerSession, sessionEmise } from './_lib/session.mjs';
@@ -67,6 +68,11 @@ export default async function handler(req, res) {
     if (action === 'contenu' && req.method === 'GET') {
       const { texte, sha } = await lireTexte(CONTENU);
       return json(res, 200, { contenu: JSON.parse(texte), version: sha, navigationDefaut: NAVIGATION_DEFAUT });
+    }
+    if (action === 'stats' && req.method === 'GET') {
+      if (!statsActives()) return json(res, 200, { actif: false });
+      const n = [1, 7, 30, 90].includes(Number(req.query.jours)) ? Number(req.query.jours) : 30;
+      return json(res, 200, { actif: true, ...(await tableauDeBord(n)) });
     }
     if (action === 'historique' && req.method === 'GET') {
       return json(res, 200, { versions: await historique(CONTENU) });

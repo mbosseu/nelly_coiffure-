@@ -123,6 +123,20 @@ Suite au retour de Nelly (manque de visibilité, interface difficile à prendre 
 - **Accueil « Que voulez-vous faire ? »** à l'ouverture (7 tâches courantes), **visite guidée** au premier lancement et depuis Mon compte, aide de l'éditeur (bouton « Aide »), messages brefs après chaque action.
 - Le code est dans `admin/admin.js` (section « Éditeur visuel ») ; les styles propres à l'éditeur sont injectés dans le cadre et jamais publiés.
 
+## Statistiques de visite (2 novembre 2026)
+
+Onglet « Statistiques » de l'espace de gestion (et tuile « Statistiques de visite » de l'accueil) : visiteurs, visites, pages vues, prises de contact (WhatsApp, appel), temps passé, taux de départ après une page, courbe par jour, provenance (Google, Instagram, Facebook, TikTok, accès direct…), pages les plus vues, pages d'où partent les contacts, appareils, villes, heures d'affluence, pages d'arrivée et de départ, chemins fréquents, et le parcours détaillé des dernières visites. « Personnes sur le site en ce moment » (5 dernières minutes).
+
+**Fonctionnement, sans cookie et anonyme** (exempté de consentement selon la CNIL) :
+- `js/main.js` envoie de petits événements à `/api/stats` (`navigator.sendBeacon`) : page vue, fin de page (temps visible, défilement), clic de contact. Un numéro de visite aléatoire vit dans `sessionStorage` (disparaît à la fermeture de l'onglet).
+- `api/_lib/stats.mjs` compte par jour dans une base Redis. Une personne est reconnue le temps d'une journée par une empreinte (IP + navigateur + sel du jour, sel effacé après 2 jours) ; l'adresse IP n'est jamais enregistrée. Robots ignorés. Compteurs gardés 13 mois, parcours détaillés 3 mois.
+- Les visites de Nelly ne sont pas comptées : la connexion à l'espace de gestion pose `nc_stats_off` sur l'appareil. La page Confidentialité explique la mesure et propose un bouton pour la refuser.
+- Lecture par l'action `stats` de `api/admin.mjs` (réservée à la session de Nelly).
+
+**Mise en service (une seule fois)** : Vercel → projet du site → onglet **Storage** → **Create Database** → **Upstash for Redis** (offre gratuite) → la relier au projet (environnements Production et Preview). Vercel ajoute seul les variables `KV_REST_API_URL` et `KV_REST_API_TOKEN` (ou `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`, les deux sont reconnues), puis **redéployer**. Sans base, le site fonctionne normalement et l'onglet indique que les statistiques ne sont pas encore activées. L'offre gratuite (500 000 commandes par mois) couvre environ 40 000 pages vues par mois.
+
+**Essai local** : `outils/essai-gestion.mjs` simule la base Redis en mémoire ; sur `localhost`, la mesure ne s'active que si `localStorage.nc_stats_essai = '1'`.
+
 ## Déconnecter tous les appareils
 
 Mon compte → « Déconnecter tous les autres appareils ». Le jeton de connexion porte sa date de création ; l'action enregistre la date du moment dans `contenu/sessions.json` (hors du site public, un commit « Espace Nelly : déconnexion de tous les appareils ») et tout jeton plus ancien est refusé. L'appareil qui fait la demande reçoit un nouveau jeton et reste connecté. La date est relue au plus une fois par minute par l'API. Changer `ADMIN_SECRET` dans Vercel déconnecte aussi tout le monde.

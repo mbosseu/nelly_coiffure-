@@ -18,7 +18,30 @@ await mkdir(DEPOT, { recursive: true });
 await cp(path.join(RACINE, 'site'), path.join(DEPOT, 'site'), { recursive: true });
 await cp(path.join(RACINE, 'contenu'), path.join(DEPOT, 'contenu'), { recursive: true });
 
-Object.assign(process.env, { ADMIN_PASSWORD: 'essai', ADMIN_SECRET: 'secret-essai', GITHUB_TOKEN: 'faux', GITHUB_REPO: 'essai/nelly', GITHUB_BRANCH: 'main' });
+Object.assign(process.env, { ADMIN_PASSWORD: 'essai', ADMIN_SECRET: 'secret-essai', GITHUB_TOKEN: 'faux', GITHUB_REPO: 'essai/nelly', GITHUB_BRANCH: 'main', KV_REST_API_URL: 'http://redis.essai', KV_REST_API_TOKEN: 'faux' });
+
+// --- Fausse base Redis (statistiques), en mémoire : seulement les commandes utilisées par api/_lib/stats.mjs ---
+const base = new Map();
+const redisCommande = ([nom, cle, ...a]) => {
+  const v = base.get(cle);
+  switch (nom.toUpperCase()) {
+    case 'HINCRBY': { const h = v || new Map(); h.set(a[0], (Number(h.get(a[0])) || 0) + Number(a[1])); base.set(cle, h); return h.get(a[0]); }
+    case 'HGETALL': return v ? [...v.entries()].flatMap(([c, x]) => [c, String(x)]) : [];
+    case 'PFADD': { const s = v || new Set(); a.forEach((x) => s.add(x)); base.set(cle, s); return 1; }
+    case 'PFCOUNT': return v ? v.size : 0;
+    case 'EXPIRE': return 1;
+    case 'SET': { if (a.includes('NX') && base.has(cle)) return null; base.set(cle, a[0]); return 'OK'; }
+    case 'GET': return v ?? null;
+    case 'RPUSH': { const l = v || []; l.push(...a); base.set(cle, l); return l.length; }
+    case 'LPUSH': { const l = v || []; l.unshift(...a.reverse()); base.set(cle, l); return l.length; }
+    case 'LTRIM': { if (v) base.set(cle, v.slice(Number(a[0]), Number(a[1]) + 1)); return 'OK'; }
+    case 'LRANGE': { const l = v || []; const fin = Number(a[1]) < 0 ? l.length : Number(a[1]) + 1; return l.slice(Number(a[0]), fin); }
+    case 'ZADD': { const z = v || new Map(); z.set(a[1], Number(a[0])); base.set(cle, z); return 1; }
+    case 'ZREMRANGEBYSCORE': { if (v) for (const [m, s] of v) if (s >= Number(a[0]) && s <= Number(a[1])) v.delete(m); return 1; }
+    case 'ZCOUNT': { const max = a[1] === '+inf' ? Infinity : Number(a[1]); return v ? [...v.values()].filter((s) => s >= Number(a[0]) && s <= max).length : 0; }
+    default: return { erreur: `commande non simulée : ${nom}` };
+  }
+};
 
 // --- Faux GitHub --------------------------------------------------------------------
 const sha1 = (b) => createHash('sha1').update(b).digest('hex');
@@ -31,6 +54,7 @@ const reponse = (donnees, statut = 200) => new Response(JSON.stringify(donnees),
 const fetchReel = globalThis.fetch;
 globalThis.fetch = async (url, options = {}) => {
   const u = new URL(url);
+  if (u.hostname === 'redis.essai') return reponse(JSON.parse(options.body).map((c) => ({ result: redisCommande(c) })));
   if (u.hostname === 'api.indexnow.org') { console.log('IndexNow (simulé) :', JSON.parse(options.body).urlList.length, 'pages'); return new Response(null, { status: 202 }); }
   if (u.hostname !== 'api.github.com') return fetchReel(url, options);
   const m = options.method || 'GET';
@@ -72,18 +96,19 @@ globalThis.fetch = async (url, options = {}) => {
 
 // --- Serveur : site publié (copie) + API ----------------------------------------------
 const { default: handler } = await import('../site/api/admin.mjs');
+const { default: handlerStats } = await import('../site/api/stats.mjs');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.xml': 'application/xml', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
 
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
-  if (url.pathname === '/api/admin') {
+  if (url.pathname === '/api/admin' || url.pathname === '/api/stats') {
     let corps = '';
     for await (const morceau of req) corps += morceau;
     req.query = Object.fromEntries(url.searchParams);
-    req.body = corps ? JSON.parse(corps) : undefined;
+    req.body = url.pathname === '/api/stats' ? corps : (corps ? JSON.parse(corps) : undefined);
     res.status = (s) => { res.statusCode = s; return res; };
     res.json = (d) => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(d)); };
-    return handler(req, res);
+    return url.pathname === '/api/stats' ? handlerStats(req, res) : handler(req, res);
   }
   const chemin = decodeURIComponent(url.pathname);
   const racine = path.join(DEPOT, 'site');

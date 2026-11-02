@@ -118,6 +118,8 @@ async function demarrer() {
   etat.instantane = JSON.stringify(etat.contenu);
   $('#connexion').hidden = true;
   $('#appli').hidden = false;
+  // Les visites de Nelly sur son propre site ne sont pas comptées dans les statistiques
+  try { localStorage.setItem('nc_stats_off', '1'); } catch { /* sans effet */ }
   toutAfficher();
   accueillir();
 }
@@ -289,7 +291,7 @@ $('#annuler-tout').addEventListener('click', () => {
 
 // --- Onglets ---------------------------------------------------------------------
 
-const TITRES = { pages: 'Mes pages', annonces: 'Annonces', coiffures: 'Coiffures et prix', photos: 'Photos', infos: 'Infos et liens', historique: 'Historique' };
+const TITRES = { pages: 'Mes pages', annonces: 'Annonces', coiffures: 'Coiffures et prix', photos: 'Photos', infos: 'Infos et liens', historique: 'Historique', stats: 'Statistiques' };
 $$('.onglets button').forEach((b) => b.addEventListener('click', () => ouvrirOnglet(b.dataset.cible)));
 
 function ouvrirOnglet(nom) {
@@ -298,6 +300,7 @@ function ouvrirOnglet(nom) {
   $$('.onglets button').forEach((b) => (b.dataset.cible === nom ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
   $('#titre-onglet').textContent = TITRES[nom];
   if (nom === 'historique') afficherHistorique();
+  if (nom === 'stats') chargerStats();
   document.body.classList.toggle('mode-editeur', nom === 'pages');
   $('#toast').hidden = true;
   if (nom === 'pages') { ajusterEditeur(); chargerSections(); }
@@ -2258,6 +2261,8 @@ const ICONES = {
   ciseaux: svg('<circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8.2 8.3L20 18M8.2 15.7L20 6"/>'),
   photo: svg('<rect x="3" y="6" width="18" height="13" rx="2"/><circle cx="12" cy="12.5" r="3.5"/><path d="M8 6l1.5-2h5L16 6"/>'),
   horloge: svg('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'),
+  courbe: svg('<path d="M3 20h18"/><path d="M5 16l4-5 4 3 6-8"/><circle cx="19" cy="6" r="1.2"/>'),
+  historique: svg('<path d="M4 12a8 8 0 102.3-5.6"/><path d="M4 4v4h4"/><path d="M12 8v4l2.5 1.5"/>'),
   palette: svg('<path d="M12 3.5a8.5 8.5 0 100 17c1.2 0 1.8-.8 1.8-1.7 0-1.2-1-1.6-1-2.6 0-.9.7-1.5 1.7-1.5H17a3.5 3.5 0 003.5-3.5c0-4.4-3.8-7.7-8.5-7.7z"/><circle cx="8" cy="11" r="1"/><circle cx="11" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/>'),
 };
 
@@ -2269,6 +2274,8 @@ const TACHES = [
   { groupe: 'Mon salon', icone: 'ciseaux', titre: 'Prix et coiffures', aide: 'Tarifs, descriptions, photos', action: () => ouvrirOnglet('coiffures') },
   { groupe: 'Mon salon', icone: 'photo', titre: 'Mes réalisations', aide: 'Ajouter vos dernières photos', action: () => ouvrirOnglet('photos') },
   { groupe: 'Mon salon', icone: 'horloge', titre: 'Horaires et contact', aide: 'Jours, téléphone, réseaux', action: () => ouvrirOnglet('infos') },
+  { groupe: 'Suivre mon site', icone: 'courbe', titre: 'Statistiques de visite', aide: 'Visiteurs, contacts, parcours', action: () => ouvrirOnglet('stats') },
+  { groupe: 'Suivre mon site', icone: 'historique', titre: 'Historique', aide: 'Revenir à une version précédente', action: () => ouvrirOnglet('historique') },
   { groupe: 'Mon salon', icone: 'palette', titre: 'Style du site', aide: 'Couleurs, logo, menu', action: () => { ouvrirOnglet('infos'); setTimeout(() => $('#palettes').scrollIntoView({ block: 'center' }), 100); } },
 ];
 const FLECHE = svg('<path d="M5 12h14M13 6l6 6-6 6"/>');
@@ -2490,6 +2497,7 @@ afficherListeDemos();
 function ouvrirAide() { $('#fiche-aide').showModal(); }
 $('#accueil-demos').addEventListener('click', () => { $('#fiche-accueil').close(); ouvrirAide(); });
 $('#ouvrir-demos').addEventListener('click', () => { $('#fiche-compte').close(); ouvrirAide(); });
+$('#ouvrir-historique').addEventListener('click', () => { $('#fiche-compte').close(); ouvrirOnglet('historique'); });
 $('#demos-liste').addEventListener('click', (e) => {
   const b = e.target.closest('[data-demo]');
   if (b) { $('#fiche-aide').close(); ouvrirDemo(b.dataset.demo); }
@@ -2562,6 +2570,146 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   ouvrirDemo(b.dataset.voirDemo);
 });
+
+// --- Statistiques de visite ----------------------------------------------------------
+// Données anonymes envoyées par le site (js/main.js → api/stats), lues ici par l'API (action « stats »).
+
+let joursStats = 7;
+const fr = (n) => Number(n || 0).toLocaleString('fr-FR');
+const NOMS_SOURCES = {
+  google: 'Google', bing: 'Bing', 'autres-moteurs': 'Autres moteurs de recherche', instagram: 'Instagram', facebook: 'Facebook',
+  tiktok: 'TikTok', snapchat: 'Snapchat', whatsapp: 'Lien WhatsApp', youtube: 'YouTube', 'google-maps': 'Google Maps',
+  direct: 'Accès direct (adresse tapée, favori…)', 'autre-site': 'Un autre site',
+};
+const NOMS_ACTIONS = { whatsapp: 'Message WhatsApp', appel: 'Appel', instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat', youtube: 'YouTube', itineraire: 'Itinéraire' };
+// Provenance en une phrase : « venu de Google », « venu d'Instagram », « arrivé directement »
+const provenance = (src) => (src === 'direct' ? 'arrivé directement (adresse, favori…)' : src === 'autre-site' ? 'venu d’un autre site'
+  : /^[aeiouyAEIOUY]/.test(NOMS_SOURCES[src] || '') ? `venu d’${NOMS_SOURCES[src]}` : `venu de ${NOMS_SOURCES[src] || src || '?'}`);
+const NOMS_APPAREILS = { mobile: 'Téléphone', ordinateur: 'Ordinateur', tablette: 'Tablette' };
+const duree = (sec) => (sec >= 60 ? `${Math.floor(sec / 60)} min ${String(sec % 60).padStart(2, '0')} s` : `${sec} s`);
+
+async function chargerStats() {
+  $$('[data-jours]').forEach((b) => b.setAttribute('aria-checked', String(Number(b.dataset.jours) === joursStats)));
+  const zone = $('#stats-contenu');
+  if (!zone.dataset.charge) zone.innerHTML = '<p class="aide"><span class="chargement"></span> Chargement des statistiques…</p>';
+  try {
+    const d = await api('stats', { params: `&jours=${joursStats}` });
+    zone.dataset.charge = '1';
+    afficherStats(d);
+  } catch (err) {
+    zone.innerHTML = `<p class="message message--erreur">${echapper(err.message)}</p>`;
+  }
+}
+$$('[data-jours]').forEach((b) => b.addEventListener('click', () => { joursStats = Number(b.dataset.jours); chargerStats(); }));
+
+function afficherStats(d) {
+  const zone = $('#stats-contenu');
+  $('#stats-live').hidden = true;
+  if (!d.actif) {
+    zone.innerHTML = `<div class="carte stats__vide"><h2>Les statistiques ne sont pas encore activées</h2>
+      <p class="aide">Il manque la petite base de données gratuite qui garde les chiffres de visite. Elle s’active une seule fois, depuis le tableau de bord Vercel du site (voir le guide <strong>ESPACE-DE-GESTION.md</strong>). Ensuite, les visites s’affichent ici automatiquement.</p></div>`;
+    return;
+  }
+  const nom = (p) => d.nomsPages[p] || (p === 'autre' ? 'Autre page' : p);
+  const r = d.resume; const av = d.precedent;
+  const evolution = (a, b, inverse = false) => {
+    if (!b) return ''; // pas de période précédente à comparer
+    const pct = Math.round(((a - b) / b) * 100);
+    if (!pct) return '<span class="stats__evol stats__evol--neutre">stable</span>';
+    const bon = inverse ? pct < 0 : pct > 0;
+    return `<span class="stats__evol ${bon ? 'stats__evol--bon' : 'stats__evol--moins'}">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct)} %</span>`;
+  };
+  const tauxContact = r.visites ? Math.round((100 * r.contacts) / r.visites) : 0;
+  $('#stats-live').hidden = false;
+  $('#stats-live span').textContent = d.enLigne ? `${d.enLigne} personne${d.enLigne > 1 ? 's' : ''} sur le site en ce moment` : 'Personne sur le site en ce moment';
+  $('#stats-live').classList.toggle('stats__live--actif', d.enLigne > 0);
+
+  if (!r.visites && !r.vues) {
+    zone.innerHTML = `<div class="carte stats__vide"><h2>Pas encore de visite sur cette période</h2>
+      <p class="aide">Les statistiques sont bien activées. Dès qu’une personne ouvre le site, elle apparaît ici, en quelques secondes. Vos propres visites, depuis cet appareil, ne sont pas comptées.</p></div>`;
+    return;
+  }
+
+  const kpi = (titre, valeur, aide, evol) => `<div class="stats__kpi"><p>${titre}</p><strong>${valeur}</strong>${evol || ''}<small>${aide}</small></div>`;
+  const barres = (liste, total, libelle, max = 8) => (liste.length ? `<ul class="stats__barres">${liste.slice(0, max).map(([c, v]) => {
+    const pct = total ? Math.round((100 * v) / total) : 0;
+    return `<li><span class="stats__barres-nom">${echapper(libelle(c))}</span><span class="stats__barres-val">${fr(v)}<small>${pct} %</small></span><i style="--p:${Math.max(2, pct)}%"></i></li>`;
+  }).join('')}</ul>` : '<p class="aide">Pas encore de données.</p>');
+
+  // Courbe des visites par jour (avec les contacts)
+  const courbe = () => {
+    const pts = d.courbe;
+    if (pts.length < 2) return '';
+    const max = Math.max(1, ...pts.map((p) => p.visites));
+    const L = 640; const H = 170; const pas = L / (pts.length - 1);
+    const y = (v) => H - 14 - ((H - 34) * v) / max;
+    const ligne = pts.map((p, i) => `${i ? 'L' : 'M'}${(i * pas).toFixed(1)} ${y(p.visites).toFixed(1)}`).join(' ');
+    const aire = `${ligne} L${L} ${H - 14} L0 ${H - 14} Z`;
+    const etiquettes = pts.map((p, i) => ((pts.length <= 8 || i % Math.ceil(pts.length / 6) === 0 || i === pts.length - 1)
+      ? `<text x="${(i * pas).toFixed(1)}" y="${H}" text-anchor="${i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}">${new Date(`${p.jour}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</text>` : '')).join('');
+    const contacts = pts.map((p, i) => (p.contacts ? `<circle cx="${(i * pas).toFixed(1)}" cy="${y(p.visites).toFixed(1)}" r="5" class="stats__point-contact"><title>${p.contacts} contact${p.contacts > 1 ? 's' : ''}</title></circle>` : '')).join('');
+    const points = pts.map((p, i) => `<circle cx="${(i * pas).toFixed(1)}" cy="${y(p.visites).toFixed(1)}" r="3" class="stats__point"><title>${new Date(`${p.jour}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} : ${p.visites} visite${p.visites > 1 ? 's' : ''}, ${p.vues} pages vues</title></circle>`).join('');
+    return `<div class="carte"><h3 class="stats__titre">Visites par jour</h3>
+      <svg class="stats__courbe" viewBox="-6 0 ${L + 12} ${H + 4}" role="img" aria-label="Courbe des visites par jour"><defs><linearGradient id="stats-degrade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B57A50" stop-opacity=".35"/><stop offset="1" stop-color="#B57A50" stop-opacity="0"/></linearGradient></defs>
+      <line x1="0" x2="${L}" y1="${H - 14}" y2="${H - 14}" class="stats__axe"/><path d="${aire}" fill="url(#stats-degrade)"/><path d="${ligne}" class="stats__ligne"/>${points}${contacts}${etiquettes}</svg>
+      <p class="aide aide--petite"><span class="stats__legende-contact"></span> jours avec au moins une prise de contact</p></div>`;
+  };
+
+  // Heures d'affluence
+  const heures = () => {
+    const max = Math.max(1, ...d.heures);
+    return `<div class="stats__heures">${d.heures.map((v, h) => `<span title="${h} h : ${v} visite${v > 1 ? 's' : ''}"><i style="--h:${Math.round((100 * v) / max)}%"></i>${h % 3 === 0 ? `<small>${h}h</small>` : ''}</span>`).join('')}</div>`;
+  };
+
+  // Dernières visites : le parcours de chaque personne
+  const visite = (v) => {
+    const etapes = v.etapes;
+    const pages = [];
+    for (const e of etapes) {
+      if (e.type === 'v') pages.push({ page: e.page, t: e.t, contacts: [] });
+      else if (e.type === 'f' && pages.length) { const p = [...pages].reverse().find((x) => x.page === e.page && x.duree === undefined); if (p) p.duree = e.duree; }
+      else if (e.type === 'c' && pages.length) pages[pages.length - 1].contacts.push(e.contact);
+    }
+    const contact = etapes.some((e) => e.type === 'c' && ['whatsapp', 'appel'].includes(e.contact));
+    const quand = new Date(v.debut).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return `<li class="stats__visite${contact ? ' stats__visite--contact' : ''}">
+      <div class="stats__visite-haut"><strong>${quand}</strong>${contact ? '<span class="pastille pastille--vert">a pris contact</span>' : ''}</div>
+      <p class="stats__visite-infos">${echapper(NOMS_APPAREILS[v.app] || v.app || '')} · ${echapper(v.ville && v.ville !== 'inconnue' ? v.ville : 'ville inconnue')} · ${echapper(provenance(v.src))}</p>
+      <ol class="stats__parcours">${pages.map((p) => `<li><span>${echapper(nom(p.page))}</span>${p.duree !== undefined ? `<small>${duree(p.duree)}</small>` : ''}${p.contacts.map((c) => `<em>${echapper(NOMS_ACTIONS[c] || c)}</em>`).join('')}</li>`).join('')}</ol>
+    </li>`;
+  };
+
+  const totalPages = r.vues; const totalVisites = r.visites;
+  zone.innerHTML = `
+    <div class="stats__kpis">
+      ${kpi('Visiteurs', fr(r.visiteurs), 'personnes différentes', evolution(r.visiteurs, av.visiteurs))}
+      ${kpi('Visites', fr(r.visites), `${fr(r.vues)} pages vues`, evolution(r.visites, av.visites))}
+      ${kpi('Prises de contact', fr(r.contacts), `${tauxContact} % des visites`, evolution(r.contacts, av.contacts))}
+      ${kpi('Temps moyen', duree(r.dureeMoyenne), 'passé sur une page', evolution(r.dureeMoyenne, av.dureeMoyenne))}
+    </div>
+    <p class="stats__phrase">${r.rebond > 0 ? `${r.rebond} % des visiteurs repartent après une seule page.` : 'Les visiteurs regardent plusieurs pages.'} En moyenne, ils lisent ${r.defilement} % de chaque page.</p>
+    ${courbe()}
+    <div class="stats__grille">
+      <div class="carte"><h3 class="stats__titre">D’où viennent les visiteurs</h3>${barres(d.sources, totalVisites, (c) => NOMS_SOURCES[c] || c)}</div>
+      <div class="carte"><h3 class="stats__titre">Pages les plus vues</h3>${barres(d.pages, totalPages, nom)}</div>
+      <div class="carte"><h3 class="stats__titre">Ce qu’ils ont fait</h3>${barres(d.actions, d.actions.reduce((a, [, v]) => a + v, 0), (c) => NOMS_ACTIONS[c] || c)}
+        ${d.contactsParPage.length ? `<p class="stats__sous-titre">Pages d’où partent les contacts</p>${barres(d.contactsParPage, r.contacts, nom, 5)}` : ''}</div>
+      <div class="carte"><h3 class="stats__titre">Appareils</h3>${barres(d.appareils, totalVisites, (c) => NOMS_APPAREILS[c] || c)}
+        <p class="stats__sous-titre">Villes</p>${barres(d.villes, totalVisites, (c) => (c === 'inconnue' ? 'Inconnue' : c), 6)}</div>
+    </div>
+    <div class="carte"><h3 class="stats__titre">Heures d’affluence</h3>${heures()}</div>
+    <h2 class="sous-titre">Parcours des visiteurs</h2>
+    <div class="stats__grille">
+      <div class="carte"><h3 class="stats__titre">Page d’arrivée</h3>${barres(d.entrees, totalVisites, nom, 6)}</div>
+      <div class="carte"><h3 class="stats__titre">Page de départ</h3>${barres(d.sorties, d.sorties.reduce((a, [, v]) => a + v, 0), nom, 6)}</div>
+      <div class="carte stats__large"><h3 class="stats__titre">Chemins les plus fréquents</h3>
+        ${d.chemins.length ? `<ul class="stats__chemins">${d.chemins.slice(0, 8).map(([c, v]) => `<li><span>${c.split(' → ').map((p) => `<b>${echapper(nom(p))}</b>`).join('<i>→</i>')}</span><strong>${fr(v)}</strong></li>`).join('')}</ul>` : '<p class="aide">Pas encore de données.</p>'}</div>
+    </div>
+    <h2 class="sous-titre">Dernières visites</h2>
+    <p class="aide">Chaque visite, page par page, avec le temps passé. Les personnes restent anonymes.</p>
+    <ul class="stats__visites">${d.visites.slice(0, 20).map(visite).join('')}</ul>
+    <p class="aide aide--petite stats__note">Mesure anonyme, sans cookie : une personne qui revient un autre jour compte à nouveau comme visiteur. Vos propres visites depuis cet appareil ne sont pas comptées.</p>`;
+}
 
 // Prévenir avant de quitter avec des images non publiées (elles ne sont pas gardées sur l'appareil)
 window.addEventListener('beforeunload', (e) => { if (modifie() && [...etat.nouvelles.values()].some((p) => p.grand)) { e.preventDefault(); e.returnValue = ''; } });

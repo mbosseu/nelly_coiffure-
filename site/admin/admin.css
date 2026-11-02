@@ -557,3 +557,98 @@ textarea { resize: vertical; min-height: 80px; }
   .demo-fiche #demo-compris { flex-basis: 100%; }
   .demo { width: min(260px, 100%); }
 }
+
+/* =====================================================================
+   Statistiques de visite
+   ===================================================================== */
+.onglet--stats { padding-bottom: 20px; }
+.stats__barre { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.stats__periodes { display: flex; padding: 3px; border-radius: 99px; background: #EBDDD0; }
+.stats__periodes button { border: 0; background: none; padding: 8px 13px; border-radius: 99px; font: inherit; font-size: .8rem; font-weight: 500; color: var(--text); cursor: pointer; }
+.stats__periodes button[aria-checked="true"] { background: var(--ink); color: var(--cream); }
+.stats__live { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: .8rem; color: var(--text); }
+.stats__live i { width: 9px; height: 9px; border-radius: 50%; background: #C9B8A9; }
+.stats__live--actif i { background: #3BA55C; box-shadow: 0 0 0 0 rgba(59, 165, 92, .5); animation: stats-pouls 1.8s infinite; }
+@keyframes stats-pouls { 70% { box-shadow: 0 0 0 9px rgba(59, 165, 92, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 165, 92, 0); } }
+
+.stats__kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.stats__kpi { position: relative; padding: 16px; border-radius: 18px; background: #fff; border: 1px solid var(--line); box-shadow: 0 10px 24px -20px rgba(60, 30, 15, .5); }
+.stats__kpi:first-child { background: linear-gradient(135deg, #2A1810, #1E140E); border-color: #1E140E; color: var(--cream); }
+.stats__kpi p { margin: 0 0 6px; font-size: .68rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--copper); }
+.stats__kpi strong { display: block; font-family: var(--serif); font-weight: 400; font-size: 2rem; line-height: 1.1; color: var(--ink); }
+.stats__kpi:first-child strong { color: var(--cream); }
+.stats__kpi small { display: block; margin-top: 4px; font-size: .74rem; color: #7A675A; }
+.stats__kpi:first-child small { color: rgba(246, 236, 226, .7); }
+.stats__evol { position: absolute; top: 14px; right: 12px; padding: 2px 8px; border-radius: 99px; font-size: .68rem; font-weight: 600; }
+.stats__evol--bon { background: #DDEFE3; color: #2E7D4F; }
+.stats__evol--moins { background: #F6E3CF; color: #8E5B3C; }
+.stats__evol--neutre { background: #ECE4DD; color: #7A6A5F; }
+.stats__phrase { margin: 12px 4px 16px; padding-left: 12px; border-left: 2px solid var(--copper); font-size: .86rem; color: var(--text); }
+
+.stats__titre { margin: 0 0 12px; font-family: var(--serif); font-weight: 400; font-size: 1.15rem; color: var(--ink); }
+.stats__sous-titre { margin: 16px 0 8px; font-size: .68rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+.stats__courbe { display: block; width: 100%; height: auto; overflow: visible; }
+.stats__courbe text { font-size: 11px; fill: #9C8676; font-family: var(--sans); }
+.stats__axe { stroke: #E6D8CB; stroke-width: 1; }
+.stats__ligne { fill: none; stroke: var(--copper); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.stats__point { fill: #fff; stroke: var(--copper); stroke-width: 2; }
+.stats__point-contact { fill: #3BA55C; stroke: #fff; stroke-width: 2; }
+.stats__legende-contact { display: inline-block; width: 10px; height: 10px; margin-right: 4px; border-radius: 50%; background: #3BA55C; vertical-align: -1px; }
+
+.stats__grille { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.stats__grille > .carte { margin: 0; }
+.stats__large { grid-column: 1 / -1; }
+.onglet--stats .carte { margin-bottom: 12px; }
+.stats__barres { list-style: none; display: grid; gap: 10px; }
+.stats__barres li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: baseline; font-size: .84rem; }
+.stats__barres-nom { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stats__barres-val { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.stats__barres-val small { margin-left: 6px; font-weight: 400; color: #9C8676; }
+.stats__barres i { grid-column: 1 / -1; display: block; height: 6px; border-radius: 6px; background: #F1E6DB; position: relative; overflow: hidden; }
+.stats__barres i::after { content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p); border-radius: 6px; background: linear-gradient(90deg, #C99872, #B57A50); }
+
+.stats__heures { display: grid; grid-template-columns: repeat(24, 1fr); align-items: end; gap: 3px; height: 110px; padding-bottom: 18px; }
+.stats__heures span { position: relative; height: 100%; display: flex; align-items: flex-end; }
+.stats__heures i { display: block; width: 100%; height: var(--h); min-height: 2px; border-radius: 4px 4px 1px 1px; background: linear-gradient(180deg, #C99872, #B57A50); }
+.stats__heures small { position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%); font-size: .62rem; color: #9C8676; }
+
+.stats__chemins { list-style: none; display: grid; gap: 8px; }
+.stats__chemins li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--cream-card); border: 1px solid var(--line); font-size: .82rem; }
+.stats__chemins span { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.stats__chemins b { font-weight: 500; color: var(--ink); }
+.stats__chemins i { font-style: normal; color: var(--copper); }
+.stats__chemins strong { flex-shrink: 0; font-family: var(--serif); font-weight: 400; font-size: 1.1rem; color: var(--accent); }
+
+.stats__visites { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.stats__visite { padding: 14px; border-radius: 16px; background: #fff; border: 1px solid var(--line); }
+.stats__visite--contact { border-color: rgba(46, 125, 79, .45); box-shadow: inset 3px 0 0 #3BA55C; }
+.stats__visite-haut { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.stats__visite-haut strong { font-size: .85rem; color: var(--ink); text-transform: capitalize; }
+.stats__visite-haut .pastille { margin: 0; }
+.stats__visite-infos { margin: 4px 0 10px; font-size: .74rem; color: #7A675A; }
+.stats__parcours { list-style: none; display: grid; gap: 0; padding-left: 4px; counter-reset: etape; }
+.stats__parcours li { position: relative; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; padding: 0 0 10px 18px; font-size: .82rem; color: var(--ink); }
+.stats__parcours li::before { content: ""; position: absolute; left: 0; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--copper); }
+.stats__parcours li:not(:last-child)::after { content: ""; position: absolute; left: 3.5px; top: 15px; bottom: 0; width: 1px; background: #E2D2C3; }
+.stats__parcours small { color: #9C8676; font-size: .72rem; }
+.stats__parcours em { font-style: normal; padding: 1px 8px; border-radius: 99px; background: #DDEFE3; color: #2E7D4F; font-size: .7rem; font-weight: 600; }
+.stats__vide h2 { font-family: var(--serif); font-weight: 400; font-size: 1.3rem; color: var(--ink); margin-bottom: 6px; }
+.stats__note { margin-top: 16px; text-align: center; }
+
+@media (max-width: 720px) {
+  .stats__kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats__grille { grid-template-columns: minmax(0, 1fr); }
+  .stats__kpi strong { font-size: 1.6rem; }
+  .stats__periodes button { padding: 8px 10px; font-size: .76rem; }
+}
+
+/* Tableau de bord d'accueil : 4 colonnes seulement pour les groupes de 4 tuiles */
+@media (min-width: 720px) {
+  .taches__groupe:last-of-type .taches__grille { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .taches__grille:has(> :nth-child(4)) { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 720px) {
+  .stats__evol { position: static; display: inline-block; margin-top: 6px; }
+  .stats__kpi p { letter-spacing: .1em; }
+}
+.stats__kpi strong { white-space: nowrap; font-size: clamp(1.45rem, 2.4vw, 2rem); }

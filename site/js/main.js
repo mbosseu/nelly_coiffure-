@@ -325,3 +325,74 @@ if (chat) {
     play();
   }
 }
+
+// Statistiques de visite anonymes, sans cookie (tableau de bord de l'espace de gestion).
+// Un numéro de visite tiré au hasard vit le temps de l'onglet (sessionStorage) ; rien ne permet de reconnaître
+// la personne d'un jour à l'autre. Désactivable : page Confidentialité, et automatiquement sur les appareils de Nelly.
+// Bouton de la page Confidentialité : refuser (ou accepter de nouveau) la mesure sur cet appareil
+document.querySelectorAll('[data-stats-refus]').forEach((b) => {
+  const maj = () => {
+    let refuse = false;
+    try { refuse = localStorage.getItem('nc_stats_off') === '1'; } catch { /* sans effet */ }
+    b.textContent = refuse ? 'Mesure refusée sur cet appareil · la réactiver' : 'Ne pas compter mes visites';
+  };
+  b.addEventListener('click', () => {
+    try {
+      if (localStorage.getItem('nc_stats_off') === '1') localStorage.removeItem('nc_stats_off');
+      else localStorage.setItem('nc_stats_off', '1');
+    } catch { /* sans effet */ }
+    maj();
+  });
+  maj();
+});
+
+(() => {
+  let off = false; let essai = false;
+  try { off = localStorage.getItem('nc_stats_off') === '1'; essai = localStorage.getItem('nc_stats_essai') === '1'; } catch { /* stockage indisponible */ }
+  // Pas de mesure pour les robots, sur les appareils exclus, ni en local (sauf essai)
+  if (off || navigator.webdriver || !navigator.sendBeacon || (/^(localhost|127\.)/.test(location.hostname) && !essai)) return;
+  const envoyer = (e) => { try { navigator.sendBeacon('/api/stats', JSON.stringify(e)); } catch { /* sans effet */ } };
+  let s; let i = 1;
+  try {
+    s = sessionStorage.getItem('nc_v');
+    if (!s) { s = Math.random().toString(36).slice(2, 12) + Date.now().toString(36); sessionStorage.setItem('nc_v', s); }
+    i = Number(sessionStorage.getItem('nc_i') || 0) + 1;
+    sessionStorage.setItem('nc_i', String(i));
+  } catch { s = Math.random().toString(36).slice(2, 14); }
+  const p = location.pathname;
+  const params = new URLSearchParams(location.search);
+  envoyer({ t: 'v', p, s, i, r: i === 1 ? document.referrer : '', u: params.get('utm_source') || '', w: window.innerWidth });
+
+  // Temps passé et défilement de la page, envoyés quand on la quitte
+  const debut = Date.now();
+  let visible = 0; let depuis = document.visibilityState === 'visible' ? Date.now() : 0;
+  let defile = 0;
+  const majDefile = () => {
+    const h = document.documentElement.scrollHeight - window.innerHeight;
+    defile = Math.max(defile, h > 0 ? Math.round((window.scrollY / h) * 100) : 100);
+  };
+  window.addEventListener('scroll', majDefile, { passive: true });
+  let fini = false;
+  const finir = () => {
+    if (depuis) { visible += Date.now() - depuis; depuis = 0; }
+    if (fini) return;
+    fini = true;
+    envoyer({ t: 'f', p, s, d: Math.round((visible || Date.now() - debut) / 1000), sc: defile });
+  };
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') finir();
+    else depuis = Date.now();
+  });
+  window.addEventListener('pagehide', finir);
+
+  // Prises de contact : WhatsApp, appel, réseaux sociaux, itinéraire
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href]');
+    if (!a) return;
+    const h = a.href;
+    const k = /wa\.me|whatsapp/.test(h) ? 'whatsapp' : /^tel:/.test(h) ? 'appel' : /instagram\.com/.test(h) ? 'instagram'
+      : /tiktok\.com/.test(h) ? 'tiktok' : /facebook\.com/.test(h) ? 'facebook' : /snapchat\.com/.test(h) ? 'snapchat'
+      : /youtube\.com/.test(h) ? 'youtube' : /google\.[a-z.]+\/maps|maps\.app/.test(h) ? 'itineraire' : '';
+    if (k) envoyer({ t: 'c', p, s, k });
+  }, true);
+})();
