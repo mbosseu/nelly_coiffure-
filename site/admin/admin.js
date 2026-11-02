@@ -119,7 +119,7 @@ async function demarrer() {
   $('#connexion').hidden = true;
   $('#appli').hidden = false;
   // Les visites de Nelly sur son propre site ne sont pas comptées dans les statistiques
-  try { localStorage.setItem('nc_stats_off', '1'); } catch { /* sans effet */ }
+  try { if (localStorage.getItem('nc_stats_compter') !== '1') localStorage.setItem('nc_stats_off', '1'); } catch { /* sans effet */ }
   toutAfficher();
   accueillir();
 }
@@ -300,7 +300,7 @@ function ouvrirOnglet(nom) {
   $$('.onglets button').forEach((b) => (b.dataset.cible === nom ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current')));
   $('#titre-onglet').textContent = TITRES[nom];
   if (nom === 'historique') afficherHistorique();
-  if (nom === 'stats') chargerStats();
+  if (nom === 'stats') { chargerStats(); chargerDirect(); afficherAppareil(); }
   document.body.classList.toggle('mode-editeur', nom === 'pages');
   $('#toast').hidden = true;
   if (nom === 'pages') { ajusterEditeur(); chargerSections(); }
@@ -2602,6 +2602,49 @@ async function chargerStats() {
 }
 $$('[data-jours]').forEach((b) => b.addEventListener('click', () => { joursStats = Number(b.dataset.jours); chargerStats(); }));
 
+// --- En direct : toutes les 10 secondes pendant que l'onglet est ouvert -----------------------
+// Requête légère (qui est sur le site, sur quelle page, chiffres du jour) ; le tableau complet
+// n'est rechargé que si un chiffre du jour a bougé.
+let dernierJour = null;
+async function chargerDirect() {
+  let d;
+  try { d = await api('direct'); } catch { return; }
+  if (!d.actif || etat.onglet !== 'stats') return;
+  const nom = (p) => d.nomsPages[p] || (p === 'autre' ? 'Autre page' : p);
+  $('#stats-live').hidden = false;
+  $('#stats-live span').textContent = d.enLigne ? `${d.enLigne} personne${d.enLigne > 1 ? 's' : ''} sur le site en ce moment` : 'Personne sur le site en ce moment';
+  $('#stats-live').classList.toggle('stats__live--actif', d.enLigne > 0);
+  const a = d.aujourdhui;
+  const heure = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  $('#stats-direct').hidden = false;
+  $('#stats-direct-pages').innerHTML = d.pagesEnLigne.length
+    ? `En train de regarder : ${d.pagesEnLigne.map(([p, n]) => `<b>${echapper(nom(p))}</b>${n > 1 ? ` (${n})` : ''}`).join(', ')}` : '';
+  $('#stats-direct-pages').hidden = !d.pagesEnLigne.length;
+  $('#stats-direct-jour').innerHTML = `Aujourd’hui : <b>${a.visiteurs}</b> visiteur${a.visiteurs > 1 ? 's' : ''} · <b>${a.vues}</b> page${a.vues > 1 ? 's' : ''} vue${a.vues > 1 ? 's' : ''} · <b>${a.contacts}</b> contact${a.contacts > 1 ? 's' : ''} <small>· à jour à ${heure}</small>`;
+  const cle = JSON.stringify(a);
+  if (dernierJour && cle !== dernierJour && !$$('dialog[open]').length) chargerStats();
+  dernierJour = cle;
+}
+setInterval(() => { if (document.visibilityState === 'visible' && etat.onglet === 'stats' && !$('#appli').hidden) chargerDirect(); }, 10000);
+
+// Cet appareil est exclu des statistiques (les visites de Nelly ne comptent pas) : on peut le compter, pour essayer
+const CLE_COMPTER = 'nc_stats_compter';
+function afficherAppareil() {
+  let compte = false;
+  try { compte = localStorage.getItem(CLE_COMPTER) === '1'; } catch { /* sans effet */ }
+  $('#stats-appareil').innerHTML = compte
+    ? 'Vos visites depuis cet appareil <b>sont comptées</b> (mode essai). <button type="button" class="lien-demo">Ne plus les compter</button>'
+    : 'Vos propres visites depuis cet appareil ne sont pas comptées. <button type="button" class="lien-demo">Les compter pour essayer</button>';
+  $('#stats-appareil button').onclick = () => {
+    try {
+      if (compte) { localStorage.removeItem(CLE_COMPTER); localStorage.setItem('nc_stats_off', '1'); }
+      else { localStorage.setItem(CLE_COMPTER, '1'); localStorage.removeItem('nc_stats_off'); }
+    } catch { /* sans effet */ }
+    afficherAppareil();
+    notifier(compte ? 'Vos visites ne sont plus comptées.' : 'Ouvrez maintenant le site sur cet appareil : votre visite apparaîtra ici en quelques secondes.');
+  };
+}
+
 function afficherStats(d) {
   const zone = $('#stats-contenu');
   $('#stats-live').hidden = true;
@@ -2648,7 +2691,7 @@ function afficherStats(d) {
     const etiquettes = pts.map((p, i) => ((pts.length <= 8 || i % Math.ceil(pts.length / 6) === 0 || i === pts.length - 1)
       ? `<text x="${(i * pas).toFixed(1)}" y="${H}" text-anchor="${i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}">${new Date(`${p.jour}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</text>` : '')).join('');
     const contacts = pts.map((p, i) => (p.contacts ? `<circle cx="${(i * pas).toFixed(1)}" cy="${y(p.visites).toFixed(1)}" r="5" class="stats__point-contact"><title>${p.contacts} contact${p.contacts > 1 ? 's' : ''}</title></circle>` : '')).join('');
-    const points = pts.map((p, i) => `<circle cx="${(i * pas).toFixed(1)}" cy="${y(p.visites).toFixed(1)}" r="3" class="stats__point"><title>${new Date(`${p.jour}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} : ${p.visites} visite${p.visites > 1 ? 's' : ''}, ${p.vues} pages vues</title></circle>`).join('');
+    const points = pts.map((p, i) => `<circle cx="${(i * pas).toFixed(1)}" cy="${y(p.visites).toFixed(1)}" r="3" class="stats__point"><title>${new Date(`${p.jour}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} : ${p.visites} visite${p.visites > 1 ? 's' : ''}, ${p.vues} page${p.vues > 1 ? 's' : ''} vue${p.vues > 1 ? 's' : ''}</title></circle>`).join('');
     return `<div class="carte"><h3 class="stats__titre">Visites par jour</h3>
       <svg class="stats__courbe" viewBox="-6 0 ${L + 12} ${H + 4}" role="img" aria-label="Courbe des visites par jour"><defs><linearGradient id="stats-degrade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B57A50" stop-opacity=".35"/><stop offset="1" stop-color="#B57A50" stop-opacity="0"/></linearGradient></defs>
       <line x1="0" x2="${L}" y1="${H - 14}" y2="${H - 14}" class="stats__axe"/><path d="${aire}" fill="url(#stats-degrade)"/><path d="${ligne}" class="stats__ligne"/>${points}${contacts}${etiquettes}</svg>
@@ -2682,8 +2725,8 @@ function afficherStats(d) {
   const totalPages = r.vues; const totalVisites = r.visites;
   zone.innerHTML = `
     <div class="stats__kpis">
-      ${kpi('Visiteurs', fr(r.visiteurs), 'personnes différentes', evolution(r.visiteurs, av.visiteurs))}
-      ${kpi('Visites', fr(r.visites), `${fr(r.vues)} pages vues`, evolution(r.visites, av.visites))}
+      ${kpi('Visiteurs', fr(r.visiteurs), r.visiteurs > 1 ? 'personnes différentes' : 'personne', evolution(r.visiteurs, av.visiteurs))}
+      ${kpi('Visites', fr(r.visites), `${fr(r.vues)} page${r.vues > 1 ? 's' : ''} vue${r.vues > 1 ? 's' : ''}`, evolution(r.visites, av.visites))}
       ${kpi('Prises de contact', fr(r.contacts), `${tauxContact} % des visites`, evolution(r.contacts, av.contacts))}
       ${kpi('Temps moyen', duree(r.dureeMoyenne), 'passé sur une page', evolution(r.dureeMoyenne, av.dureeMoyenne))}
     </div>

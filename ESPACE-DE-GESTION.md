@@ -137,6 +137,8 @@ Onglet « Statistiques » de l'espace de gestion (et tuile « Statistiques de vi
 
 **Essai local** : `outils/essai-gestion.mjs` simule la base Redis en mémoire ; sur `localhost`, la mesure ne s'active que si `localStorage.nc_stats_essai = '1'`.
 
+**En direct** : tant qu'une page est affichée, `js/main.js` envoie un signal de présence toutes les 30 s (30 min au plus) ; une personne compte « en ce moment » pendant 90 s après son dernier signal, avec la page qu'elle regarde (`lp`). L'onglet Statistiques interroge toutes les 10 s l'action légère `direct` (personnes présentes, pages regardées, chiffres du jour) et recharge le tableau complet dès qu'un chiffre du jour change. Sous le bandeau, « Les compter pour essayer » fait compter les visites de l'appareil connecté (`nc_stats_compter`), pratique pour vérifier que tout fonctionne.
+
 **En service depuis le 2 novembre 2026** : base `upstash-kv-camel-curtain` (offre gratuite, région Francfort), reliée au projet `nelly-coiffure`.
 
 ## Actualisation automatique de l'application

@@ -122,8 +122,12 @@ export async function enregistrer(e, req) {
     }
     if (rang === 2) ajouter('HINCRBY', j, 'engagees', 1); // visites qui voient au moins 2 pages
     parcours(`${maintenant}|v|${page}`);
-    ajouter('ZADD', 'live', maintenant, s);
-    ajouter('ZREMRANGEBYSCORE', 'live', 0, maintenant - 10 * 60000);
+    enDirect(ajouter, s, page, maintenant);
+  } else if (e.t === 'h') {
+    // Signal de présence (toutes les 30 s tant que la page est affichée) : seulement pour « en ce moment »
+    enDirect(ajouter, s, page, maintenant);
+    await redis(cmd);
+    return;
   } else if (e.t === 'f') {
     const duree = Math.max(0, Math.min(1800, Math.round(Number(e.d) || 0)));
     const defile = Math.max(0, Math.min(100, Math.round(Number(e.sc) || 0)));
@@ -152,6 +156,37 @@ const jours = (n, fin = Date.now()) => Array.from({ length: n }, (_, i) => jourP
 const nombre = (v) => Number(v) || 0;
 const hash = (liste) => { const o = {}; for (let i = 0; liste && i < liste.length; i += 2) o[liste[i]] = liste[i + 1]; return o; };
 
+// « En ce moment » : dernière activité de chaque visite (live) et page qu'elle regarde (lp)
+const EN_DIRECT = 90 * 1000; // une personne compte tant qu'un signal est arrivé dans les 90 dernières secondes
+function enDirect(ajouter, s, page, maintenant) {
+  ajouter('ZADD', 'live', maintenant, s);
+  ajouter('ZREMRANGEBYSCORE', 'live', 0, maintenant - 10 * 60000);
+  ajouter('HSET', 'lp', s, page);
+  ajouter('EXPIRE', 'lp', 3600);
+}
+
+/** Vue légère, actualisée toutes les quelques secondes : qui est sur le site et sur quelle page, chiffres du jour */
+export async function direct() {
+  const maintenant = Date.now();
+  const jour = jourParis(maintenant);
+  const [ids, j, u] = await redis([
+    ['ZRANGEBYSCORE', 'live', maintenant - EN_DIRECT, '+inf'],
+    ['HGETALL', `j:${jour}`],
+    ['PFCOUNT', `u:${jour}`],
+  ]);
+  const liste = (ids || []).slice(0, 100);
+  const pages = liste.length ? (await redis([['HMGET', 'lp', ...liste]]))[0] || [] : [];
+  const parPage = new Map();
+  for (const p of pages) if (p) parPage.set(p, (parPage.get(p) || 0) + 1);
+  const t = hash(j);
+  return {
+    enLigne: liste.length,
+    pagesEnLigne: [...parPage.entries()].sort((a, b) => b[1] - a[1]),
+    aujourdhui: { visiteurs: nombre(u), visites: nombre(t.visites), vues: nombre(t.vues), contacts: nombre(t.contacts) },
+    nomsPages: PAGES_SITE,
+  };
+}
+
 /** Données du tableau de bord sur les n derniers jours (n = 1 : aujourd'hui) */
 export async function tableauDeBord(n = 30) {
   const periode = jours(n);
@@ -162,7 +197,7 @@ export async function tableauDeBord(n = 30) {
     ...periode.map((d) => ['PFCOUNT', `u:${d}`]),
     ...avant.map((d) => ['HGETALL', `j:${d}`]),
     ...avant.map((d) => ['PFCOUNT', `u:${d}`]),
-    ['ZCOUNT', 'live', maintenant - 5 * 60000, '+inf'],
+    ['ZCOUNT', 'live', maintenant - EN_DIRECT, '+inf'],
     ...periode.slice(-14).reverse().map((d) => ['LRANGE', `dv:${d}`, 0, 199]),
   ]);
   const k = periode.length;

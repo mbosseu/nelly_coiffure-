@@ -569,6 +569,12 @@ textarea { resize: vertical; min-height: 80px; }
 .stats__live { display: inline-flex; align-items: center; gap: 8px; margin: 0; font-size: .8rem; color: var(--text); }
 .stats__live i { width: 9px; height: 9px; border-radius: 50%; background: #C9B8A9; }
 .stats__live--actif i { background: #3BA55C; box-shadow: 0 0 0 0 rgba(59, 165, 92, .5); animation: stats-pouls 1.8s infinite; }
+.stats__direct { margin: -4px 0 12px; padding: 12px 16px; border-radius: 16px; background: #fff; border: 1px solid var(--line); font-size: .85rem; color: var(--text); }
+.stats__direct p { margin: 0; }
+.stats__direct p + p { margin-top: 4px; }
+.stats__direct b { color: var(--ink); font-weight: 600; }
+.stats__direct small { color: #9A8778; font-size: .75rem; }
+.stats__appareil { margin: 0 0 14px; font-size: .78rem; color: #8A7666; }
 @keyframes stats-pouls { 70% { box-shadow: 0 0 0 9px rgba(59, 165, 92, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 165, 92, 0); } }
 
 .stats__kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }

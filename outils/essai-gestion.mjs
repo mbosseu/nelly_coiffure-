@@ -39,6 +39,9 @@ const redisCommande = ([nom, cle, ...a]) => {
     case 'ZADD': { const z = v || new Map(); z.set(a[1], Number(a[0])); base.set(cle, z); return 1; }
     case 'ZREMRANGEBYSCORE': { if (v) for (const [m, s] of v) if (s >= Number(a[0]) && s <= Number(a[1])) v.delete(m); return 1; }
     case 'ZCOUNT': { const max = a[1] === '+inf' ? Infinity : Number(a[1]); return v ? [...v.values()].filter((s) => s >= Number(a[0]) && s <= max).length : 0; }
+    case 'ZRANGEBYSCORE': { const max = a[1] === '+inf' ? Infinity : Number(a[1]); return v ? [...v.entries()].filter(([, s]) => s >= Number(a[0]) && s <= max).sort((x, y) => x[1] - y[1]).map(([m]) => m) : []; }
+    case 'HSET': { const h = v || new Map(); h.set(a[0], a[1]); base.set(cle, h); return 1; }
+    case 'HMGET': return a.map((c) => (v && v.has(c) ? String(v.get(c)) : null));
     default: return { erreur: `commande non simulée : ${nom}` };
   }
 };

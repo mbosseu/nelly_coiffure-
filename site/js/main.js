@@ -381,9 +381,15 @@ document.querySelectorAll('[data-stats-refus]').forEach((b) => {
   };
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') finir();
-    else depuis = Date.now();
+    else { depuis = Date.now(); envoyer({ t: 'h', p, s }); }
   });
   window.addEventListener('pagehide', finir);
+
+  // Signal de présence toutes les 30 s tant que la page est affichée (« en ce moment » du tableau de bord), 30 min au plus
+  const presence = setInterval(() => {
+    if (Date.now() - debut > 30 * 60000) clearInterval(presence);
+    else if (document.visibilityState === 'visible') envoyer({ t: 'h', p, s });
+  }, 30000);
 
   // Prises de contact : WhatsApp, appel, réseaux sociaux, itinéraire
   document.addEventListener('click', (e) => {
