@@ -1,7 +1,7 @@
 import { verifierContenu, PAGES, PAGES_ANNONCES, FORMATS_ANNONCE, FONDS, THEMES, DOMAINE } from './regenerer.mjs';
 import { structurePage } from './pages.mjs';
 import { navigationDe, RESEAUX_LISTE } from './navigation.mjs';
-import { lireTexte, listerDossier, historique } from './github.mjs';
+import { lireTexte, lireOctets, listerDossier, historique } from './github.mjs';
 import { CONTENU, publierContenuVerifie } from './publication.mjs';
 import { direct, statsActives, tableauDeBord } from './stats.mjs';
 import { signerJeton } from './oauth.mjs';
@@ -75,6 +75,7 @@ const decrireCadrage = (im) => {
   if (!im) return '';
   const x = im.x ?? 50; const y = im.y ?? 50; const z = im.zoom ?? 1;
   if (x === 50 && y === 50 && z === 1) return 'cadrage centré';
+  if (x === 50 && y === 30 && z === 1) return 'cadrage légèrement vers le haut';
   const nom = Object.entries(POSITIONS).find(([, [a, b]]) => a === x && b === y)?.[0] || `point ${x} % / ${y} %`;
   return `cadrage ${nom}${z !== 1 ? `, zoom ×${z}` : ''}`;
 };
@@ -107,6 +108,23 @@ async function verifierPhoto(dossier, src) {
   if (!trouvee) throw new ErreurOutil(`Photo introuvable : « ${src} ». Utilisez voir_photos pour la liste des photos disponibles (pour une nouvelle photo : preparer_envoi_photo, puis attendre que l’utilisatrice l’ait envoyée).`);
   return trouvee;
 }
+
+// Dimensions d'une photo JPEG du site (lues dans son en-tête) : le site adapte le cadre à son orientation
+function dimensionsJpeg(o) {
+  for (let i = 2; i + 9 < o.length;) {
+    if (o[i] !== 0xff) return null;
+    const marque = o[i + 1];
+    const taille = o.readUInt16BE(i + 2);
+    if (marque >= 0xc0 && marque <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marque)) return { largeur: o.readUInt16BE(i + 7), hauteur: o.readUInt16BE(i + 5) };
+    i += 2 + taille;
+  }
+  return null;
+}
+async function photoAvecDimensions(src) {
+  try { return { src, ...(dimensionsJpeg(await lireOctets(`site/${src}.jpg`)) || { largeur: 1600, hauteur: 1200 }) }; } catch { return { src, largeur: 1600, hauteur: 1200 }; }
+}
+// Cadrage par défaut : une photo en hauteur est cadrée un peu vers le haut (visage, tête), sinon au centre
+const cadrageDefaut = (p) => ({ x: 50, y: p.hauteur > p.largeur * 1.1 ? 30 : 50, zoom: 1 });
 
 // --- Présentation -----------------------------------------------------------------------------------
 const horaire = (j) => (j.etat === 'ouvert' ? `${j.debut} – ${j.fin}` : NOMS_ETATS[j.etat] || j.etat);
@@ -283,7 +301,11 @@ async function remplirAnnonce(a, args) {
   if (args.pages !== undefined && !a.emplacement) a.pages = pagesAnnonce(args.pages, ['toutes']);
   if (args.bouton !== undefined) a.bouton = String(args.bouton.texte ?? 'x').trim() ? versLien(args.bouton, a.bouton) : { texte: '', type: 'whatsapp', valeur: '' };
   if (args.photo !== undefined) {
-    a.image = args.photo === 'aucune' ? null : { src: await verifierPhoto('annonces', args.photo), x: 50, y: 50, zoom: 1, alt: args.photo_description ?? a.image?.alt ?? '', largeur: 1600, hauteur: 1200 };
+    if (args.photo === 'aucune') a.image = null;
+    else {
+      const p = await photoAvecDimensions(await verifierPhoto('annonces', args.photo));
+      a.image = { src: p.src, ...cadrageDefaut(p), alt: args.photo_description ?? a.image?.alt ?? '', largeur: p.largeur, hauteur: p.hauteur };
+    }
   } else if (args.photo_description !== undefined && a.image) a.image.alt = args.photo_description;
   if (args.cadrage !== undefined) {
     if (!a.image?.src) throw new ErreurOutil('Cette annonce n’a pas de photo à cadrer.');
@@ -663,7 +685,7 @@ export const OUTILS = [
           const actuelle = p.images?.[id];
           const src = im.photo ? await verifierPhoto('pages', im.photo) : actuelle?.src;
           if (!src) throw new ErreurOutil(`Indiquez la photo de l’image ${id}.`);
-          const base = im.photo ? { x: 50, y: 50, zoom: 1 } : { x: actuelle.x, y: actuelle.y, zoom: actuelle.zoom };
+          const base = im.photo ? cadrageDefaut(await photoAvecDimensions(src)) : { x: actuelle.x, y: actuelle.y, zoom: actuelle.zoom };
           (p.images ||= {})[id] = cadrer({ ...(actuelle || {}), src, ...base, alt: im.description ?? actuelle?.alt ?? images.find((x) => x.id === id).alt }, im.cadrage);
         }
         const autres = st.filter((s) => !s.premiere).map((s) => s.id);

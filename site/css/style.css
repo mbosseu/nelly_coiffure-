@@ -1328,12 +1328,17 @@ html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -
 .promo__media { position: relative; overflow: hidden; border-radius: 22px; background: #EAD9CB; aspect-ratio: 4 / 5; }
 .promo__media img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .promo__texte .title { margin-bottom: 16px; }
+/* Un mot très long (titre écrit depuis l'espace de gestion ou par l'assistant) passe à la ligne au lieu d'élargir la page */
+.promo .title, .promo .body, .promo__carte h3, .annonce p { overflow-wrap: break-word; hyphens: auto; }
 .promo__texte .body { margin-bottom: 26px; }
 .promo__texte .body:last-child, .promo__texte .title:last-child { margin-bottom: 0; }
 .promo__texte .eyebrow { margin-bottom: 12px; }
 .promo--section .promo__inner { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); }
 .promo--carte .promo__inner { max-width: 880px; margin-inline: auto; grid-template-columns: 240px minmax(0, 1fr); padding: clamp(18px, 2.4vw, 26px); border-radius: 26px; }
 .promo--carte .promo__media { aspect-ratio: 1; border-radius: 18px; }
+/* Photo en largeur : cadre en largeur (sinon une grande partie de la photo serait coupée) */
+.promo--section .promo__media--paysage { aspect-ratio: 4 / 3; }
+.promo--carte .promo__media--paysage { aspect-ratio: 4 / 3; }
 .promo--carte .title { font-size: clamp(1.6rem, 2.4vw, 2.1rem); }
 .promo--carte .body { font-size: .96rem; }
 .promo--encadre .promo__inner, .promo--sans-image .promo__inner { grid-template-columns: minmax(0, 1fr); max-width: 820px; margin-inline: auto; text-align: center; background: transparent; box-shadow: none; border-color: rgba(181, 122, 80, .5); }
@@ -1362,6 +1367,8 @@ main > section[hidden] { display: none !important; }
 .promo--carte.promo--image-dessus .promo__inner { max-width: 640px; }
 .promo--image-dessus .body { margin-inline: auto; }
 @media (max-width: 860px) {
+  /* (plus précis que la règle ci-dessus : sans cela, la section « image à droite » gardait deux colonnes sur téléphone) */
+  .promo--section.promo--image-droite .promo__inner { grid-template-columns: minmax(0, 1fr); }
   .promo--image-droite .promo__media { order: 0; }
   .promo--image-dessus .promo__media { aspect-ratio: 4 / 3; }
 }

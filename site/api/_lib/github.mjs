@@ -36,6 +36,12 @@ export async function lireTexte(chemin, ref = branche()) {
   return { texte: Buffer.from(b.content, 'base64').toString('utf8'), sha: f.sha };
 }
 
+// Contenu brut d'un petit fichier (moins de 1 Mo : images du site), dernière version de la branche
+export async function lireOctets(chemin) {
+  const f = await gh(`/repos/${depot()}/contents/${enc(chemin)}?ref=${encodeURIComponent(branche())}`);
+  return Buffer.from(f.content || '', 'base64');
+}
+
 // Noms des fichiers d'un dossier (dernière version de la branche)
 export async function listerDossier(chemin) {
   const liste = await gh(`/repos/${depot()}/contents/${enc(chemin)}?ref=${encodeURIComponent(branche())}`);

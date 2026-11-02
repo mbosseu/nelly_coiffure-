@@ -251,6 +251,9 @@ export const attributsLien = (b) => {
 
 const dates = (a, aujourdhui) => `${a.debut ? ` data-debut="${a.debut}"` : ''}${a.fin ? ` data-fin="${a.fin}"` : ''}${a.debut && a.debut > aujourdhui ? ' hidden' : ''}`;
 
+// Cadre adapté à l'orientation de la photo : une photo en largeur n'est pas rognée dans un cadre en hauteur
+const classeMedia = (img) => `promo__media${Number(img?.largeur) > Number(img?.hauteur) * 1.1 ? ' promo__media--paysage' : ''}`;
+
 const imageAnnonce = (img, tailles) => {
   if (!img?.src) return '';
   const x = Number(img.x ?? 50); const y = Number(img.y ?? 50); const z = Number(img.zoom ?? 1);
@@ -288,14 +291,14 @@ const rendrePromo = (a, aujourdhui, NL, ajout = false) => {
     `    <section class="${classes}" aria-label="${echapper(a.titre || etiquette || 'Annonce')}"${attributs}${dates(a, aujourdhui)}>`,
     '      <div class="container">',
     '        <div class="promo__inner reveal">',
-    avecImage && `          <div class="promo__media">${imageAnnonce(a.image, tailles)}</div>`,
+    avecImage && `          <div class="${classeMedia(a.image)}">${imageAnnonce(a.image, tailles)}</div>`,
     textes.length && '          <div class="promo__texte">',
     ...textes.map((t) => `            ${t}`),
     textes.length && '          </div>',
     cartes.length && `          <div class="promo__grille promo__grille--${cartes.length}">`,
     ...cartes.map((c) => [
       '            <article class="promo__carte">',
-      c.image?.src && `              <div class="promo__media">${imageAnnonce(c.image, '(min-width: 1025px) 30vw, 100vw')}</div>`,
+      c.image?.src && `              <div class="${classeMedia(c.image)}">${imageAnnonce(c.image, '(min-width: 1025px) 30vw, 100vw')}</div>`,
       `              <h3${champ(`carte-${c.i}-titre`)}>${echapper(c.titre.trim())}</h3>`,
       paragraphe(c.texte) && `              ${paragraphe(c.texte, 'body', champ(`carte-${c.i}-texte`))}`,
       '            </article>',
