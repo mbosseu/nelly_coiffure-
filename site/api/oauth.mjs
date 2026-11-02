@@ -127,11 +127,10 @@ function pageAutorisation(req, res, p, message = '') {
     <h1><strong>${echapper(d.client.n)}</strong> demande à gérer votre site</h1>
     <p class="texte">Une fois autorisé, l’assistant pourra, quand vous le lui demandez :</p>
     <ul>
-      <li>lire vos horaires, vos coiffures et tarifs, vos annonces ;</li>
-      <li>consulter les statistiques de visite ;</li>
-      <li>modifier les horaires, les tarifs et les annonces — <b>toujours après votre accord</b>, et chaque publication reste annulable dans l’espace de gestion (Historique).</li>
+      <li>lire tout le contenu du site et les statistiques de visite ;</li>
+      <li>modifier les textes des pages, horaires, coiffures et tarifs, annonces, galerie, coordonnées, menu et couleurs — <b>toujours après votre accord</b>, et chaque publication reste annulable (Historique).</li>
     </ul>
-    <p class="note">Il ne peut ni changer le mot de passe, ni supprimer de photos. Retour vers : <b>${echapper(hote)}</b></p>
+    <p class="note">Il peut réutiliser les photos déjà en ligne, mais pas en envoyer de nouvelles ni régler leur cadrage. Le mot de passe et les réglages du compte restent dans l’espace de gestion. Retour vers : <b>${echapper(hote)}</b></p>
     <form method="post" action="/oauth/autoriser">
       ${caches}
       <label for="mdp">Mot de passe de l’espace de gestion</label>

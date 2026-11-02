@@ -161,12 +161,15 @@ Nelly peut gérer le site en parlant à un assistant IA : « je suis en congé d
 - Le Chat (chat.mistral.ai) : menu Connecteurs → « + Ajouter un connecteur » → onglet « Connecteur MCP personnalisé » → adresse ci-dessus (authentification détectée : OAuth) → Connecter.
 - Une page aux couleurs du site s'ouvre : « Claude demande à gérer votre site ». Mot de passe de l'espace de gestion → **Autoriser**. Le connecteur fonctionne ensuite aussi dans l'application mobile de l'assistant.
 
-**Outils proposés à l'assistant** (`api/mcp.mjs`) : `voir_site`, `statistiques`, `historique` (lecture) ; `modifier_horaires`, `modifier_coiffure` (prix, nom, description, masquer), `ajouter_annonce` (bandeau, encadré, carte), `modifier_annonce` (texte, dates, pages, pause), `supprimer_annonce`. Pas de photos, de mise en page, de téléphones ni de réseaux : cela reste dans l'espace de gestion.
+**Outils proposés à l'assistant** (`site/api/mcp.mjs`, logique dans `site/api/_lib/outils-ia.mjs`) :
+- Lecture : `voir_site`, `voir_page`, `voir_photos`, `statistiques`, `historique`.
+- Contenu : `modifier_horaires`, `modifier_coordonnees`, `modifier_coiffure`, `ajouter_coiffure`, `supprimer_coiffure`, `modifier_galerie`, `ajouter_annonce`, `modifier_annonce`, `supprimer_annonce`, `modifier_page`, `modifier_menu`, `modifier_style`, `revenir_version`.
+- L'assistant peut réutiliser les photos déjà en ligne, mais ne peut pas en téléverser de nouvelles ni modifier le mot de passe ou les réglages du compte. Les changements d'image restent limités au choix d'une photo existante ; le cadrage détaillé et l'ajout de fichiers se font dans l'espace de gestion.
 
 **Sécurité** :
 - Chaque modification se fait en deux temps : l'outil renvoie d'abord un **aperçu** sans rien publier ; il ne publie qu'avec `confirmer: true`, que l'assistant n'envoie qu'après l'accord de Nelly (consigne donnée à l'assistant, et outils marqués « écriture » : Claude et Le Chat demandent en plus une approbation à l'écran).
-- Le contenu passe par les mêmes vérifications et la même publication que l'espace de gestion (`api/_lib/publication.mjs`) ; chaque publication est un commit « … (assistant IA) », annulable dans Historique.
-- Connexion OAuth 2.1 (`api/oauth.mjs`, `api/_lib/oauth.mjs`) : inscription automatique de l'assistant, autorisation par le mot de passe de l'espace de gestion (8 essais par quart d'heure), code à usage unique protégé par PKCE, jeton d'accès d'une heure, renouvellement 90 jours. Rien n'est stocké : jetons signés avec `ADMIN_SECRET`.
+- Le contenu passe par les mêmes vérifications et la même publication que l'espace de gestion (`site/api/_lib/publication.mjs`) ; chaque publication est un commit « … (assistant IA) », annulable dans Historique.
+- Connexion OAuth 2.1 (`site/api/oauth.mjs`, `site/api/_lib/oauth.mjs`) : inscription automatique de l'assistant, autorisation par le mot de passe de l'espace de gestion (8 essais par quart d'heure), code à usage unique protégé par PKCE, jeton d'accès d'une heure, renouvellement 90 jours. Rien n'est stocké : jetons signés avec `ADMIN_SECRET`.
 - **Retirer l'accès** : Mon compte → « Déconnecter tous les autres appareils » (révoque aussi les assistants), ou retirer le connecteur dans Claude / Le Chat. Changer `ADMIN_SECRET` révoque tout.
 
 **Adresses techniques** (réécritures de `vercel.json`) : `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/inscription`, `/oauth/autoriser`, `/oauth/jeton`.
