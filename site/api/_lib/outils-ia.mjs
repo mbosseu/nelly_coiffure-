@@ -7,8 +7,8 @@ import { direct, statsActives, tableauDeBord } from './stats.mjs';
 import { signerJeton } from './oauth.mjs';
 
 // Outils du connecteur IA (api/mcp.mjs) : la plupart des modifications de contenu de l'espace de gestion.
-// Une nouvelle photo passe par un lien d'envoi à usage unique (preparer_envoi_photo, api/envoi.mjs) ; le cadrage
-// précis des photos et les réglages du compte (mot de passe, déconnexions) restent dans l'app.
+// Une nouvelle photo passe par un lien d'envoi à usage unique (preparer_envoi_photo, api/envoi.mjs) et se cadre
+// par position et zoom (paramètre cadrage) ; le cadrage au doigt et les réglages du compte (mot de passe, déconnexions) restent dans l'app.
 // Chaque modification part du contenu en ligne, passe par verifierContenu() et la même publication que
 // l'espace de gestion. Sans « confirmer: true », l'outil renvoie seulement l'aperçu des changements.
 
@@ -55,6 +55,29 @@ function versLien(b, ancien = {}) {
   if (destination === 'page') valeur = lienPage(valeur);
   return { texte: b.texte !== undefined ? String(b.texte).trim() : ancien.texte || '', type: destination, valeur };
 }
+// Cadrage d'une photo dans son cadre : point gardé visible (x, y en %) et zoom, comme dans l'espace de gestion
+const POSITIONS = {
+  centre: [50, 50], haut: [50, 0], bas: [50, 100], gauche: [0, 50], droite: [100, 50],
+  'haut-gauche': [0, 0], 'haut-droite': [100, 0], 'bas-gauche': [0, 100], 'bas-droite': [100, 100],
+};
+function cadrer(image, cadrage) {
+  if (!cadrage) return image;
+  const [x, y] = POSITIONS[cadrage.position] || [image.x ?? 50, image.y ?? 50];
+  const borne = (v, min, max) => Math.min(max, Math.max(min, Number(v)));
+  return {
+    ...image,
+    x: cadrage.x !== undefined ? Math.round(borne(cadrage.x, 0, 100)) : x,
+    y: cadrage.y !== undefined ? Math.round(borne(cadrage.y, 0, 100)) : y,
+    zoom: cadrage.zoom !== undefined ? Math.round(borne(cadrage.zoom, 1, 2.5) * 100) / 100 : image.zoom ?? 1,
+  };
+}
+const decrireCadrage = (im) => {
+  if (!im) return '';
+  const x = im.x ?? 50; const y = im.y ?? 50; const z = im.zoom ?? 1;
+  if (x === 50 && y === 50 && z === 1) return 'cadrage centré';
+  const nom = Object.entries(POSITIONS).find(([, [a, b]]) => a === x && b === y)?.[0] || `point ${x} % / ${y} %`;
+  return `cadrage ${nom}${z !== 1 ? `, zoom ×${z}` : ''}`;
+};
 const decrireLien = (b) => (b?.type ? `${NOMS_DESTINATIONS[b.type]}${b.valeur ? ` (${b.type === 'page' ? nomPage(b.valeur) : b.valeur})` : ''}` : '');
 
 // --- Lecture du site -----------------------------------------------------------------------------
@@ -91,7 +114,7 @@ const dateFr = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR',
 const periodeAnnonce = (a) => (a.debut && a.fin ? `du ${dateFr(a.debut)} au ${dateFr(a.fin)}` : a.debut ? `à partir du ${dateFr(a.debut)}` : a.fin ? `jusqu’au ${dateFr(a.fin)}` : 'sans date de fin');
 const court = (t, n = 90) => { const s = String(t || '').replace(/\s+/g, ' ').trim(); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
 const decrireAnnonce = (a) => `[${a.id}] ${a.format}${a.active === false ? ' (en pause)' : ''} — ${court([a.etiquette, a.titre, a.texte].filter(Boolean).join(' · '), 120)}`
-  + `${a.cartes?.length ? ` — cartes : ${a.cartes.map((c) => c.titre).join(', ')}` : ''}${a.image?.src ? ` — photo ${a.image.src}` : ''}${a.bouton?.texte ? ` — bouton « ${a.bouton.texte} » → ${decrireLien(a.bouton)}` : ''}`
+  + `${a.cartes?.length ? ` — cartes : ${a.cartes.map((c) => c.titre).join(', ')}` : ''}${a.image?.src ? ` — photo ${a.image.src} (${decrireCadrage(a.image)})` : ''}${a.bouton?.texte ? ` — bouton « ${a.bouton.texte} » → ${decrireLien(a.bouton)}` : ''}`
   + ` — ${a.emplacement ? `section de la page ${nomPage(a.emplacement.page)} (après ${a.emplacement.apres})` : (a.pages || []).map(nomPage).join(', ')} — ${periodeAnnonce(a)}`;
 
 // Différences entre deux contenus, en phrases simples (aperçu avant publication et résumé après)
@@ -162,7 +185,7 @@ async function differences(a, b) {
     }
     for (const id of new Set([...Object.keys(pa.images || {}), ...Object.keys(pb.images || {})])) {
       if (JSON.stringify(pa.images?.[id]) === JSON.stringify(pb.images?.[id])) continue;
-      l.push(`${page} — image ${id} : ${pb.images?.[id]?.src || 'image d’origine rétablie'}`);
+      l.push(`${page} — image ${id} : ${pb.images?.[id]?.src ? `${pb.images[id].src} (${decrireCadrage(pb.images[id])})` : 'image d’origine rétablie'}`);
     }
     if (JSON.stringify(pa.ordre || []) !== JSON.stringify(pb.ordre || [])) l.push(`${page} — nouvel ordre des sections : ${(pb.ordre || []).map(nomSection).join(' → ') || 'ordre d’origine'}`);
     const masA = new Set(pa.masquees || []); const masB = new Set(pb.masquees || []);
@@ -233,8 +256,21 @@ const champsAnnonce = {
   disposition: { type: 'string', enum: ['gauche', 'droite', 'dessus'], description: 'Place de la photo (format section).' },
   photo: { type: 'string', description: 'Photo déjà en ligne (img/annonces/…, voir voir_photos), ou « aucune ».' },
   photo_description: { type: 'string', maxLength: 120, description: 'Description de la photo pour les malvoyants et Google.' },
+  cadrage: null, // défini plus bas (schéma partagé avec modifier_page)
   cartes: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'object', properties: { titre: { type: 'string', maxLength: 60 }, texte: { type: 'string', maxLength: 300 } }, required: ['titre'], additionalProperties: false }, description: 'Format cartes : 2 ou 3 cartes.' },
 };
+const schemaCadrage = {
+  type: 'object',
+  description: 'Cadrage de la photo dans son cadre (la photo n’est jamais déformée : ce qui dépasse est caché). Ex. « on ne voit pas sa tête » → position haut ; « plus près » → zoom 1.3.',
+  properties: {
+    position: { type: 'string', enum: Object.keys(POSITIONS), description: 'Partie de la photo à garder visible.' },
+    x: { type: 'integer', minimum: 0, maximum: 100, description: 'Réglage fin horizontal (0 = bord gauche, 100 = bord droit).' },
+    y: { type: 'integer', minimum: 0, maximum: 100, description: 'Réglage fin vertical (0 = haut, 100 = bas).' },
+    zoom: { type: 'number', minimum: 1, maximum: 2.5, description: '1 = photo entière dans le cadre ; jusqu’à 2,5 pour se rapprocher.' },
+  },
+  additionalProperties: false,
+};
+champsAnnonce.cadrage = schemaCadrage;
 const ecriture = (titre, destructif = false, idempotent = true) => ({ title: titre, readOnlyHint: false, destructiveHint: destructif, idempotentHint: idempotent, openWorldHint: false });
 const lecture = (titre) => ({ title: titre, readOnlyHint: true, openWorldHint: false });
 const objet = (properties, required = []) => ({ type: 'object', properties, ...(required.length ? { required } : {}), additionalProperties: false });
@@ -249,6 +285,10 @@ async function remplirAnnonce(a, args) {
   if (args.photo !== undefined) {
     a.image = args.photo === 'aucune' ? null : { src: await verifierPhoto('annonces', args.photo), x: 50, y: 50, zoom: 1, alt: args.photo_description ?? a.image?.alt ?? '', largeur: 1600, hauteur: 1200 };
   } else if (args.photo_description !== undefined && a.image) a.image.alt = args.photo_description;
+  if (args.cadrage !== undefined) {
+    if (!a.image?.src) throw new ErreurOutil('Cette annonce n’a pas de photo à cadrer.');
+    a.image = cadrer(a.image, args.cadrage);
+  }
   if (args.cartes !== undefined) a.cartes = args.cartes.map((c, i) => ({ ...(a.cartes?.[i] || {}), titre: String(c.titre).trim(), texte: String(c.texte || '').trim() }));
 }
 
@@ -550,7 +590,7 @@ export const OUTILS = [
   },
   {
     name: 'modifier_annonce', annotations: ecriture('Modifier une annonce ou une section'),
-    description: 'Change une annonce ou une section ajoutée (identifiant donné par voir_site) : textes, dates, pages, bouton, photo, fond, cartes, mise en pause (active: false) ou réactivation, ou déplacement dans sa page (section). Deux temps : aperçu, puis confirmer: true après accord.',
+    description: 'Change une annonce ou une section ajoutée (identifiant donné par voir_site) : textes, dates, pages, bouton, photo et son cadrage, fond, cartes, mise en pause (active: false) ou réactivation, ou déplacement dans sa page (section). Deux temps : aperçu, puis confirmer: true après accord.',
     inputSchema: objet({
       id: { type: 'string' },
       format: { type: 'string', enum: FORMATS_ANNONCE },
@@ -587,14 +627,14 @@ export const OUTILS = [
   },
   {
     name: 'modifier_page', annotations: ecriture('Modifier une page'),
-    description: 'Modifie une page du site avec les identifiants donnés par voir_page : textes (t…), boutons (b…), images (i…, avec une photo de page déjà en ligne), ordre des sections (s…), sections masquées ou réaffichées, image et texte inversés. Deux temps : aperçu, puis confirmer: true après accord.',
+    description: 'Modifie une page du site avec les identifiants donnés par voir_page : textes (t…), boutons (b…), images (i…, avec une photo de page déjà en ligne, et leur cadrage), ordre des sections (s…), sections masquées ou réaffichées, image et texte inversés. Deux temps : aperçu, puis confirmer: true après accord.',
     inputSchema: objet({
       page: { type: 'string' },
       textes: { type: 'object', additionalProperties: { type: 'string', maxLength: 2000 }, description: '{ "t12": "nouveau texte" } — *mot* pour mettre en valeur.' },
       remettre_textes: { type: 'array', items: { type: 'string' }, description: 'Textes à remettre comme à l’origine.' },
       boutons: { type: 'object', additionalProperties: lien('Bouton'), description: '{ "b3": { "texte": "…", "destination": "page", "valeur": "Contact" } }' },
       remettre_boutons: { type: 'array', items: { type: 'string' } },
-      images: { type: 'object', additionalProperties: objet({ photo: { type: 'string', description: 'img/pages/… (voir_photos), ou « origine ».' }, description: { type: 'string', maxLength: 120 } }), description: '{ "i4": { "photo": "img/pages/…", "description": "…" } }' },
+      images: { type: 'object', additionalProperties: objet({ photo: { type: 'string', description: 'img/pages/… (voir_photos), ou « origine ». Facultatif pour seulement recadrer une photo déjà remplacée.' }, description: { type: 'string', maxLength: 120 }, cadrage: schemaCadrage }), description: '{ "i4": { "photo": "img/pages/…", "cadrage": { "position": "haut" } } }' },
       ordre: { type: 'array', items: { type: 'string' }, description: 'Identifiants des sections dans le nouvel ordre (l’en-tête reste en premier).' },
       masquer: { type: 'array', items: { type: 'string' } },
       afficher: { type: 'array', items: { type: 'string' } },
@@ -623,7 +663,8 @@ export const OUTILS = [
           const actuelle = p.images?.[id];
           const src = im.photo ? await verifierPhoto('pages', im.photo) : actuelle?.src;
           if (!src) throw new ErreurOutil(`Indiquez la photo de l’image ${id}.`);
-          (p.images ||= {})[id] = { ...(actuelle || { x: 50, y: 50, zoom: 1 }), src, x: im.photo ? 50 : actuelle.x, y: im.photo ? 50 : actuelle.y, zoom: im.photo ? 1 : actuelle.zoom, alt: im.description ?? actuelle?.alt ?? images.find((x) => x.id === id).alt };
+          const base = im.photo ? { x: 50, y: 50, zoom: 1 } : { x: actuelle.x, y: actuelle.y, zoom: actuelle.zoom };
+          (p.images ||= {})[id] = cadrer({ ...(actuelle || {}), src, ...base, alt: im.description ?? actuelle?.alt ?? images.find((x) => x.id === id).alt }, im.cadrage);
         }
         const autres = st.filter((s) => !s.premiere).map((s) => s.id);
         if (args.ordre) {

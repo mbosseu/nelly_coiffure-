@@ -130,7 +130,7 @@ function pageAutorisation(req, res, p, message = '') {
       <li>lire tout le contenu du site et les statistiques de visite ;</li>
       <li>modifier les textes des pages, horaires, coiffures et tarifs, annonces, galerie, coordonnées, menu et couleurs — <b>toujours après votre accord</b>, et chaque publication reste annulable (Historique).</li>
     </ul>
-    <p class="note">Pour une nouvelle photo, il vous donne un lien d’envoi à usage unique ; le cadrage précis des photos reste dans l’espace de gestion. Le mot de passe et les réglages du compte restent dans l’espace de gestion. Retour vers : <b>${echapper(hote)}</b></p>
+    <p class="note">Pour une nouvelle photo, il vous donne un lien d’envoi à usage unique. Le mot de passe et les réglages du compte restent dans l’espace de gestion. Retour vers : <b>${echapper(hote)}</b></p>
     <form method="post" action="/oauth/autoriser">
       ${caches}
       <label for="mdp">Mot de passe de l’espace de gestion</label>
