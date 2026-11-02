@@ -1,14 +1,54 @@
 {
   "redirects": [
-    { "source": "/:path*", "has": [{ "type": "host", "value": "nelly-coiffure.vercel.app" }], "destination": "https://www.nellycoiffure.fr/:path*", "permanent": true },
+    { "source": "/:path*", "has": [ { "type": "host", "value": "nelly-coiffure.vercel.app" }
+      ],
+      "destination": "https://www.nellycoiffure.fr/:path*",
+      "permanent": true
+    },
     { "source": "/tarifs.html", "destination": "/coiffures.html#carte", "permanent": true },
     { "source": "/tarifs", "destination": "/coiffures.html#carte", "permanent": true }
   ],
+  "rewrites": [
+    { "source": "/.well-known/oauth-authorization-server", "destination": "/api/oauth?etape=serveur" },
+    { "source": "/.well-known/oauth-authorization-server/:chemin*", "destination": "/api/oauth?etape=serveur" },
+    { "source": "/.well-known/openid-configuration", "destination": "/api/oauth?etape=serveur" },
+    { "source": "/.well-known/oauth-protected-resource", "destination": "/api/oauth?etape=ressource" },
+    { "source": "/.well-known/oauth-protected-resource/:chemin*", "destination": "/api/oauth?etape=ressource" },
+    { "source": "/oauth/inscription", "destination": "/api/oauth?etape=inscription" },
+    { "source": "/oauth/autoriser", "destination": "/api/oauth?etape=autoriser" },
+    { "source": "/oauth/jeton", "destination": "/api/oauth?etape=jeton" }
+  ],
   "headers": [
-    { "source": "/admin/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }, { "key": "Cache-Control", "value": "no-cache" }, { "key": "X-Frame-Options", "value": "DENY" }, { "key": "Referrer-Policy", "value": "same-origin" }] },
-    { "source": "/admin", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }, { "key": "X-Frame-Options", "value": "DENY" }] },
-    { "source": "/api/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }] },
-    { "source": "/img/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate=86400" }] },
-    { "source": "/(css|js)/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }] }
+    { "source": "/admin/(.*)", "headers": [ { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "same-origin"
+        }
+      ]
+    },
+    { "source": "/admin", "headers": [ { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        }
+      ]
+    },
+    { "source": "/api/(.*)", "headers": [ { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    { "source": "/img/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=2592000, stale-while-revalidate=86400" }
+      ]
+    },
+    { "source": "/(css|js)/(.*)", "headers": [ { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+      ]
+    }
   ]
 }

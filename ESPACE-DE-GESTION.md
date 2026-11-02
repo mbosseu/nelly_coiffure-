@@ -150,6 +150,29 @@ Toutes les minutes, et dès qu'on revient sur l'application (téléphone déverr
 
 Sécurités : rien n'est rechargé tant qu'une modification n'est pas publiée (un message prévient que la nouvelle version s'installera après publication), qu'une fenêtre est ouverte ou qu'un texte est en cours de saisie. En dehors d'un retour sur l'application, il faut aussi 20 secondes sans toucher l'écran, et jamais pendant l'édition dans « Mes pages ».
 
+## Connecteur IA (Claude, Le Chat) — protocole MCP
+
+Nelly peut gérer le site en parlant à un assistant IA : « je suis en congé du 20 au 27 décembre, mets une annonce », « passe les knotless à 65 € », « combien de visites cette semaine ? ». Gratuit avec **Claude** (offre gratuite : 1 connecteur personnalisé) et **Le Chat** de Mistral (offre gratuite). ChatGPT réserve les connecteurs personnalisés à ses offres Business/Enterprise.
+
+**Adresse du connecteur** : `https://www.nellycoiffure.fr/api/mcp`
+
+**Brancher l'assistant (une seule fois, sur ordinateur de préférence)** :
+- Claude (claude.ai) : Paramètres → Connecteurs → « Ajouter un connecteur personnalisé » → nom « Nelly Coiffure », adresse ci-dessus → Ajouter, puis « Se connecter ».
+- Le Chat (chat.mistral.ai) : menu Connecteurs → « + Ajouter un connecteur » → onglet « Connecteur MCP personnalisé » → adresse ci-dessus (authentification détectée : OAuth) → Connecter.
+- Une page aux couleurs du site s'ouvre : « Claude demande à gérer votre site ». Mot de passe de l'espace de gestion → **Autoriser**. Le connecteur fonctionne ensuite aussi dans l'application mobile de l'assistant.
+
+**Outils proposés à l'assistant** (`api/mcp.mjs`) : `voir_site`, `statistiques`, `historique` (lecture) ; `modifier_horaires`, `modifier_coiffure` (prix, nom, description, masquer), `ajouter_annonce` (bandeau, encadré, carte), `modifier_annonce` (texte, dates, pages, pause), `supprimer_annonce`. Pas de photos, de mise en page, de téléphones ni de réseaux : cela reste dans l'espace de gestion.
+
+**Sécurité** :
+- Chaque modification se fait en deux temps : l'outil renvoie d'abord un **aperçu** sans rien publier ; il ne publie qu'avec `confirmer: true`, que l'assistant n'envoie qu'après l'accord de Nelly (consigne donnée à l'assistant, et outils marqués « écriture » : Claude et Le Chat demandent en plus une approbation à l'écran).
+- Le contenu passe par les mêmes vérifications et la même publication que l'espace de gestion (`api/_lib/publication.mjs`) ; chaque publication est un commit « … (assistant IA) », annulable dans Historique.
+- Connexion OAuth 2.1 (`api/oauth.mjs`, `api/_lib/oauth.mjs`) : inscription automatique de l'assistant, autorisation par le mot de passe de l'espace de gestion (8 essais par quart d'heure), code à usage unique protégé par PKCE, jeton d'accès d'une heure, renouvellement 90 jours. Rien n'est stocké : jetons signés avec `ADMIN_SECRET`.
+- **Retirer l'accès** : Mon compte → « Déconnecter tous les autres appareils » (révoque aussi les assistants), ou retirer le connecteur dans Claude / Le Chat. Changer `ADMIN_SECRET` révoque tout.
+
+**Adresses techniques** (réécritures de `vercel.json`) : `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/inscription`, `/oauth/autoriser`, `/oauth/jeton`.
+
+**Essai local** : `outils/essai-gestion.mjs` sert aussi `/api/mcp` et les adresses OAuth (mot de passe d'essai : essai).
+
 ## Déconnecter tous les appareils
 
 Mon compte → « Déconnecter tous les autres appareils ». Le jeton de connexion porte sa date de création ; l'action enregistre la date du moment dans `contenu/sessions.json` (hors du site public, un commit « Espace Nelly : déconnexion de tous les appareils ») et tout jeton plus ancien est refusé. L'appareil qui fait la demande reçoit un nouveau jeton et reste connecté. La date est relue au plus une fois par minute par l'API. Changer `ADMIN_SECRET` dans Vercel déconnecte aussi tout le monde.

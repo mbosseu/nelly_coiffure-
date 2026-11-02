@@ -39,6 +39,7 @@ const redisCommande = ([nom, cle, ...a]) => {
     case 'ZADD': { const z = v || new Map(); z.set(a[1], Number(a[0])); base.set(cle, z); return 1; }
     case 'ZREMRANGEBYSCORE': { if (v) for (const [m, s] of v) if (s >= Number(a[0]) && s <= Number(a[1])) v.delete(m); return 1; }
     case 'ZCOUNT': { const max = a[1] === '+inf' ? Infinity : Number(a[1]); return v ? [...v.values()].filter((s) => s >= Number(a[0]) && s <= max).length : 0; }
+    case 'INCR': { const n = (Number(v) || 0) + 1; base.set(cle, String(n)); return n; }
     case 'ZRANGEBYSCORE': { const max = a[1] === '+inf' ? Infinity : Number(a[1]); return v ? [...v.entries()].filter(([, s]) => s >= Number(a[0]) && s <= max).sort((x, y) => x[1] - y[1]).map(([m]) => m) : []; }
     case 'HSET': { const h = v || new Map(); h.set(a[0], a[1]); base.set(cle, h); return 1; }
     case 'HMGET': return a.map((c) => (v && v.has(c) ? String(v.get(c)) : null));
@@ -102,8 +103,27 @@ const { default: handler } = await import('../site/api/admin.mjs');
 const { default: handlerStats } = await import('../site/api/stats.mjs');
 const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.xml': 'application/xml', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
 
+const { default: handlerMcp } = await import('../site/api/mcp.mjs');
+const { default: handlerOAuth } = await import('../site/api/oauth.mjs');
+// Réécritures de vercel.json (connexion des assistants IA)
+const REECRITURES = JSON.parse(await readFile(path.join(RACINE, 'site/vercel.json'), 'utf8')).rewrites || [];
+
 http.createServer(async (req, res) => {
   const url = new URL(req.url, 'http://x');
+  const reecriture = REECRITURES.find((r) => new RegExp(`^${r.source.replace(/\./g, '\\.').replace(/\/:chemin\*$/, '(/.*)?')}$`).test(url.pathname));
+  if (reecriture) {
+    const d = new URL(reecriture.destination, 'http://x');
+    url.pathname = d.pathname;
+    for (const [k, v] of d.searchParams) url.searchParams.set(k, v);
+  }
+  if (url.pathname === '/api/mcp' || url.pathname === '/api/oauth') {
+    let corps = '';
+    for await (const morceau of req) corps += morceau;
+    req.query = Object.fromEntries(url.searchParams);
+    req.body = corps;
+    res.status = (s) => { res.statusCode = s; return res; };
+    return url.pathname === '/api/mcp' ? handlerMcp(req, res) : handlerOAuth(req, res);
+  }
   if (url.pathname === '/api/admin' || url.pathname === '/api/stats') {
     let corps = '';
     for await (const morceau of req) corps += morceau;

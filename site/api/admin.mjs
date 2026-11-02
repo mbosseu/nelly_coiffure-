@@ -1,9 +1,9 @@
-import { regenerer, verifierContenu, FICHIERS, PAGES, DOMAINE } from './_lib/regenerer.mjs';
+import { regenerer, verifierContenu, PAGES } from './_lib/regenerer.mjs';
 import { structurePage } from './_lib/pages.mjs';
 import { NAVIGATION_DEFAUT } from './_lib/navigation.mjs';
 import { direct, statsActives, tableauDeBord } from './_lib/stats.mjs';
-import { createHash } from 'node:crypto';
 import { lireTexte, listerDossier, publier, historique, ErreurGithub } from './_lib/github.mjs';
+import { CONTENU, SESSIONS, revoqueesAvant, noterRevocation, lireFichiersSite, publierContenuVerifie } from './_lib/publication.mjs';
 import { motDePasseValide, ouvrirSession, fermerSession, sessionEmise } from './_lib/session.mjs';
 
 // API de l'espace de gestion de Nelly (/admin). Une seule fonction, l'action est passée dans ?action=
@@ -11,10 +11,8 @@ import { motDePasseValide, ouvrirSession, fermerSession, sessionEmise } from './
 // Une publication régénère les pages à partir du contenu (même générateur que outils/seo.mjs)
 // et envoie le tout en un seul commit sur GitHub ; Vercel remet ensuite le site en ligne (environ une minute).
 
-const CONTENU = 'contenu/site.json';
 const PHOTO = /^img\/(realisations\/catalogue|annonces|pages)\/[a-z0-9-]+(-sm)?\.jpg$|^img\/marque\/logo-[0-9]+(-clair)?\.png$/;
 const MAX_PHOTO = 900 * 1024;
-const INDEXNOW_CLE = '9854d7068bfd3aafaa6ed978dd241645';
 
 // Limite les essais de mot de passe (par instance, au mieux)
 const essais = new Map();
@@ -60,7 +58,7 @@ export default async function handler(req, res) {
     if (action === 'deconnecter-partout' && req.method === 'POST') {
       const maintenant = Math.floor(Date.now() / 1000);
       await publier([{ chemin: SESSIONS, texte: `${JSON.stringify({ revoqueesAvant: maintenant })}\n` }], 'Espace Nelly : déconnexion de tous les appareils');
-      revocation = { quand: Date.now(), avant: maintenant };
+      noterRevocation(maintenant);
       ouvrirSession(res, maintenant);
       return json(res, 200, { ok: true });
     }
@@ -95,32 +93,6 @@ export default async function handler(req, res) {
     const message = e instanceof ErreurGithub ? 'Le site n’a pas pu être mis à jour (GitHub). Réessayez dans un instant.' : 'Erreur inattendue. Réessayez dans un instant.';
     return json(res, 500, { erreur: message });
   }
-}
-
-// Date avant laquelle les connexions sont refusées (contenu/sessions.json, hors du site public).
-// Relue au plus une fois par minute : un appareil déconnecté l'est partout en une minute au plus.
-const SESSIONS = 'contenu/sessions.json';
-let revocation = { quand: 0, avant: 0 };
-async function revoqueesAvant() {
-  if (Date.now() - revocation.quand < 60 * 1000) return revocation.avant;
-  let avant = 0;
-  try { avant = Number(JSON.parse((await lireTexte(SESSIONS)).texte).revoqueesAvant) || 0; }
-  catch (e) { if (e.statut !== 404) throw e; }
-  revocation = { quand: Date.now(), avant };
-  return avant;
-}
-
-// Pages actuelles du site (dernière version sur GitHub), gardées une minute pour enchaîner les aperçus rapidement
-let memoire = { quand: 0, fichiers: null };
-async function lireFichiersSite({ frais = true } = {}) {
-  if (!frais && memoire.fichiers && Date.now() - memoire.quand < 60 * 1000) return memoire.fichiers;
-  const fichiers = {};
-  await Promise.all(FICHIERS.map(async (f) => {
-    try { fichiers[f] = (await lireTexte(`site/${f}`)).texte; }
-    catch (e) { if (e.statut !== 404) throw e; }
-  }));
-  memoire = { quand: Date.now(), fichiers };
-  return fichiers;
 }
 
 // Aperçu fidèle : la page est générée exactement comme à la publication, sans rien publier
@@ -213,32 +185,6 @@ async function publierContenu(req, res) {
     return json(res, 400, { erreur: 'L’image de fond est introuvable. Ajoutez-la de nouveau.' });
   }
 
-  // Régénération des pages à partir de la dernière version en ligne
-  const fichiers = await lireFichiersSite();
-  const modifies = regenerer(fichiers, contenu, { ancien });
-
-  // Les photos retirées disparaissent du site mais leurs fichiers restent dans le dépôt :
-  // l'historique peut ainsi toujours revenir à une version qui les affichait
-  const texteContenu = `${JSON.stringify(contenu, null, 2)}\n`;
-  const aPublier = [
-    { chemin: CONTENU, texte: texteContenu },
-    ...Object.entries(modifies).map(([f, texte]) => ({ chemin: `site/${f}`, texte })),
-    ...photos.map((p) => ({ chemin: `site/${p.chemin}`, base64: p.base64 })),
-  ];
-  const message = `Espace Nelly : ${String(resume || 'mise à jour du contenu').replace(/\s+/g, ' ').slice(0, 120)}`;
-  const commit = await publier(aPublier, message);
-
-  // Prévient Bing (IndexNow) que les pages ont changé ; sans effet sur le reste si cela échoue
-  const pages = Object.keys(modifies).filter((f) => PAGES[f] && !PAGES[f].robots).map((f) => `${DOMAINE}${PAGES[f].chemin}`);
-  if (pages.length) {
-    await fetch('https://api.indexnow.org/indexnow', {
-      method: 'POST', headers: { 'Content-Type': 'application/json; charset=utf-8' }, signal: AbortSignal.timeout(3000),
-      body: JSON.stringify({ host: new URL(DOMAINE).host, key: INDEXNOW_CLE, keyLocation: `${DOMAINE}/${INDEXNOW_CLE}.txt`, urlList: pages }),
-    }).catch(() => {});
-  }
-
-  // Nouvelle version du contenu (empreinte Git du fichier) : permet d'enchaîner une autre publication
-  const octets = Buffer.from(texteContenu, 'utf8');
-  const nouvelleVersion = createHash('sha1').update(`blob ${octets.length}\0`).update(octets).digest('hex');
+  const { commit, version: nouvelleVersion } = await publierContenuVerifie(contenu, ancien, { photos, resume });
   return json(res, 200, { ok: true, commit, version: nouvelleVersion, contenu, renommees: Object.fromEntries(renommer) });
 }
