@@ -137,6 +137,17 @@ Onglet « Statistiques » de l'espace de gestion (et tuile « Statistiques de vi
 
 **Essai local** : `outils/essai-gestion.mjs` simule la base Redis en mémoire ; sur `localhost`, la mesure ne s'active que si `localStorage.nc_stats_essai = '1'`.
 
+**En service depuis le 2 novembre 2026** : base `upstash-kv-camel-curtain` (offre gratuite, région Francfort), reliée au projet `nelly-coiffure`.
+
+## Actualisation automatique de l'application
+
+Toutes les minutes, et dès qu'on revient sur l'application (téléphone déverrouillé, onglet rouvert, retour du réseau) :
+- **Nouvelle version de l'application** (empreintes `ETag` de `/admin/`, `admin.js`, `admin.css`) : la page se recharge seule et revient sur le même onglet (« Application mise à jour. »).
+- **Contenu publié depuis un autre appareil** (version de `contenu/site.json`, contrôlée au plus toutes les 2 minutes) : le contenu affiché est remplacé (« Contenu actualisé… »).
+- **Statistiques** : les chiffres se mettent à jour pendant que l'onglet est ouvert.
+
+Sécurités : rien n'est rechargé tant qu'une modification n'est pas publiée (un message prévient que la nouvelle version s'installera après publication), qu'une fenêtre est ouverte ou qu'un texte est en cours de saisie. En dehors d'un retour sur l'application, il faut aussi 20 secondes sans toucher l'écran, et jamais pendant l'édition dans « Mes pages ».
+
 ## Déconnecter tous les appareils
 
 Mon compte → « Déconnecter tous les autres appareils ». Le jeton de connexion porte sa date de création ; l'action enregistre la date du moment dans `contenu/sessions.json` (hors du site public, un commit « Espace Nelly : déconnexion de tous les appareils ») et tout jeton plus ancien est refusé. L'appareil qui fait la demande reçoit un nouveau jeton et reste connecté. La date est relue au plus une fois par minute par l'API. Changer `ADMIN_SECRET` dans Vercel déconnecte aussi tout le monde.

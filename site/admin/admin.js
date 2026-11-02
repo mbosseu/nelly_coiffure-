@@ -2711,10 +2711,87 @@ function afficherStats(d) {
     <p class="aide aide--petite stats__note">Mesure anonyme, sans cookie : une personne qui revient un autre jour compte à nouveau comme visiteur. Vos propres visites depuis cet appareil ne sont pas comptées.</p>`;
 }
 
+// --- Actualisation automatique ---------------------------------------------------------
+// Toutes les minutes (et dès qu'on revient sur l'application) : nouvelle version de l'application,
+// contenu publié depuis un autre appareil, chiffres des statistiques. Rien n'est actualisé
+// tant qu'une modification n'est pas publiée ou qu'une fenêtre est ouverte.
+const CLE_RETOUR = 'nc_retour_maj';
+const FICHIERS_APPLI = ['/admin/', '/admin/admin.js', '/admin/admin.css'];
+let empreinteAppli = null;
+let derniereAction = Date.now();
+let majSignalee = false;
+let dernierControleContenu = 0;
+['pointerdown', 'keydown', 'input', 'scroll'].forEach((t) => document.addEventListener(t, () => { derniereAction = Date.now(); }, { capture: true, passive: true }));
+
+const connecte = () => !$('#appli').hidden && etat.contenu;
+const auCalme = (retour) => connecte() && !modifie() && !$$('dialog[open]').length && !document.querySelector('[contenteditable="true"]')
+  && (retour || (Date.now() - derniereAction > 20000 && etat.onglet !== 'pages'));
+
+async function lireEmpreinteAppli() {
+  try {
+    const r = await Promise.all(FICHIERS_APPLI.map((f) => fetch(f, { method: 'HEAD', cache: 'no-store' })));
+    const e = r.map((x) => x.headers.get('etag') || x.headers.get('last-modified') || '').join('|');
+    return e.replace(/\|/g, '') ? e : null;
+  } catch { return null; }
+}
+
+async function controlerAppli(retour) {
+  const e = await lireEmpreinteAppli();
+  if (!e) return;
+  if (!empreinteAppli) { empreinteAppli = e; return; }
+  if (e === empreinteAppli) return;
+  if (auCalme(retour)) {
+    try { sessionStorage.setItem(CLE_RETOUR, etat.onglet); } catch { /* sans effet */ }
+    navigator.serviceWorker?.getRegistration('/admin/').then((r) => r?.update()).catch(() => {});
+    location.reload();
+  } else if (!majSignalee && connecte()) {
+    majSignalee = true;
+    if (modifie()) notifier('Une nouvelle version de l’application est prête : elle s’installera après votre publication.');
+    else notifier('Une nouvelle version de l’application est prête.', { libelle: 'Actualiser', action: () => controlerAppli(true) });
+  }
+}
+
+async function controlerContenu(retour) {
+  if (!connecte() || Date.now() - dernierControleContenu < (retour ? 15000 : 110000)) return;
+  dernierControleContenu = Date.now();
+  let r;
+  try { r = await api('contenu'); } catch { return; }
+  if (!r.version || r.version === etat.version || !auCalme(retour)) return;
+  normaliser(r.contenu);
+  etat.base = r.contenu;
+  etat.version = r.version;
+  etat.contenu = structuredClone(r.contenu);
+  etat.defaire = [];
+  etat.refaire = [];
+  toutAfficher();
+  notifier('Contenu actualisé : les dernières modifications publiées sont affichées.');
+}
+
+function actualiser(retour = false) {
+  if (document.visibilityState !== 'visible') return;
+  controlerAppli(retour);
+  controlerContenu(retour);
+  if (connecte() && etat.onglet === 'stats' && !$$('dialog[open]').length) chargerStats();
+}
+setInterval(() => actualiser(false), 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') actualiser(true); });
+window.addEventListener('online', () => actualiser(true));
+
+// Après une mise à jour automatique : on revient là où on était
+function reprendreApresMaj() {
+  let onglet = null;
+  try { onglet = sessionStorage.getItem(CLE_RETOUR); sessionStorage.removeItem(CLE_RETOUR); } catch { /* sans effet */ }
+  if (!onglet || !TITRES[onglet] || !connecte()) return;
+  $$('dialog[open]').forEach((d) => d.close());
+  ouvrirOnglet(onglet);
+  notifier('Application mise à jour.');
+}
+
 // Prévenir avant de quitter avec des images non publiées (elles ne sont pas gardées sur l'appareil)
 window.addEventListener('beforeunload', (e) => { if (modifie() && [...etat.nouvelles.values()].some((p) => p.grand)) { e.preventDefault(); e.returnValue = ''; } });
 
 // Application installable (Android) et ouverture sans réseau de l'écran de démarrage
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' }).catch(() => {});
 
-demarrer().catch(() => afficherConnexion());
+demarrer().then(reprendreApresMaj).catch(() => afficherConnexion());
+lireEmpreinteAppli().then((e) => { empreinteAppli = empreinteAppli || e; });

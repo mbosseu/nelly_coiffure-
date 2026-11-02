@@ -117,7 +117,9 @@ http.createServer(async (req, res) => {
   const f = path.join(base, chemin.endsWith('/') ? `${chemin}index.html` : chemin);
   try {
     const b = await readFile(f);
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store' }).end(b);
+    // Date de modification : permet de tester l'actualisation automatique de l'application
+    const modif = (await stat(f)).mtime.toUTCString();
+    res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store', 'Last-Modified': modif }).end(req.method === 'HEAD' ? undefined : b);
   } catch {
     res.writeHead(404, { 'Content-Type': TYPES['.html'] }).end(await readFile(path.join(racine, '404.html')).catch(() => 'Introuvable'));
   }
