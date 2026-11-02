@@ -164,7 +164,9 @@ Nelly peut gérer le site en parlant à un assistant IA : « je suis en congé d
 **Outils proposés à l'assistant** (`site/api/mcp.mjs`, logique dans `site/api/_lib/outils-ia.mjs`) :
 - Lecture : `voir_site`, `voir_page`, `voir_photos`, `statistiques`, `historique`.
 - Contenu : `modifier_horaires`, `modifier_coordonnees`, `modifier_coiffure`, `ajouter_coiffure`, `supprimer_coiffure`, `modifier_galerie`, `ajouter_annonce`, `modifier_annonce`, `supprimer_annonce`, `modifier_page`, `modifier_menu`, `modifier_style`, `revenir_version`.
-- L'assistant peut réutiliser les photos déjà en ligne, mais ne peut pas en téléverser de nouvelles ni modifier le mot de passe ou les réglages du compte. Les changements d'image restent limités au choix d'une photo existante ; le cadrage détaillé et l'ajout de fichiers se font dans l'espace de gestion.
+- Photos : `preparer_envoi_photo` (voir ci-dessous) pour une nouvelle photo ; l'assistant réutilise aussi les photos déjà en ligne. Le cadrage détaillé, le mot de passe et les réglages du compte restent dans l'espace de gestion.
+
+**Nouvelle photo via l'assistant** (`site/api/envoi.mjs`) : un assistant ne peut pas transmettre de fichier. `preparer_envoi_photo` (usage : réalisation, annonce ou page) donne donc un lien `/envoi?j=…` à usage unique, valable 20 minutes, et l'emplacement prévu de la photo. Nelly ouvre le lien sur son téléphone et choisit la photo : elle est redimensionnée dans le navigateur comme dans l'espace de gestion (réalisation recadrée en portrait 1000×1250 et 500×625 ; annonce ou page entière, 1600 et 800 px au plus), puis enregistrée dans le dépôt (commit « photo envoyée pour l'assistant IA ») sans être affichée. L'assistant l'utilise ensuite avec l'outil voulu, après aperçu et accord. Jeton signé avec `ADMIN_SECRET`, usage unique vérifié dans la base Redis, JPEG de 900 Ko au plus.
 
 **Sécurité** :
 - Chaque modification se fait en deux temps : l'outil renvoie d'abord un **aperçu** sans rien publier ; il ne publie qu'avec `confirmer: true`, que l'assistant n'envoie qu'après l'accord de Nelly (consigne donnée à l'assistant, et outils marqués « écriture » : Claude et Le Chat demandent en plus une approbation à l'écran).
@@ -172,7 +174,7 @@ Nelly peut gérer le site en parlant à un assistant IA : « je suis en congé d
 - Connexion OAuth 2.1 (`site/api/oauth.mjs`, `site/api/_lib/oauth.mjs`) : inscription automatique de l'assistant, autorisation par le mot de passe de l'espace de gestion (8 essais par quart d'heure), code à usage unique protégé par PKCE, jeton d'accès d'une heure, renouvellement 90 jours. Rien n'est stocké : jetons signés avec `ADMIN_SECRET`.
 - **Retirer l'accès** : Mon compte → « Déconnecter tous les autres appareils » (révoque aussi les assistants), ou retirer le connecteur dans Claude / Le Chat. Changer `ADMIN_SECRET` révoque tout.
 
-**Adresses techniques** (réécritures de `vercel.json`) : `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/inscription`, `/oauth/autoriser`, `/oauth/jeton`.
+**Adresses techniques** (réécritures de `vercel.json`) : `/.well-known/oauth-protected-resource`, `/.well-known/oauth-authorization-server`, `/oauth/inscription`, `/oauth/autoriser`, `/oauth/jeton`, `/envoi`.
 
 **Essai local** : `outils/essai-gestion.mjs` sert aussi `/api/mcp` et les adresses OAuth (mot de passe d'essai : essai).
 

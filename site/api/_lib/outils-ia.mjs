@@ -4,9 +4,11 @@ import { navigationDe, RESEAUX_LISTE } from './navigation.mjs';
 import { lireTexte, listerDossier, historique } from './github.mjs';
 import { CONTENU, publierContenuVerifie } from './publication.mjs';
 import { direct, statsActives, tableauDeBord } from './stats.mjs';
+import { signerJeton } from './oauth.mjs';
 
 // Outils du connecteur IA (api/mcp.mjs) : la plupart des modifications de contenu de l'espace de gestion.
-// L'ajout et le cadrage des photos, ainsi que les réglages du compte (mot de passe, déconnexions), restent dans l'app.
+// Une nouvelle photo passe par un lien d'envoi à usage unique (preparer_envoi_photo, api/envoi.mjs) ; le cadrage
+// précis des photos et les réglages du compte (mot de passe, déconnexions) restent dans l'app.
 // Chaque modification part du contenu en ligne, passe par verifierContenu() et la même publication que
 // l'espace de gestion. Sans « confirmer: true », l'outil renvoie seulement l'aperçu des changements.
 
@@ -79,7 +81,7 @@ async function verifierPhoto(dossier, src) {
   const liste = await photosDisponibles(dossier);
   const nom = String(src || '').replace(/\.jpg$/, '').split('/').pop();
   const trouvee = liste.find((p) => p.endsWith(`/${nom}`));
-  if (!trouvee) throw new ErreurOutil(`Photo introuvable : « ${src} ». Utilisez voir_photos pour la liste des photos disponibles (les nouvelles photos s’ajoutent depuis l’espace de gestion).`);
+  if (!trouvee) throw new ErreurOutil(`Photo introuvable : « ${src} ». Utilisez voir_photos pour la liste des photos disponibles (pour une nouvelle photo : preparer_envoi_photo, puis attendre que l’utilisatrice l’ait envoyée).`);
   return trouvee;
 }
 
@@ -298,7 +300,7 @@ export const OUTILS = [
   },
   {
     name: 'voir_photos', annotations: lecture('Photos disponibles'),
-    description: 'Photos déjà en ligne utilisables : galerie des réalisations (dans l’ordre, avec leur coiffure), photos du catalogue (coiffures et galerie), photos d’annonces et photos de pages. Envoyer une nouvelle photo se fait depuis l’espace de gestion.',
+    description: 'Photos déjà en ligne utilisables : galerie des réalisations (dans l’ordre, avec leur coiffure), photos du catalogue (coiffures et galerie), photos d’annonces et photos de pages. Pour une nouvelle photo : preparer_envoi_photo.',
     inputSchema: objet({}),
     async executer() {
       const c = await lireContenu();
@@ -311,6 +313,27 @@ export const OUTILS = [
         `\nPhotos d’annonces (img/annonces) :\n${annonces.join('\n') || '(aucune)'}`,
         `\nPhotos de pages (img/pages, pour modifier_page et l’image de fin de page) :\n${pages.join('\n') || '(aucune)'}`,
       ].join('\n');
+    },
+  },
+  {
+    name: 'preparer_envoi_photo', annotations: ecriture('Préparer l’envoi d’une nouvelle photo', false, false),
+    description: 'Pour ajouter une NOUVELLE photo (l’assistant ne peut pas transmettre de fichier) : crée un lien d’envoi à usage unique, valable 20 minutes, que l’utilisatrice ouvre sur son téléphone pour choisir la photo. Renvoie l’emplacement prévu de la photo. Quand elle dit l’avoir envoyée, utilisez cet emplacement avec modifier_galerie, ajouter_coiffure, modifier_coiffure, ajouter_annonce, modifier_annonce, modifier_page ou modifier_style (aperçu puis confirmation, comme toujours). Ne publie rien sur le site.',
+    inputSchema: objet({
+      usage: { type: 'string', enum: ['realisation', 'annonce', 'page'], description: 'realisation : galerie ou photo d’une coiffure (recadrée en portrait) ; annonce : photo d’annonce ou de section ; page : image d’une page ou de la bande de fin de page.' },
+      coiffure: { type: 'string', description: 'Pour une réalisation : la coiffure représentée (nom ou identifiant), qui sert à nommer la photo.' },
+    }, ['usage']),
+    async executer(args, contexte = {}) {
+      const suffixe = Date.now().toString(36);
+      let chemin; let u;
+      if (args.usage === 'realisation') {
+        const c = await lireContenu();
+        const s = args.coiffure ? trouverCoiffure(c, args.coiffure) : null;
+        chemin = `img/realisations/catalogue/${s ? s.cle : 'realisation'}-${suffixe}`;
+        u = s ? `Photo de réalisation : ${s.nom}` : 'Photo de réalisation';
+      } else if (args.usage === 'annonce') { chemin = `img/annonces/annonce-${suffixe}`; u = 'Photo pour une annonce'; } else { chemin = `img/pages/page-${suffixe}`; u = 'Photo pour une page du site'; }
+      const jeton = signerJeton('envoi', { c: chemin, f: args.usage === 'realisation' ? 'portrait' : 'libre', u, k: suffixe }, 20 * 60);
+      const lienEnvoi = `${contexte.base || DOMAINE}/envoi?j=${jeton}`;
+      return `Lien d’envoi (à usage unique, valable 20 minutes) — donnez-le tel quel à l’utilisatrice :\n${lienEnvoi}\n\nEmplacement prévu de la photo : ${chemin}\nQuand elle confirme l’envoi, utilisez cet emplacement dans l’outil voulu (aperçu puis confirmation). Si l’outil répond « Photo introuvable », l’envoi n’est pas terminé : demandez-lui de vérifier.`;
     },
   },
   {
@@ -440,7 +463,7 @@ export const OUTILS = [
   },
   {
     name: 'ajouter_coiffure', annotations: ecriture('Ajouter une coiffure', false, false),
-    description: 'Ajoute une coiffure à la carte des tarifs, avec une photo déjà en ligne (voir_photos ; pour une nouvelle photo, l’envoyer d’abord depuis l’espace de gestion). Deux temps : aperçu, puis confirmer: true après accord.',
+    description: 'Ajoute une coiffure à la carte des tarifs, avec une photo déjà en ligne (voir_photos ; pour une nouvelle photo : preparer_envoi_photo d’abord). Deux temps : aperçu, puis confirmer: true après accord.',
     inputSchema: objet({
       nom: { type: 'string', maxLength: 60 }, categorie: { type: 'string', maxLength: 40 }, prix: { type: 'integer', minimum: 1, maximum: 2000 },
       description: { type: 'string', maxLength: 160 }, photo: { type: 'string', description: 'Photo du catalogue (img/realisations/catalogue/…).' },

@@ -16,7 +16,8 @@
     { "source": "/.well-known/oauth-protected-resource/:chemin*", "destination": "/api/oauth?etape=ressource" },
     { "source": "/oauth/inscription", "destination": "/api/oauth?etape=inscription" },
     { "source": "/oauth/autoriser", "destination": "/api/oauth?etape=autoriser" },
-    { "source": "/oauth/jeton", "destination": "/api/oauth?etape=jeton" }
+    { "source": "/oauth/jeton", "destination": "/api/oauth?etape=jeton" },
+    { "source": "/envoi", "destination": "/api/envoi" }
   ],
   "headers": [
     { "source": "/admin/(.*)", "headers": [ { "key": "X-Robots-Tag", "value": "noindex, nofollow" },

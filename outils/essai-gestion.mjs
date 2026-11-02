@@ -39,6 +39,7 @@ const redisCommande = ([nom, cle, ...a]) => {
     case 'ZADD': { const z = v || new Map(); z.set(a[1], Number(a[0])); base.set(cle, z); return 1; }
     case 'ZREMRANGEBYSCORE': { if (v) for (const [m, s] of v) if (s >= Number(a[0]) && s <= Number(a[1])) v.delete(m); return 1; }
     case 'ZCOUNT': { const max = a[1] === '+inf' ? Infinity : Number(a[1]); return v ? [...v.values()].filter((s) => s >= Number(a[0]) && s <= max).length : 0; }
+    case 'DEL': return base.delete(cle) ? 1 : 0;
     case 'INCR': { const n = (Number(v) || 0) + 1; base.set(cle, String(n)); return n; }
     case 'ZRANGEBYSCORE': { const max = a[1] === '+inf' ? Infinity : Number(a[1]); return v ? [...v.entries()].filter(([, s]) => s >= Number(a[0]) && s <= max).sort((x, y) => x[1] - y[1]).map(([m]) => m) : []; }
     case 'HSET': { const h = v || new Map(); h.set(a[0], a[1]); base.set(cle, h); return 1; }
@@ -105,6 +106,7 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 
 
 const { default: handlerMcp } = await import('../site/api/mcp.mjs');
 const { default: handlerOAuth } = await import('../site/api/oauth.mjs');
+const { default: handlerEnvoi } = await import('../site/api/envoi.mjs');
 // Réécritures de vercel.json (connexion des assistants IA)
 const REECRITURES = JSON.parse(await readFile(path.join(RACINE, 'site/vercel.json'), 'utf8')).rewrites || [];
 
@@ -116,13 +118,13 @@ http.createServer(async (req, res) => {
     url.pathname = d.pathname;
     for (const [k, v] of d.searchParams) url.searchParams.set(k, v);
   }
-  if (url.pathname === '/api/mcp' || url.pathname === '/api/oauth') {
+  if (url.pathname === '/api/mcp' || url.pathname === '/api/oauth' || url.pathname === '/api/envoi') {
     let corps = '';
     for await (const morceau of req) corps += morceau;
     req.query = Object.fromEntries(url.searchParams);
     req.body = corps;
     res.status = (s) => { res.statusCode = s; return res; };
-    return url.pathname === '/api/mcp' ? handlerMcp(req, res) : handlerOAuth(req, res);
+    return { '/api/mcp': handlerMcp, '/api/oauth': handlerOAuth, '/api/envoi': handlerEnvoi }[url.pathname](req, res);
   }
   if (url.pathname === '/api/admin' || url.pathname === '/api/stats') {
     let corps = '';
