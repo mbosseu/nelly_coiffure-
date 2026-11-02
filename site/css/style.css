@@ -676,7 +676,7 @@ button { font: inherit; color: inherit; }
 .note { font-size: .82rem; color: var(--muted); }
 
 /* ---------- Coiffures ---------- */
-.style-nav { position: sticky; top: 96px; z-index: 20; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 12px 0; transition: top .45s var(--ease); }
+.style-nav { position: sticky; top: calc(96px + var(--bandeaux, 0px)); z-index: 20; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; padding: 12px 0; transition: top .45s var(--ease); }
 .header.is-hidden ~ main .style-nav { top: 12px; }
 .style { display: grid; grid-template-columns: 1fr 1.05fr; gap: 90px; align-items: center; padding: 80px 2.5%; scroll-margin-top: 150px; }
 .style:nth-of-type(even) .style__media { order: 2; }
@@ -790,7 +790,7 @@ button { font: inherit; color: inherit; }
   .section-intro { text-align: left; margin-bottom: 36px; }
   .section-intro .body { margin-left: 0; }
 
-  .style-nav { top: 72px; justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; margin-inline: -20px; padding: 10px 20px; scrollbar-width: none; background: linear-gradient(var(--cream) 70%, transparent); }
+  .style-nav { top: calc(72px + var(--bandeaux, 0px)); justify-content: flex-start; flex-wrap: nowrap; overflow-x: auto; margin-inline: -20px; padding: 10px 20px; scrollbar-width: none; background: linear-gradient(var(--cream) 70%, transparent); }
   .style-nav::-webkit-scrollbar { display: none; }
   .header.is-hidden ~ main .style-nav { top: 0; }
   .style { grid-template-columns: 1fr; gap: 44px; padding: 50px 0; scroll-margin-top: 140px; }

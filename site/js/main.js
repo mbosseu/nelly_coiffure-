@@ -44,6 +44,15 @@ const cta = document.querySelector('.cta');
 let lastY = window.scrollY;
 let ctaVisible = false;
 
+// Bandeaux d'annonce au-dessus de l'en-tête fixe : la page descend d'autant, pour ne rien cacher du haut de page
+function reserverBandeaux() {
+  const h = [...header.querySelectorAll('.annonce')].filter((a) => !a.hidden).reduce((s, a) => s + a.offsetHeight, 0);
+  document.body.style.paddingTop = h ? `${h}px` : '';
+  document.documentElement.style.setProperty('--bandeaux', `${h}px`);
+}
+reserverBandeaux();
+window.addEventListener('resize', reserverBandeaux);
+
 function onScroll() {
   const y = window.scrollY;
   header.classList.toggle('is-scrolled', y > 40);

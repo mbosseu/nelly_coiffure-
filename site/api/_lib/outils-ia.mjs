@@ -318,7 +318,7 @@ async function remplirAnnonce(a, args) {
 export const OUTILS = [
   {
     name: 'voir_site', annotations: lecture('Voir le contenu du site'),
-    description: 'Vue d’ensemble : horaires, coiffures et tarifs (avec identifiants et photos), annonces et sections ajoutées, coordonnées, réseaux, couleurs, menu et pied de page. À appeler avant une modification.',
+    description: 'Site internet de Nelly Coiffure, la coiffeuse afro qui utilise cet assistant : quand elle parle de ses horaires, jours de travail, prix, coiffures, congés, promos, photos ou clientes, c’est ce site qu’il faut consulter et mettre à jour (et non une simple note). Vue d’ensemble : horaires, coiffures et tarifs (avec identifiants et photos), annonces et sections ajoutées, coordonnées, réseaux, couleurs, menu et pied de page. À appeler avant une modification.',
     inputSchema: objet({}),
     async executer() {
       const c = await lireContenu();
@@ -400,7 +400,7 @@ export const OUTILS = [
   },
   {
     name: 'statistiques', annotations: lecture('Statistiques de visite'),
-    description: 'Fréquentation du site (anonyme) : visiteurs, visites, pages vues, prises de contact, provenance, pages, appareils, villes, heures, chemins fréquents, et qui est sur le site en ce moment.',
+    description: 'Quand Nelly demande si des gens sont venus, combien de clientes la trouvent, d’où elles viennent. Fréquentation du site (anonyme) : visiteurs, visites, pages vues, prises de contact, provenance, pages, appareils, villes, heures, chemins fréquents, et qui est sur le site en ce moment.',
     inputSchema: objet({ periode: { type: 'string', enum: Object.keys(PERIODES), description: 'Période (7_jours par défaut).' } }),
     async executer(args) {
       if (!statsActives()) return 'Les statistiques ne sont pas encore activées sur ce site.';
@@ -459,7 +459,7 @@ export const OUTILS = [
   },
   {
     name: 'modifier_horaires', annotations: ecriture('Modifier les horaires'),
-    description: 'Change les horaires d’un ou plusieurs jours (les autres ne bougent pas). Deux temps : aperçu, puis confirmer: true après accord.',
+    description: 'Quand Nelly dit qu’elle ne travaille plus (ou de nouveau) tel jour, qu’elle commence ou finit plus tôt ou plus tard : change les horaires affichés sur son site, pour un ou plusieurs jours (les autres ne bougent pas). Deux temps : aperçu, puis confirmer: true après accord.',
     inputSchema: objet({
       jours: { type: 'array', minItems: 1, maxItems: 7, items: objet({ jour: { type: 'string', enum: JOURS }, etat: { type: 'string', enum: Object.keys(ETATS), description: 'ouvert (avec debut et fin), ferme, ou sur_demande.' }, debut: { type: 'string', pattern: '^\\d{2}:\\d{2}$' }, fin: { type: 'string', pattern: '^\\d{2}:\\d{2}$' } }, ['jour', 'etat']) },
       confirmer,
@@ -498,7 +498,7 @@ export const OUTILS = [
   },
   {
     name: 'modifier_coiffure', annotations: ecriture('Modifier une coiffure'),
-    description: 'Change une coiffure existante : prix, nom, catégorie, description, photo (déjà en ligne, voir voir_photos), visibilité, ou sa position dans la liste. Deux temps : aperçu, puis confirmer: true après accord.',
+    description: 'Quand Nelly annonce un nouveau prix (« les knotless c’est 65 maintenant »), renomme, décrit ou ne propose plus une coiffure. Change une coiffure existante : prix, nom, catégorie, description, photo (déjà en ligne, voir voir_photos), visibilité, ou sa position dans la liste. Deux temps : aperçu, puis confirmer: true après accord.',
     inputSchema: objet({
       coiffure: { type: 'string', description: 'Nom ou identifiant (voir_site).' },
       prix: { type: 'integer', minimum: 1, maximum: 2000 },
@@ -587,7 +587,7 @@ export const OUTILS = [
   },
   {
     name: 'ajouter_annonce', annotations: ecriture('Ajouter une annonce ou une section', false, false),
-    description: 'Ajoute une annonce (congés, promo…) sur une ou plusieurs pages, ou une section placée à un endroit précis d’une page (paramètre section). Formats : bandeau (fine barre en haut, texte seul), encadre (texte), carte (compacte, photo facultative), section (photo et texte), cartes (2 ou 3 petites cartes), appel (bande sombre « réservez »). Deux temps : aperçu, puis confirmer: true après accord.',
+    description: 'Quand Nelly part en congés, lance une promo ou une nouveauté, ou veut prévenir ses clientes. Ajoute une annonce (congés, promo…) sur une ou plusieurs pages, ou une section placée à un endroit précis d’une page (paramètre section). Formats : bandeau (fine barre en haut, texte seul), encadre (texte), carte (compacte, photo facultative), section (photo et texte), cartes (2 ou 3 petites cartes), appel (bande sombre « réservez »). Deux temps : aperçu, puis confirmer: true après accord.',
     inputSchema: objet({
       format: { type: 'string', enum: FORMATS_ANNONCE },
       ...champsAnnonce,
