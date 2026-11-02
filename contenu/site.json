@@ -1,5 +1,26 @@
 {
-  "annonces": [],
+  "annonces": [
+    {
+      "id": "annonce-mvzrzbbx",
+      "active": true,
+      "format": "bandeau",
+      "etiquette": "",
+      "titre": "",
+      "texte": "Offre spéciale : les 5 premiers clients bénéficient de 15 % de réduction sur le prix de leur prestation.",
+      "image": null,
+      "bouton": {
+        "texte": "",
+        "type": "whatsapp",
+        "valeur": ""
+      },
+      "pages": [
+        "toutes"
+      ],
+      "debut": "",
+      "fin": "",
+      "fond": "clair"
+    }
+  ],
   "reseaux": {
     "instagram": "https://www.instagram.com/nellycoiffure_?psln=NnpnYzI1N3J1cGRv&utm_source=qr",
     "tiktok": "https://www.tiktok.com/@nellycoiffure237",
