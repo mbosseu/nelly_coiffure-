@@ -65,7 +65,7 @@
       "prix": 60,
       "photo": "img/realisations/catalogue/knotless-braids-1",
       "alt": "Knotless braids, exemple de coiffure",
-      "visible": true
+      "visible": false
     },
     {
       "cle": "locks",
