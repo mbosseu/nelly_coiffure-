@@ -123,6 +123,17 @@
       "visible": true
     },
     {
+      "cle": "tresses-collees-homme",
+      "ancre": "tresses-homme-prix",
+      "nom": "Tresses collées homme",
+      "categorie": "Homme",
+      "description": "Tresses plaquées, droites ou graphiques.",
+      "prix": 30,
+      "photo": "img/realisations/catalogue/tresses-collees-homme-1",
+      "alt": "Tresses collées homme, exemple de coiffure",
+      "visible": true
+    },
+    {
       "cle": "tresses-couchees",
       "ancre": "tresses-couchees",
       "nom": "Tresses couchées",
@@ -142,17 +153,6 @@
       "prix": 60,
       "photo": "img/realisations/catalogue/twists-1",
       "alt": "Twists, exemple de coiffure",
-      "visible": true
-    },
-    {
-      "cle": "tresses-collees-homme",
-      "ancre": "tresses-homme-prix",
-      "nom": "Tresses collées homme",
-      "categorie": "Homme",
-      "description": "Tresses plaquées, droites ou graphiques.",
-      "prix": 30,
-      "photo": "img/realisations/catalogue/tresses-collees-homme-1",
-      "alt": "Tresses collées homme, exemple de coiffure",
       "visible": true
     },
     {
