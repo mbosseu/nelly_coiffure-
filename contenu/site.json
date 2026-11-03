@@ -68,6 +68,17 @@
       "visible": true
     },
     {
+      "cle": "locks",
+      "ancre": "locks",
+      "nom": "Locks",
+      "categorie": "Twists et locks",
+      "description": "Locks longues au rendu bohème et généreux.",
+      "prix": 80,
+      "photo": "img/realisations/catalogue/locks-1",
+      "alt": "Locks, exemple de coiffure",
+      "visible": true
+    },
+    {
       "cle": "tresses-couchees",
       "ancre": "tresses-couchees",
       "nom": "Tresses couchées",
@@ -87,17 +98,6 @@
       "prix": 30,
       "photo": "img/realisations/catalogue/nattes-collees-1",
       "alt": "Nattes collées, exemple de coiffure",
-      "visible": true
-    },
-    {
-      "cle": "locks",
-      "ancre": "locks",
-      "nom": "Locks",
-      "categorie": "Twists et locks",
-      "description": "Locks longues au rendu bohème et généreux.",
-      "prix": 80,
-      "photo": "img/realisations/catalogue/locks-1",
-      "alt": "Locks, exemple de coiffure",
       "visible": true
     },
     {
