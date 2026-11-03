@@ -90,17 +90,6 @@
       "visible": true
     },
     {
-      "cle": "tresses-couchees",
-      "ancre": "tresses-couchees",
-      "nom": "Tresses couchées",
-      "categorie": "Tresses",
-      "description": "Tresses plaquées, droites ou dessinées en motifs.",
-      "prix": 50,
-      "photo": "img/realisations/catalogue/tresses-couchees-1",
-      "alt": "Tresses couchées, exemple de coiffure",
-      "visible": true
-    },
-    {
       "cle": "nattes-collees",
       "ancre": "nattes-collees",
       "nom": "Nattes collées",
@@ -109,6 +98,17 @@
       "prix": 30,
       "photo": "img/realisations/catalogue/nattes-collees-1",
       "alt": "Nattes collées, exemple de coiffure",
+      "visible": true
+    },
+    {
+      "cle": "tresses-couchees",
+      "ancre": "tresses-couchees",
+      "nom": "Tresses couchées",
+      "categorie": "Tresses",
+      "description": "Tresses plaquées, droites ou dessinées en motifs.",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/tresses-couchees-1",
+      "alt": "Tresses couchées, exemple de coiffure",
       "visible": true
     },
     {
