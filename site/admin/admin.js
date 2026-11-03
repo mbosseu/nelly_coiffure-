@@ -2274,7 +2274,7 @@ const TACHES = [
   { groupe: 'Mon salon', icone: 'ciseaux', titre: 'Prix et coiffures', aide: 'Tarifs, descriptions, photos', action: () => ouvrirOnglet('coiffures') },
   { groupe: 'Mon salon', icone: 'photo', titre: 'Mes réalisations', aide: 'Ajouter vos dernières photos', action: () => ouvrirOnglet('photos') },
   { groupe: 'Mon salon', icone: 'horloge', titre: 'Horaires et contact', aide: 'Jours, téléphone, réseaux', action: () => ouvrirOnglet('infos') },
-  { groupe: 'Suivre mon site', icone: 'courbe', titre: 'Statistiques de visite', aide: 'Visiteurs, contacts, parcours', action: () => ouvrirOnglet('stats') },
+  { groupe: 'Suivre mon site', icone: 'courbe', titre: 'Statistiques de visite', aide: 'Visiteurs, WhatsApp, parcours', action: () => ouvrirOnglet('stats') },
   { groupe: 'Suivre mon site', icone: 'historique', titre: 'Historique', aide: 'Revenir à une version précédente', action: () => ouvrirOnglet('historique') },
   { groupe: 'Mon salon', icone: 'palette', titre: 'Style du site', aide: 'Couleurs, logo, menu', action: () => { ouvrirOnglet('infos'); setTimeout(() => $('#palettes').scrollIntoView({ block: 'center' }), 100); } },
 ];
@@ -2581,7 +2581,7 @@ const NOMS_SOURCES = {
   tiktok: 'TikTok', snapchat: 'Snapchat', whatsapp: 'Lien WhatsApp', youtube: 'YouTube', 'google-maps': 'Google Maps',
   direct: 'Accès direct (adresse tapée, favori…)', 'autre-site': 'Un autre site',
 };
-const NOMS_ACTIONS = { whatsapp: 'Message WhatsApp', appel: 'Appel', instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat', youtube: 'YouTube', itineraire: 'Itinéraire' };
+const NOMS_ACTIONS = { whatsapp: 'WhatsApp ouvert', appel: 'Appel lancé', instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat', youtube: 'YouTube', itineraire: 'Itinéraire' };
 // Provenance en une phrase : « venu de Google », « venu d'Instagram », « arrivé directement »
 const provenance = (src) => (src === 'direct' ? 'arrivé directement (adresse, favori…)' : src === 'autre-site' ? 'venu d’un autre site'
   : /^[aeiouyAEIOUY]/.test(NOMS_SOURCES[src] || '') ? `venu d’${NOMS_SOURCES[src]}` : `venu de ${NOMS_SOURCES[src] || src || '?'}`);
@@ -2620,7 +2620,7 @@ async function chargerDirect() {
   $('#stats-direct-pages').innerHTML = d.pagesEnLigne.length
     ? `En train de regarder : ${d.pagesEnLigne.map(([p, n]) => `<b>${echapper(nom(p))}</b>${n > 1 ? ` (${n})` : ''}`).join(', ')}` : '';
   $('#stats-direct-pages').hidden = !d.pagesEnLigne.length;
-  $('#stats-direct-jour').innerHTML = `Aujourd’hui : <b>${a.visiteurs}</b> visiteur${a.visiteurs > 1 ? 's' : ''} · <b>${a.vues}</b> page${a.vues > 1 ? 's' : ''} vue${a.vues > 1 ? 's' : ''} · <b>${a.contacts}</b> contact${a.contacts > 1 ? 's' : ''} <small>· à jour à ${heure}</small>`;
+  $('#stats-direct-jour').innerHTML = `Aujourd’hui : <b>${a.visiteurs}</b> visiteur${a.visiteurs > 1 ? 's' : ''} · <b>${a.vues}</b> page${a.vues > 1 ? 's' : ''} vue${a.vues > 1 ? 's' : ''} · <b>${a.contacts}</b> WhatsApp ou appel${a.contacts > 1 ? 's' : ''} <small>· à jour à ${heure}</small>`;
   const cle = JSON.stringify(a);
   if (dernierJour && cle !== dernierJour && !$$('dialog[open]').length) chargerStats();
   dernierJour = cle;
@@ -2690,12 +2690,12 @@ function afficherStats(d) {
     const aire = `${ligne} L${L} ${H - 14} L0 ${H - 14} Z`;
     const etiquettes = pts.map((p, i) => ((pts.length <= 8 || i % Math.ceil(pts.length / 6) === 0 || i === pts.length - 1)
       ? `<text x="${(i * pas).toFixed(1)}" y="${H}" text-anchor="${i === 0 ? 'start' : i === pts.length - 1 ? 'end' : 'middle'}">${new Date(`${p.jour}T12:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</text>` : '')).join('');
-    const contacts = pts.map((p, i) => (p.contacts ? `<circle cx="${(i * pas).toFixed(1)}" cy="${y(p.visites).toFixed(1)}" r="5" class="stats__point-contact"><title>${p.contacts} contact${p.contacts > 1 ? 's' : ''}</title></circle>` : '')).join('');
+    const contacts = pts.map((p, i) => (p.contacts ? `<circle cx="${(i * pas).toFixed(1)}" cy="${y(p.visites).toFixed(1)}" r="5" class="stats__point-contact"><title>${p.contacts} WhatsApp ou appel${p.contacts > 1 ? 's' : ''}</title></circle>` : '')).join('');
     const points = pts.map((p, i) => `<circle cx="${(i * pas).toFixed(1)}" cy="${y(p.visites).toFixed(1)}" r="3" class="stats__point"><title>${new Date(`${p.jour}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} : ${p.visites} visite${p.visites > 1 ? 's' : ''}, ${p.vues} page${p.vues > 1 ? 's' : ''} vue${p.vues > 1 ? 's' : ''}</title></circle>`).join('');
     return `<div class="carte"><h3 class="stats__titre">Visites par jour</h3>
       <svg class="stats__courbe" viewBox="-6 0 ${L + 12} ${H + 4}" role="img" aria-label="Courbe des visites par jour"><defs><linearGradient id="stats-degrade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#B57A50" stop-opacity=".35"/><stop offset="1" stop-color="#B57A50" stop-opacity="0"/></linearGradient></defs>
       <line x1="0" x2="${L}" y1="${H - 14}" y2="${H - 14}" class="stats__axe"/><path d="${aire}" fill="url(#stats-degrade)"/><path d="${ligne}" class="stats__ligne"/>${points}${contacts}${etiquettes}</svg>
-      <p class="aide aide--petite"><span class="stats__legende-contact"></span> jours avec au moins une prise de contact</p></div>`;
+      <p class="aide aide--petite"><span class="stats__legende-contact"></span> jours où WhatsApp a été ouvert ou un appel lancé</p></div>`;
   };
 
   // Heures d'affluence
@@ -2716,7 +2716,7 @@ function afficherStats(d) {
     const contact = etapes.some((e) => e.type === 'c' && ['whatsapp', 'appel'].includes(e.contact));
     const quand = new Date(v.debut).toLocaleString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     return `<li class="stats__visite${contact ? ' stats__visite--contact' : ''}">
-      <div class="stats__visite-haut"><strong>${quand}</strong>${contact ? '<span class="pastille pastille--vert">a pris contact</span>' : ''}</div>
+      <div class="stats__visite-haut"><strong>${quand}</strong>${contact ? '<span class="pastille pastille--vert">a ouvert WhatsApp ou appelé</span>' : ''}</div>
       <p class="stats__visite-infos">${echapper(NOMS_APPAREILS[v.app] || v.app || '')} · ${echapper(v.ville && v.ville !== 'inconnue' ? v.ville : 'ville inconnue')} · ${echapper(provenance(v.src))}</p>
       <ol class="stats__parcours">${pages.map((p) => `<li><span>${echapper(nom(p.page))}</span>${p.duree !== undefined ? `<small>${duree(p.duree)}</small>` : ''}${p.contacts.map((c) => `<em>${echapper(NOMS_ACTIONS[c] || c)}</em>`).join('')}</li>`).join('')}</ol>
     </li>`;
@@ -2727,7 +2727,7 @@ function afficherStats(d) {
     <div class="stats__kpis">
       ${kpi('Visiteurs', fr(r.visiteurs), r.visiteurs > 1 ? 'personnes différentes' : 'personne', evolution(r.visiteurs, av.visiteurs))}
       ${kpi('Visites', fr(r.visites), `${fr(r.vues)} page${r.vues > 1 ? 's' : ''} vue${r.vues > 1 ? 's' : ''}`, evolution(r.visites, av.visites))}
-      ${kpi('Prises de contact', fr(r.contacts), `${tauxContact} % des visites`, evolution(r.contacts, av.contacts))}
+      ${kpi('WhatsApp et appels', fr(r.contacts), `${tauxContact} % des visites`, evolution(r.contacts, av.contacts))}
       ${kpi('Temps moyen', duree(r.dureeMoyenne), 'passé sur une page', evolution(r.dureeMoyenne, av.dureeMoyenne))}
     </div>
     <p class="stats__phrase">${r.rebond > 0 ? `${r.rebond} % des visiteurs repartent après une seule page.` : 'Les visiteurs regardent plusieurs pages.'} En moyenne, ils lisent ${r.defilement} % de chaque page.</p>
@@ -2736,7 +2736,7 @@ function afficherStats(d) {
       <div class="carte"><h3 class="stats__titre">D’où viennent les visiteurs</h3>${barres(d.sources, totalVisites, (c) => NOMS_SOURCES[c] || c)}</div>
       <div class="carte"><h3 class="stats__titre">Pages les plus vues</h3>${barres(d.pages, totalPages, nom)}</div>
       <div class="carte"><h3 class="stats__titre">Ce qu’ils ont fait</h3>${barres(d.actions, d.actions.reduce((a, [, v]) => a + v, 0), (c) => NOMS_ACTIONS[c] || c)}
-        ${d.contactsParPage.length ? `<p class="stats__sous-titre">Pages d’où partent les contacts</p>${barres(d.contactsParPage, r.contacts, nom, 5)}` : ''}</div>
+        ${d.contactsParPage.length ? `<p class="stats__sous-titre">Pages d’où WhatsApp s’ouvre ou l’appel part</p>${barres(d.contactsParPage, r.contacts, nom, 5)}` : ''}</div>
       <div class="carte"><h3 class="stats__titre">Appareils</h3>${barres(d.appareils, totalVisites, (c) => NOMS_APPAREILS[c] || c)}
         <p class="stats__sous-titre">Villes</p>${barres(d.villes, totalVisites, (c) => (c === 'inconnue' ? 'Inconnue' : c), 6)}</div>
     </div>
@@ -2751,7 +2751,7 @@ function afficherStats(d) {
     <h2 class="sous-titre">Dernières visites</h2>
     <p class="aide">Chaque visite, page par page, avec le temps passé. Les personnes restent anonymes.</p>
     <ul class="stats__visites">${d.visites.slice(0, 20).map(visite).join('')}</ul>
-    <p class="aide aide--petite stats__note">Mesure anonyme, sans cookie : une personne qui revient un autre jour compte à nouveau comme visiteur. Vos propres visites depuis cet appareil ne sont pas comptées.</p>`;
+    <p class="aide aide--petite stats__note">« WhatsApp et appels » compte les fois où WhatsApp ou le téléphone s’ouvre depuis le site. WhatsApp ne dit à personne si le message est vraiment envoyé : les messages reçus se voient dans le WhatsApp de Nelly. Mesure anonyme, sans cookie : une personne qui revient un autre jour compte à nouveau comme visiteur. Vos propres visites depuis cet appareil ne sont pas comptées.</p>`;
 }
 
 // --- Actualisation automatique ---------------------------------------------------------

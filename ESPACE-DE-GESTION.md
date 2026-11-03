@@ -125,7 +125,7 @@ Suite au retour de Nelly (manque de visibilité, interface difficile à prendre 
 
 ## Statistiques de visite (2 novembre 2026)
 
-Onglet « Statistiques » de l'espace de gestion (et tuile « Statistiques de visite » de l'accueil) : visiteurs, visites, pages vues, prises de contact (WhatsApp, appel), temps passé, taux de départ après une page, courbe par jour, provenance (Google, Instagram, Facebook, TikTok, accès direct…), pages les plus vues, pages d'où partent les contacts, appareils, villes, heures d'affluence, pages d'arrivée et de départ, chemins fréquents, et le parcours détaillé des dernières visites. « Personnes sur le site en ce moment » (5 dernières minutes).
+Onglet « Statistiques » de l'espace de gestion (et tuile « Statistiques de visite » de l'accueil) : visiteurs, visites, pages vues, WhatsApp ouverts et appels lancés (un clic n'est compté que si la page passe au second plan dans les 5 secondes ; l'envoi du message n'est pas mesurable, il se passe dans WhatsApp), temps passé, taux de départ après une page, courbe par jour, provenance (Google, Instagram, Facebook, TikTok, accès direct…), pages les plus vues, pages d'où partent les contacts, appareils, villes, heures d'affluence, pages d'arrivée et de départ, chemins fréquents, et le parcours détaillé des dernières visites. « Personnes sur le site en ce moment » (5 dernières minutes).
 
 **Fonctionnement, sans cookie et anonyme** (exempté de consentement selon la CNIL) :
 - `js/main.js` envoie de petits événements à `/api/stats` (`navigator.sendBeacon`) : page vue, fin de page (temps visible, défilement), clic de contact. Un numéro de visite aléatoire vit dans `sessionStorage` (disparaît à la fermeture de l'onglet).

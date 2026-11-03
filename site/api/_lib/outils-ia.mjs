@@ -400,7 +400,7 @@ export const OUTILS = [
   },
   {
     name: 'statistiques', annotations: lecture('Statistiques de visite'),
-    description: 'Quand Nelly demande si des gens sont venus, combien de clientes la trouvent, d’où elles viennent. Fréquentation du site (anonyme) : visiteurs, visites, pages vues, prises de contact, provenance, pages, appareils, villes, heures, chemins fréquents, et qui est sur le site en ce moment.',
+    description: 'Quand Nelly demande si des gens sont venus, combien de clientes la trouvent, d’où elles viennent. Fréquentation du site (anonyme) : visiteurs, visites, pages vues, WhatsApp ouverts et appels lancés (pas les messages envoyés, invisibles pour le site), provenance, pages, appareils, villes, heures, chemins fréquents, et qui est sur le site en ce moment.',
     inputSchema: objet({ periode: { type: 'string', enum: Object.keys(PERIODES), description: 'Période (7_jours par défaut).' } }),
     async executer(args) {
       if (!statsActives()) return 'Les statistiques ne sont pas encore activées sur ce site.';
@@ -416,12 +416,12 @@ export const OUTILS = [
         `En ce moment : ${live.enLigne} personne(s) sur le site${live.pagesEnLigne.length ? ` — ${live.pagesEnLigne.map(([p, k]) => `${nom(p)} (${k})`).join(', ')}` : ''}`,
         `Visiteurs : ${r.visiteurs}${evol(r.visiteurs, av.visiteurs)}`,
         `Visites : ${r.visites}${evol(r.visites, av.visites)} · pages vues : ${r.vues}`,
-        `Prises de contact (WhatsApp + appel) : ${r.contacts}${evol(r.contacts, av.contacts)}`,
+        `WhatsApp ouverts et appels lancés depuis le site : ${r.contacts}${evol(r.contacts, av.contacts)} (les messages vraiment envoyés ne sont pas visibles par le site : ils se voient dans le WhatsApp de Nelly)`,
         `Temps moyen par page : ${r.dureeMoyenne} s · départ après une seule page : ${r.rebond} % · défilement moyen : ${r.defilement} %`,
         `Provenance : ${top(d.sources)}`,
         `Pages les plus vues : ${top(d.pages, nom)}`,
         `Pages d’arrivée : ${top(d.entrees, nom)} · pages de départ : ${top(d.sorties, nom)}`,
-        `Pages d’où partent les contacts : ${top(d.contactsParPage, nom)}`,
+        `Pages d’où WhatsApp s’ouvre ou l’appel part : ${top(d.contactsParPage, nom)}`,
         `Clics : ${top(d.actions)}`,
         `Appareils : ${top(d.appareils)} · villes : ${top(d.villes)}`,
         `Heures les plus fréquentées : ${heures || 'aucune donnée'}`,

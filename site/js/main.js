@@ -400,7 +400,24 @@ document.querySelectorAll('[data-stats-refus]').forEach((b) => {
     else if (document.visibilityState === 'visible') envoyer({ t: 'h', p, s });
   }, 30000);
 
-  // Prises de contact : WhatsApp, appel, réseaux sociaux, itinéraire
+  // WhatsApp et appel : comptés seulement si l'application s'ouvre vraiment (la page passe au second plan dans
+  // les 5 secondes). L'envoi du message, lui, se passe dans WhatsApp : aucun site ne peut le voir.
+  const siApplicationOuverte = (compter) => {
+    const surVisibilite = () => { if (document.visibilityState === 'hidden') ouverte(); };
+    const nettoyer = () => {
+      clearTimeout(delai);
+      document.removeEventListener('visibilitychange', surVisibilite);
+      window.removeEventListener('pagehide', ouverte);
+      window.removeEventListener('blur', ouverte);
+    };
+    const ouverte = () => { nettoyer(); compter(); };
+    const delai = setTimeout(nettoyer, 5000);
+    document.addEventListener('visibilitychange', surVisibilite);
+    window.addEventListener('pagehide', ouverte);
+    window.addEventListener('blur', ouverte);
+  };
+
+  // Liens de contact : WhatsApp, appel, réseaux sociaux, itinéraire
   document.addEventListener('click', (e) => {
     const a = e.target.closest('a[href]');
     if (!a) return;
@@ -408,6 +425,7 @@ document.querySelectorAll('[data-stats-refus]').forEach((b) => {
     const k = /wa\.me|whatsapp/.test(h) ? 'whatsapp' : /^tel:/.test(h) ? 'appel' : /instagram\.com/.test(h) ? 'instagram'
       : /tiktok\.com/.test(h) ? 'tiktok' : /facebook\.com/.test(h) ? 'facebook' : /snapchat\.com/.test(h) ? 'snapchat'
       : /youtube\.com/.test(h) ? 'youtube' : /google\.[a-z.]+\/maps|maps\.app/.test(h) ? 'itineraire' : '';
-    if (k) envoyer({ t: 'c', p, s, k });
+    if (k === 'whatsapp' || k === 'appel') siApplicationOuverte(() => envoyer({ t: 'c', p, s, k }));
+    else if (k) envoyer({ t: 'c', p, s, k });
   }, true);
 })();
