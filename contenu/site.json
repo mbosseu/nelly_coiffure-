@@ -112,6 +112,17 @@
       "visible": true
     },
     {
+      "cle": "tissage",
+      "ancre": "tissage",
+      "nom": "Tissage",
+      "categorie": "Tissage",
+      "description": "Pose lisse, ondulée ou bouclée selon le rendu souhaité.",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/tissage-1",
+      "alt": "Tissage, exemple de coiffure",
+      "visible": true
+    },
+    {
       "cle": "tresses-couchees",
       "ancre": "tresses-couchees",
       "nom": "Tresses couchées",
@@ -131,17 +142,6 @@
       "prix": 60,
       "photo": "img/realisations/catalogue/twists-1",
       "alt": "Twists, exemple de coiffure",
-      "visible": true
-    },
-    {
-      "cle": "tissage",
-      "ancre": "tissage",
-      "nom": "Tissage",
-      "categorie": "Tissage",
-      "description": "Pose lisse, ondulée ou bouclée selon le rendu souhaité.",
-      "prix": 50,
-      "photo": "img/realisations/catalogue/tissage-1",
-      "alt": "Tissage, exemple de coiffure",
       "visible": true
     },
     {
