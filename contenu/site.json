@@ -79,6 +79,17 @@
       "visible": true
     },
     {
+      "cle": "locks-courtes",
+      "ancre": "locks-courtes",
+      "nom": "Locks courtes",
+      "categorie": "Twists et locks",
+      "description": "Locks au carré, pour un style affirmé et léger.",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/locks-courtes-1",
+      "alt": "Locks courtes, exemple de coiffure",
+      "visible": true
+    },
+    {
       "cle": "tresses-couchees",
       "ancre": "tresses-couchees",
       "nom": "Tresses couchées",
@@ -98,17 +109,6 @@
       "prix": 30,
       "photo": "img/realisations/catalogue/nattes-collees-1",
       "alt": "Nattes collées, exemple de coiffure",
-      "visible": true
-    },
-    {
-      "cle": "locks-courtes",
-      "ancre": "locks-courtes",
-      "nom": "Locks courtes",
-      "categorie": "Twists et locks",
-      "description": "Locks au carré, pour un style affirmé et léger.",
-      "prix": 50,
-      "photo": "img/realisations/catalogue/locks-courtes-1",
-      "alt": "Locks courtes, exemple de coiffure",
       "visible": true
     },
     {
