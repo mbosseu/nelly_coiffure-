@@ -156,17 +156,6 @@
       "visible": true
     },
     {
-      "cle": "twists",
-      "ancre": "twists",
-      "nom": "Twists",
-      "categorie": "Twists et locks",
-      "description": "Vanilles torsadées, souples et légères à porter.",
-      "prix": 60,
-      "photo": "img/realisations/catalogue/twists-1",
-      "alt": "Twists, exemple de coiffure",
-      "visible": true
-    },
-    {
       "cle": "twists-homme",
       "ancre": "twists-homme-prix",
       "nom": "Twists homme",
