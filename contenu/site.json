@@ -125,12 +125,12 @@
     {
       "cle": "tresses-collees-homme",
       "ancre": "tresses-homme-prix",
-      "nom": "Nattes collées homme",
+      "nom": "Tresses collées homme",
       "categorie": "Homme",
       "description": "Tresses plaquées, droites ou graphiques.",
       "prix": 30,
       "photo": "img/realisations/catalogue/tresses-collees-homme-1",
-      "alt": "Nattes collées homme, exemple de coiffure",
+      "alt": "Tresses collées homme, exemple de coiffure",
       "visible": true
     },
     {
