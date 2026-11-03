@@ -101,6 +101,17 @@
       "visible": true
     },
     {
+      "cle": "short-braids",
+      "ancre": "short-braids",
+      "nom": "Short braids",
+      "categorie": "Tresses",
+      "description": "Box braids courtes au carré, faciles à porter.",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/short-braids-1",
+      "alt": "Short braids, exemple de coiffure",
+      "visible": true
+    },
+    {
       "cle": "tresses-couchees",
       "ancre": "tresses-couchees",
       "nom": "Tresses couchées",
@@ -120,17 +131,6 @@
       "prix": 60,
       "photo": "img/realisations/catalogue/twists-1",
       "alt": "Twists, exemple de coiffure",
-      "visible": true
-    },
-    {
-      "cle": "short-braids",
-      "ancre": "short-braids",
-      "nom": "Short braids",
-      "categorie": "Tresses",
-      "description": "Box braids courtes au carré, faciles à porter.",
-      "prix": 50,
-      "photo": "img/realisations/catalogue/short-braids-1",
-      "alt": "Short braids, exemple de coiffure",
       "visible": true
     },
     {
