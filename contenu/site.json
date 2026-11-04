@@ -313,6 +313,20 @@
           "y": 50,
           "zoom": 1,
           "alt": "Locks cuivrées"
+        },
+        "i1": {
+          "src": "img/pages/index-i1-179379813525500",
+          "x": 50,
+          "y": 50,
+          "zoom": 1,
+          "alt": "Tresses africaines bouclées réalisées par Nelly, coiffeuse afro à Marseille"
+        }
+      },
+      "boutons": {
+        "b2": {
+          "texte": "Découvrir les coiffures",
+          "type": "page",
+          "valeur": "index.html"
         }
       }
     }
