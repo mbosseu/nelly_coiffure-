@@ -1363,58 +1363,33 @@ html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -
 @media (max-width: 1180px) { .promo .title--mot-long { font-size: clamp(1.7rem, 3.4vw, 2.5rem); } }
 @media (max-width: 760px) { .promo .title--mot-long { font-size: clamp(1.25rem, 6.4vw, 1.9rem); } }
 
-/* --- Section animée au rythme de la musique --- */
-.promo--motion { padding-block: clamp(28px, 5vw, 64px); }
-.motion { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: stretch; gap: clamp(28px, 5vw, 72px); overflow: hidden; padding: clamp(18px, 3vw, 40px); border-radius: 32px; background: #1C0F09; color: #FBF3EA; box-shadow: 0 40px 70px -46px rgba(40, 20, 10, .9); isolation: isolate; }
-.motion__pouls { position: absolute; inset: -20%; z-index: -1; background: radial-gradient(closest-side at 26% 50%, rgba(201, 138, 92, .42), transparent 72%); opacity: .5; pointer-events: none; }
-.motion__cadre { position: relative; height: min(76vh, 680px); aspect-ratio: 9 / 16; overflow: hidden; border-radius: 22px; background: #000; box-shadow: 0 26px 50px -24px rgba(0, 0, 0, .85); will-change: transform; }
-.motion__cadre video { display: block; width: 100%; height: 100%; object-fit: cover; }
-.motion__texte { position: relative; min-width: 0; align-self: center; }
-.motion__titre { margin: 0 0 18px; font-family: var(--serif); font-weight: 400; font-size: clamp(1.7rem, 3.4vw, 2.5rem); line-height: 1.1; color: var(--copper-light); }
-.motion__phrase, .motion__appel { margin: 0 0 14px; font-family: var(--serif); font-size: clamp(1.15rem, 1.9vw, 1.5rem); line-height: 1.32; }
-.motion__signature { margin: 0 0 22px; font-family: var(--serif); font-size: clamp(1.5rem, 2.8vw, 2.25rem); line-height: 1.18; }
-.motion__mot--fort { color: var(--copper-light); }
-.motion__commandes { display: none; }
-
-/* Version animée (activée par js/main.js) */
-.motion--actif .motion__cadre video { cursor: pointer; }
-.motion--actif .motion__texte { align-self: stretch; }
-.motion--actif .motion__titre { position: absolute; inset: 0 0 auto; z-index: 2; margin: 0; font-size: clamp(2.6rem, 6.2vw, 5.4rem); line-height: 1.02; color: #FBF3EA; transform-origin: 0 0; transform: translateY(calc(min(38vh, 340px) - 50%)); transition: transform .62s var(--ease-out), color .4s; }
-.motion--actif.motion--revele .motion__titre { transform: scale(.38); color: var(--copper-light); }
-.motion--actif .motion__titre-mot { display: inline-block; opacity: 0; transform: translateY(.42em) scale(.96); transition: opacity .26s ease-out, transform .42s var(--ease-out); }
-.motion--actif .motion__titre-mot.est-la { opacity: 1; transform: none; }
-.motion--actif .motion__phrase, .motion--actif .motion__fin { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; margin: 0; visibility: hidden; opacity: 0; transition: opacity .2s ease-out, visibility 0s .2s; }
-.motion--actif .motion__phrase { display: block; align-self: center; inset: auto 0 auto 0; top: 50%; translate: 0 -50%; font-size: clamp(1.7rem, 3.3vw, 2.9rem); line-height: 1.16; }
-.motion--actif .motion__phrase.est-la, .motion--actif .motion__fin.est-la { visibility: visible; opacity: 1; transition: opacity .12s; }
-.motion--actif .motion__mot { display: inline-block; }
-.motion--actif .est-la .motion__mot { animation: motion-mot .5s var(--ease-out) both; animation-delay: calc(var(--i) * 48ms); }
-.motion--actif .motion__fin .motion__appel { font-size: clamp(1.05rem, 1.6vw, 1.3rem); opacity: .9; }
-.motion--actif .motion__fin .btn { align-self: flex-start; }
-@keyframes motion-mot { from { opacity: 0; transform: translateY(.5em); } to { opacity: 1; transform: none; } }
-.motion__barre { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255, 255, 255, .22); }
-.motion__barre i { display: block; height: 100%; background: var(--copper-light); transform: scaleX(0); transform-origin: 0 50%; }
-.motion--actif .motion__commandes { position: absolute; inset: 0; display: block; pointer-events: none; }
-.motion__bouton { position: absolute; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid rgba(255, 255, 255, .28); border-radius: 99px; background: rgba(20, 10, 5, .62); backdrop-filter: blur(6px); color: #FBF3EA; font: 600 .82rem/1 var(--sans); cursor: pointer; pointer-events: auto; }
-.motion__bouton svg { width: 18px; height: 18px; flex: none; }
-.motion__son { top: 12px; right: 12px; }
-.motion__rejouer { left: 50%; top: 50%; translate: -50% -50%; }
-.motion__rejouer[hidden] { display: none; }
+/* --- Section film : la vidéo et le texte côte à côte, sans effet par-dessus --- */
+.film { display: grid; grid-template-columns: auto minmax(0, 500px); justify-content: center; align-items: center; gap: clamp(36px, 6vw, 88px); padding: clamp(24px, 3.6vw, 52px); border-radius: 32px; background: #1C0F09; color: #FBF3EA; box-shadow: 0 40px 70px -46px rgba(40, 20, 10, .9); }
+.film__cadre { position: relative; height: min(78vh, 700px); aspect-ratio: 9 / 16; overflow: hidden; border-radius: 22px; background: #000; box-shadow: 0 26px 50px -24px rgba(0, 0, 0, .9); }
+.film__cadre video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.film__surtitre { margin: 0 0 14px; font: 600 .74rem/1 var(--sans); letter-spacing: .22em; text-transform: uppercase; color: var(--copper-light); }
+.film__titre { margin: 0 0 20px; font-family: var(--serif); font-weight: 400; font-size: clamp(2rem, 3.4vw, 3.1rem); line-height: 1.1; color: #FBF3EA; overflow-wrap: normal; }
+.film__corps { margin: 0 0 12px; font-size: clamp(1rem, 1.2vw, 1.1rem); line-height: 1.7; color: rgba(251, 243, 234, .86); }
+.film__signature { margin: 20px 0 26px; padding-top: 18px; border-top: 1px solid rgba(251, 243, 234, .18); font-family: var(--serif); font-size: clamp(1.15rem, 1.6vw, 1.4rem); line-height: 1.35; color: #EDBE8F; }
+.film__commandes { display: none; }
+.film--actif .film__cadre video { cursor: pointer; }
+.film--actif .film__commandes { display: block; }
+.film__son { position: absolute; right: 10px; bottom: 12px; display: grid; place-items: center; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%; background: rgba(15, 8, 4, .55); color: #FBF3EA; cursor: pointer; }
+.film__son svg { width: 18px; height: 18px; }
+.film__son-coupe { display: none; }
+.film__son[aria-pressed="false"] .film__son-coupe { display: inline; }
+.film__son[aria-pressed="false"] .film__son-ondes { display: none; }
+.film__indice { position: absolute; right: 10px; top: 12px; padding: 6px 10px; border-radius: 99px; background: rgba(15, 8, 4, .55); color: #FBF3EA; font: 500 .72rem/1.1 var(--sans); pointer-events: none; }
+.film__indice[hidden], .film__charge[hidden] { display: none; }
+.film__charge { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .2); }
+.film__charge i { display: block; height: 100%; background: var(--copper-light); transform: scaleX(0); transform-origin: 0 50%; transition: transform .25s linear; }
 @media (max-width: 860px) {
-  .motion { display: block; padding: 0; border-radius: 24px; background: #000; }
-  .motion__cadre { height: auto; width: 100%; max-height: 86svh; border-radius: 0; box-shadow: none; }
-  .motion__texte { padding: 22px 20px; background: #1C0F09; }
-  /* Sur téléphone, le texte se pose sur le bas de la vidéo */
-  .motion--actif .motion__texte { position: absolute; left: 0; right: 0; bottom: 0; height: 56%; padding: 0; margin: 0; background: linear-gradient(0deg, rgba(14, 7, 3, .92) 0%, rgba(14, 7, 3, .78) 58%, transparent); pointer-events: none; }
-  .motion--actif .motion__titre { left: 20px; right: 20px; font-size: clamp(1.9rem, 9.2vw, 3.1rem); top: 30%; transform: none; }
-  .motion--actif.motion--revele .motion__titre { opacity: 0; transform: translateY(-12px); transition: opacity .25s, transform .3s; }
-  .motion--actif .motion__phrase, .motion--actif .motion__fin { left: 20px; right: 20px; top: 36%; bottom: 22px; inset-block-end: 22px; }
-  .motion--actif .motion__phrase { translate: none; font-size: clamp(1.3rem, 6vw, 1.9rem); }
-  .motion--actif .motion__fin { justify-content: flex-end; }
-  .motion--actif .motion__fin a { pointer-events: auto; }
-  .motion--actif .motion__signature { margin-bottom: 12px; font-size: clamp(1.25rem, 5.6vw, 1.7rem); }
-  .motion--actif .motion__fin .motion__appel { margin-bottom: 8px; font-size: .95rem; }
+  .film { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 16px 16px 26px; border-radius: 24px; }
+  .film__cadre { justify-self: center; height: auto; width: min(100%, calc(84svh * 9 / 16)); }
+  .film__texte { padding-inline: 6px; }
+  .film__titre { font-size: clamp(1.35rem, 7.3vw, 2.2rem); }
   /* Le bouton WhatsApp fixe du site suffit sur téléphone */
-  .motion--actif .motion__fin .btn { display: none; }
+  .film .btn { display: none; }
 }
 .promo--carte .body { font-size: .96rem; }
 .promo--encadre .promo__inner, .promo--sans-image .promo__inner { grid-template-columns: minmax(0, 1fr); max-width: 820px; margin-inline: auto; text-align: center; background: transparent; box-shadow: none; border-color: rgba(181, 122, 80, .5); }

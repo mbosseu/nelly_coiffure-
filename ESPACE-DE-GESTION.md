@@ -190,7 +190,7 @@ Nelly peut gérer le site en parlant à un assistant IA : « je suis en congé d
 
 **Poids** : chaque vidéo alourdit le dépôt GitHub, jusqu'à 35 Mo la minute. Préférer des vidéos courtes (15 à 30 secondes). Si les vidéos se multiplient, passer à un hébergement vidéo dédié.
 
-**Section animée au rythme de la musique** (annonce format section avec `motion: { frappes, revele }`) : le texte, resté du vrai texte dans la page, apparaît sur les temps forts mesurés dans la musique. Elle démarre quand le défilement s'arrête dessus, s'arrête dès qu'elle quitte l'écran et repart du début au retour. Elle tente de jouer avec le son ; les navigateurs le refusent tant que le visiteur n'a rien touché sur le site : elle part alors muette, et le son arrive au premier toucher ou clic. Connexion lente : `video.leger` (720p, fichier préparé à la main). Le réglage n'existe pas encore dans l'application : les temps forts sont mesurés à la main pour chaque vidéo.
+**Section film** (annonce format section avec `film: true`) : le film contient toute l'animation (rubans, volets, loupe, écran final), calculé une fois sur le poste à partir de la vidéo de Nelly. La page présente la vidéo et le texte côte à côte, sans effet par-dessus. La vidéo est entièrement téléchargée avant de démarrer, puis tourne en boucle ; elle démarre quand le défilement s'arrête dessus, se met en pause quand elle quitte l'écran et reprend au même endroit. Elle tente de jouer avec le son ; les navigateurs le refusent tant que le visiteur n'a rien touché sur le site : elle part alors muette, et le son arrive au premier toucher ou clic. Réseau lent : `video.leger` (720p). Un nouveau film ne se fabrique pas depuis l'application.
 
 ## Déconnecter tous les appareils
 

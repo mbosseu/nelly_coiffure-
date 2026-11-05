@@ -322,197 +322,124 @@ if (lightbox && (tiles.length || gallery || albums.length)) {
   });
 }
 
-// Section animée au rythme de la musique : le texte suit les temps forts mesurés dans la vidéo.
-// Elle démarre quand le visiteur s'arrête dessus, s'arrête dès qu'il la quitte et repart du début à son retour ;
-// rien n'est téléchargé si on ne fait que passer. Elle joue avec le son ; si le navigateur le refuse
-// (visiteur qui n'a encore rien touché sur le site), elle part muette et le son arrive au premier toucher ou clic.
-// Connexion lente : version légère de la vidéo, et le texte défile sans attendre qu'elle soit prête.
-function lancerMotion(box) {
+// Section film : la vidéo est entièrement chargée avant de démarrer, puis tourne en boucle, sans saccade ni coupure.
+// Rien n'est téléchargé tant que le visiteur ne s'arrête pas dessus. Pause quand elle quitte l'écran, reprise au même endroit.
+// Son demandé d'office ; si le navigateur le refuse (visiteur qui n'a encore rien touché), il arrive au premier toucher ou clic.
+function lancerFilm(box) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const video = box.querySelector('video');
-  const cadre = box.querySelector('.motion__cadre');
-  const pouls = box.querySelector('.motion__pouls');
-  const { frappes, revele, duree } = JSON.parse(box.dataset.motion);
-  const reperes = [...box.querySelectorAll('[data-debut]')].map((el) => ({ el, debut: Number(el.dataset.debut), fin: el.dataset.fin ? Number(el.dataset.fin) : Infinity }));
+  const cadre = box.querySelector('.film__cadre');
   const reseau = navigator.connection;
   const econome = reseau?.saveData === true;
   const lente = econome || ['slow-2g', '2g', '3g'].includes(reseau?.effectiveType) || (reseau?.downlink > 0 && reseau.downlink < 3);
-  const leger = video.dataset.leger;
-  let surLeger = false;
-  if (lente && leger) { video.src = `${leger}.mp4`; surLeger = true; }
-
-  box.classList.add('motion--actif');
-  // Le plus long mot du titre tient toujours en entier, quelle que soit la largeur de l'écran
-  const titre = box.querySelector('.motion__titre');
-  const ajusterTitre = () => {
-    titre.style.fontSize = '';
-    const plusLong = Math.max(...[...titre.children].map((m) => m.offsetWidth));
-    if (plusLong > titre.clientWidth) titre.style.fontSize = `${(parseFloat(getComputedStyle(titre).fontSize) * titre.clientWidth * 0.98) / plusLong}px`;
-  };
-  ajusterTitre();
-  document.fonts?.ready.then(ajusterTitre);
-  window.addEventListener('resize', ajusterTitre, { passive: true });
+  const complete = video.getAttribute('src');
+  const leger = video.dataset.leger ? `${video.dataset.leger}.mp4` : null;
+  box.classList.add('film--actif');
   video.controls = false;
   video.muted = true;
-
+  video.loop = true;
   const commandes = document.createElement('div');
-  commandes.className = 'motion__commandes';
-  commandes.innerHTML = `<button type="button" class="motion__bouton motion__son"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/><path class="motion__son-ondes" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg><span>Activer le son</span></button>
-    <button type="button" class="motion__bouton motion__rejouer" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.2v13.6a1 1 0 0 0 1.5.86l11.2-6.8a1 1 0 0 0 0-1.72L9.5 4.34A1 1 0 0 0 8 5.2z"/></svg><span>Lire la vidéo</span></button>
-    <div class="motion__barre" aria-hidden="true"><i></i></div>`;
+  commandes.className = 'film__commandes';
+  commandes.innerHTML = `<span class="film__indice" hidden>Touchez pour le son</span>
+    <button type="button" class="film__son" aria-label="Son de la vidéo" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/><path class="film__son-ondes" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/><path class="film__son-coupe" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg></button>
+    <div class="film__charge" hidden><i></i></div>`;
   cadre.append(commandes);
-  const son = commandes.querySelector('.motion__son');
-  const rejouer = commandes.querySelector('.motion__rejouer');
-  const barre = commandes.querySelector('.motion__barre i');
-
-  let visible = false; // assez présente à l'écran
-  let enScene = false; // lecture demandée
-  let enCours = false; // la vidéo joue vraiment
-  let sonCoupe = false; // le visiteur a coupé le son lui-même
-  let misEnPause = false;
-  let suivante = 0;
-  let boucleActive = false;
-  let departTexte = null; // horloge du texte quand la vidéo n'est pas encore prête
-  let minuteurs = [];
-
+  const son = commandes.querySelector('.film__son');
+  const indice = commandes.querySelector('.film__indice');
+  const charge = commandes.querySelector('.film__charge');
+  const barre = charge.querySelector('i');
+  let visible = false; let enScene = false; let sonCoupe = false; let enLecture = false;
+  let chargement = null; let pret = false; let attente = null;
   const majSon = () => {
-    son.querySelector('span').textContent = video.muted ? 'Activer le son' : 'Couper le son';
-    son.querySelector('.motion__son-ondes').style.opacity = video.muted ? 0.3 : 1;
+    son.setAttribute('aria-pressed', String(!video.muted));
+    son.setAttribute('aria-label', video.muted ? 'Activer le son' : 'Couper le son');
+    indice.hidden = !video.muted || sonCoupe || !enLecture;
   };
-  const frapper = () => {
-    cadre.animate([{ transform: 'scale(1.016)' }, { transform: 'scale(1)' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' });
-    pouls.animate([{ opacity: 1 }, { opacity: 0.5 }], { duration: 420, easing: 'ease-out' });
-  };
-  const temps = () => (departTexte !== null ? (performance.now() - departTexte) / 1000 : video.currentTime);
-  const peindre = (t) => {
-    for (const r of reperes) r.el.classList.toggle('est-la', t >= r.debut && t < r.fin);
-    box.classList.toggle('motion--revele', t >= revele);
-    barre.style.transform = `scaleX(${Math.min(1, t / duree)})`;
-    while (suivante < frappes.length && frappes[suivante] <= t) {
-      if (departTexte === null && t - frappes[suivante] < 0.12) frapper();
-      suivante += 1;
-    }
-  };
-  const finTexteSeul = () => { departTexte = null; video.pause(); peindre(duree); rejouer.hidden = false; };
-  const boucle = () => {
-    if (departTexte !== null && temps() >= duree) finTexteSeul();
-    else if (enCours || departTexte !== null) peindre(temps());
-    if (enCours || departTexte !== null) requestAnimationFrame(boucle); else boucleActive = false;
-  };
-  const lancerBoucle = () => { if (!boucleActive) { boucleActive = true; requestAnimationFrame(boucle); } };
-
-  const jouer = () => {
+  function jouer() {
     video.muted = sonCoupe;
     majSon();
     return video.play().catch((e) => {
-      if (e.name === 'AbortError' || !enScene) return;
-      if (video.muted) { rejouer.hidden = false; return; }
-      // Son refusé par le navigateur : la vidéo part muette, le son viendra au premier geste
+      if (e.name === 'AbortError' || !enScene || video.muted) return;
       video.muted = true;
       majSon();
-      video.play().catch((e2) => { if (e2.name !== 'AbortError') rejouer.hidden = false; });
+      video.play().catch(() => {});
     });
-  };
-  const basculerLeger = () => {
-    if (surLeger || !leger) return;
-    surLeger = true;
-    const t = video.currentTime;
-    video.src = `${leger}.mp4`;
-    if (t > 0) video.addEventListener('loadedmetadata', () => { video.currentTime = t; }, { once: true });
-    if (enScene && !misEnPause) jouer();
-  };
-  const annulerMinuteurs = () => { minuteurs.forEach(clearTimeout); minuteurs = []; };
-  const demarrer = () => {
-    if (enScene || video.ended) return;
-    enScene = true;
-    misEnPause = false;
-    rejouer.hidden = true;
-    // Mode économie de données : le texte seul, la vidéo reste à la demande
-    if (econome) { departTexte = performance.now(); lancerBoucle(); return; }
-    video.preload = 'auto';
-    jouer();
-    // Vidéo pas encore prête : le texte part sans elle, et la version légère prend le relais si besoin
-    minuteurs.push(setTimeout(() => { if (enScene && !enCours && departTexte === null) { departTexte = performance.now(); lancerBoucle(); } }, 700));
-    minuteurs.push(setTimeout(() => { if (enScene && !enCours) basculerLeger(); }, 2000));
-  };
-  const arreter = () => {
-    annulerMinuteurs();
-    enScene = false;
-    misEnPause = false;
-    departTexte = null;
-    video.pause();
-    if (video.readyState > 0) video.currentTime = 0;
-    suivante = 0;
-    peindre(0);
-    rejouer.hidden = true;
-    rejouer.querySelector('span').textContent = 'Lire la vidéo';
-  };
-  const relire = () => {
-    annulerMinuteurs();
-    departTexte = null;
-    misEnPause = false;
-    enScene = true;
-    rejouer.hidden = true;
-    video.preload = 'auto';
-    if (video.readyState > 0) video.currentTime = 0;
-    suivante = 0;
-    jouer();
-  };
-
-  video.addEventListener('playing', () => {
-    rejouer.hidden = true;
-    if (departTexte !== null) {
-      // La vidéo rattrape le texte déjà affiché : image, musique et texte restent ensemble
-      const t = temps();
-      departTexte = null;
-      if (t > 0.4 && t < duree - 0.4) video.currentTime = t;
+  }
+  video.addEventListener('playing', () => { enLecture = true; majSon(); });
+  video.addEventListener('pause', () => { enLecture = false; if (enScene && !document.hidden) setTimeout(() => { if (enScene && video.paused) jouer(); }, 300); });
+  async function telecharger(adresse, signal) {
+    const r = await fetch(adresse, { signal });
+    if (!r.ok || !r.body) throw new Error('video');
+    const total = Number(r.headers.get('content-length')) || 0;
+    const lecteur = r.body.getReader();
+    const morceaux = [];
+    let recu = 0;
+    const debut = performance.now();
+    for (;;) {
+      const { done, value } = await lecteur.read();
+      if (done) break;
+      morceaux.push(value);
+      recu += value.length;
+      if (total) barre.style.transform = `scaleX(${recu / total})`;
+      const ecoule = (performance.now() - debut) / 1000;
+      // Réseau trop lent pour la version complète : on passe à la version légère
+      if (adresse !== leger && leger && total && ecoule > 1.5 && ((total - recu) / (recu / ecoule)) > 5) { lecteur.cancel(); return null; }
     }
-    enCours = true;
-    lancerBoucle();
-  });
-  video.addEventListener('pause', () => { enCours = false; });
-  video.addEventListener('waiting', () => { minuteurs.push(setTimeout(() => { if (enScene && video.readyState < 3) basculerLeger(); }, 2000)); });
-  video.addEventListener('seeked', () => { suivante = frappes.findIndex((f) => f > video.currentTime); if (suivante < 0) suivante = frappes.length; if (departTexte === null) peindre(video.currentTime); });
-  video.addEventListener('ended', () => { enCours = false; peindre(duree); rejouer.querySelector('span').textContent = 'Revoir'; rejouer.hidden = false; });
-
-  son.addEventListener('click', () => {
+    return new Blob(morceaux, { type: 'video/mp4' });
+  }
+  function preparer() {
+    if (pret || chargement) return;
+    const controle = new AbortController();
+    chargement = { controle };
+    charge.hidden = false;
+    (async () => {
+      let blob = null;
+      try {
+        if (!lente || !leger) blob = await telecharger(complete, controle.signal);
+        if (!blob && leger) blob = await telecharger(leger, controle.signal);
+        if (blob) video.src = URL.createObjectURL(blob);
+      } catch (e) {
+        if (e.name === 'AbortError') { charge.hidden = true; chargement = null; return; }
+        video.src = lente && leger ? leger : complete; // lecture directe en secours
+      }
+      video.preload = 'auto';
+      charge.hidden = true;
+      pret = true;
+      chargement = null;
+      if (enScene) jouer();
+    })();
+  }
+  const demarrer = () => { if (enScene) return; enScene = true; if (pret) jouer(); else preparer(); };
+  const mettreEnPause = () => { enScene = false; clearTimeout(attente); chargement?.controle.abort(); video.pause(); };
+  const basculerSon = () => {
     sonCoupe = !video.muted;
     video.muted = sonCoupe;
     majSon();
-    if (!sonCoupe && video.paused && !video.ended) relire();
-  });
-  rejouer.addEventListener('click', relire);
-  video.addEventListener('click', () => {
-    if (video.muted && !sonCoupe) { video.muted = false; majSon(); if (video.paused && !video.ended) relire(); return; }
-    if (video.paused) { misEnPause = false; if (video.ended) relire(); else jouer(); } else { misEnPause = true; video.pause(); }
-  });
-  // Premier toucher ou clic ailleurs sur la page : le son arrive sans interrompre l'animation
+    if (!enScene) demarrer(); else if (pret && video.paused) jouer();
+  };
+  son.addEventListener('click', (e) => { e.stopPropagation(); basculerSon(); });
+  video.addEventListener('click', basculerSon);
   const gesteVisiteur = (e) => {
-    if (!enScene || !video.muted || sonCoupe || cadre.contains(e.target)) return;
+    if (!enLecture || !video.muted || sonCoupe || cadre.contains(e.target)) return;
     video.muted = false;
     majSon();
   };
   document.addEventListener('click', gesteVisiteur, true);
   document.addEventListener('keydown', gesteVisiteur, true);
-
-  // On démarre quand le défilement s'arrête sur la section ; on arrête dès qu'elle quitte l'écran
-  let attente = null;
   const programmer = () => {
     clearTimeout(attente);
+    if (econome) return; // mode économie de données : la vidéo se lance au toucher
     attente = setTimeout(() => { if (visible && !document.hidden) demarrer(); }, 280);
   };
   new IntersectionObserver((entrees) => {
     for (const e of entrees) {
-      if (e.intersectionRatio >= 0.6) { visible = true; programmer(); }
-      else if (e.intersectionRatio < 0.35) { visible = false; clearTimeout(attente); if (enScene || video.ended) arreter(); }
+      if (e.intersectionRatio >= 0.5) { visible = true; programmer(); } else if (e.intersectionRatio < 0.15) { visible = false; mettreEnPause(); }
     }
-  }, { threshold: [0, 0.35, 0.6] }).observe(cadre);
+  }, { threshold: [0, 0.15, 0.5] }).observe(cadre);
   window.addEventListener('scroll', () => { if (visible && !enScene) programmer(); }, { passive: true });
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { if (enScene) arreter(); } else if (visible) programmer();
-  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) mettreEnPause(); else if (visible) programmer(); });
 }
-document.querySelectorAll('[data-motion]').forEach(lancerMotion);
+document.querySelectorAll('.film').forEach(lancerFilm);
 
 // Coiffures : puce active selon la section visible
 const styleNav = document.querySelector('.style-nav');

@@ -8,7 +8,7 @@
       "titre": "🚨 ALERTE TRANSFORMATION ! 😍🔥",
       "texte": "Encore une magnifique réalisation signée Nelly Coiffure ! 💇🏽‍♀️✨\n\nDes braids élégantes, longues et soigneusement réalisées pour un résultat juste magnifique. 🥰\n\nEnvie de sublimer vos cheveux ? Prenez vite votre rendez-vous ! ❤️\n\n📩 Contactez Nelly Coiffure pour vos réservations.\n\nNelly Coiffure, votre beauté est notre priorité ! 💕",
       "image": {
-        "src": "img/annonces/annonce-mw3z8tus",
+        "src": "img/annonces/annonce-film-nelly",
         "x": 50,
         "y": 50,
         "zoom": 1,
@@ -29,36 +29,13 @@
       "fin": "",
       "fond": "clair",
       "video": {
-        "src": "video/annonce-mw3z8tus",
+        "src": "video/annonce-film-nelly",
+        "leger": "video/annonce-film-nelly-720",
         "largeur": 1080,
         "hauteur": 1920,
-        "duree": 17.6,
-        "leger": "video/annonce-mw3z8tus-720"
+        "duree": 17.6
       },
-      "motion": {
-        "frappes": [
-          1.12,
-          2.43,
-          2.75,
-          3.41,
-          4.06,
-          4.71,
-          5.37,
-          6.34,
-          7.65,
-          7.97,
-          8.95,
-          10.58,
-          11.56,
-          12.87,
-          13.19,
-          14.16,
-          15.48,
-          15.8,
-          16.78
-        ],
-        "revele": 5.37
-      }
+      "film": true
     }
   ],
   "reseaux": {

@@ -312,64 +312,30 @@ const motLong = (t) => String(t).split(/\s+/).some((m) => m.replace(/[^\p{L}]/gu
 
 const paragraphe = (t, classe = 'body', champ = '') => (String(t || '').trim() ? `<p class="${classe}"${champ}>${echapper(t.trim()).replace(/[ \t]*\n[ \t]*/g, ' <br>')}</p>` : '');
 
-// --- Section animée au rythme de la musique (annonce avec video + motion : { frappes, revele }) ---
-// Le texte reste du vrai texte dans la page (net, léger, lu par Google) ; js/main.js le fait apparaître sur les
-// temps forts mesurés dans la musique. Sans JavaScript ou si le visiteur limite les animations : texte complet et vidéo classique.
+// --- Section film (annonce avec video + film: true) ---
+// Le film contient déjà toute l'animation : la page présente simplement la vidéo et le texte, resté lisible par Google.
 const sansEmoji = (t) => String(t || '').replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}]/gu, ' ').replace(/[ \t]+/g, ' ').trim();
 const phrasesDe = (texte) => String(texte || '').split(/\n+/)
   .flatMap((l) => sansEmoji(l).split(/(?<=[.!?…])\s+(?=\p{Lu})/u)).map((p) => p.trim()).filter((p) => /\p{L}/u.test(p));
-const nbMots = (p) => p.split(/\s+/).length;
-const tempsLecture = (p) => 0.25 + nbMots(p) * 0.27; // environ 220 mots par minute : confortable
-const MOTS_FORTS = /^(Nelly|Coiffure|magnifique|magnifiques|beauté|rendez-vous)[,.!?]*$/i;
-const motsAnimes = (p) => p.split(/\s+/).map((m, i) => `<span class="motion__mot${MOTS_FORTS.test(m) ? ' motion__mot--fort' : ''}" style="--i:${i}">${echapper(m)}</span>`).join(' ');
 
-export function planMotion(a) {
-  const frappes = (a.motion?.frappes || []).map(Number).filter((x) => x >= 0).sort((x, y) => x - y);
-  const duree = Number(a.video?.duree) || 0;
-  const revele = Number(a.motion?.revele) || duree * 0.3;
-  const prochaine = (t) => frappes.find((f) => f >= t);
-  // Le titre arrive mot par mot avant la révélation
-  const motsTitre = sansEmoji(a.titre).replace(/\s+([!?:;]+)/g, ' $1').split(/ +/).filter(Boolean);
-  let t = 0.6;
-  const titre = motsTitre.map((m) => { const d = prochaine(t) ?? t; t = d + 0.9; return { m, debut: d }; });
-  // Les petites phrases voisines se lisent ensemble ; les deux dernières forment l'écran final
-  const brutes = phrasesDe(a.texte);
-  const finales = brutes.slice(-2);
-  const corps = [];
-  for (const p of brutes.slice(0, -2)) {
-    const der = corps[corps.length - 1];
-    if (der && nbMots(der) <= 5 && nbMots(p) <= 5) corps[corps.length - 1] = `${der} ${p}`;
-    else corps.push(p);
-  }
-  let debut = revele;
-  const phrases = corps.map((texte) => {
-    const fin = prochaine(debut + tempsLecture(texte) - 0.3) ?? debut + tempsLecture(texte);
-    const p = { texte, debut, fin };
-    debut = fin;
-    return p;
-  });
-  return { frappes, revele, titre, phrases, finales, finale: debut };
-}
-
-const rendreMotion = (a, NL) => {
-  const plan = planMotion(a);
+const rendreFilm = (a, NL) => {
   const v = a.video;
-  const nb = (x) => Number(x.toFixed(2));
-  const titre = plan.titre.map((x) => `<span class="motion__titre-mot" data-debut="${nb(x.debut)}">${echapper(x.m)}</span>`).join(' ');
+  const titre = sansEmoji(a.titre).replace(/\s+([!?:;]+)/g, '\u00A0$1');
+  const phrases = phrasesDe(a.texte);
+  const signature = phrases.length > 1 ? phrases.pop() : '';
   const bouton = String(a.bouton?.texte || '').trim() ? boutonAnnonce(a, 'btn btn--light btn--shine') : '';
   return [
-    `    <section class="promo promo--motion" aria-label="${echapper(sansEmoji(a.titre) || 'Vidéo')}"${dates(a, new Date().toISOString().slice(0, 10))}>`,
+    `    <section class="promo promo--film" aria-label="${echapper(titre || 'Vidéo')}"${dates(a, new Date().toISOString().slice(0, 10))}>`,
     '      <div class="container">',
-    `        <div class="motion" data-motion="${echapper(JSON.stringify({ frappes: plan.frappes, revele: plan.revele, duree: Number(v.duree) }))}">`,
-    '          <span class="motion__pouls" aria-hidden="true"></span>',
-    `          <div class="motion__cadre"><video src="${v.src}.mp4"${VIDEO_SRC.test(v.leger || '') ? ` data-leger="${v.leger}"` : ''} poster="${a.image.src}-sm.jpg" width="${Number(v.largeur)}" height="${Number(v.hauteur)}" controls playsinline preload="none" controlslist="nodownload" aria-label="${echapper(a.image.alt || sansEmoji(a.titre) || 'Vidéo de Nelly Coiffure')}"></video></div>`,
-    '          <div class="motion__texte">',
-    `            <h2 class="motion__titre">${titre}</h2>`,
-    ...plan.phrases.map((p) => `            <p class="motion__phrase" data-debut="${nb(p.debut)}" data-fin="${nb(p.fin)}">${motsAnimes(p.texte)}</p>`),
-    `            <div class="motion__fin" data-debut="${nb(plan.finale)}">`,
-    ...plan.finales.map((p, i) => `              <p class="${i === plan.finales.length - 1 ? 'motion__signature' : 'motion__appel'}">${motsAnimes(p)}</p>`),
-    bouton && `              ${bouton}`,
-    '            </div>',
+    '        <div class="film">',
+    `          <div class="film__cadre"><video src="${v.src}.mp4"${VIDEO_SRC.test(v.leger || '') ? ` data-leger="${v.leger}"` : ''} poster="${a.image.src}-sm.jpg" width="${Number(v.largeur)}" height="${Number(v.hauteur)}" controls playsinline preload="none" controlslist="nodownload" aria-label="${echapper(a.image.alt || titre || 'Vidéo de Nelly Coiffure')}"></video></div>`,
+    '          <div class="film__texte">',
+    String(a.etiquette || '').trim() && `            <p class="film__surtitre">${echapper(a.etiquette.trim())}</p>`,
+    `            <h2 class="film__titre">${echapper(titre)}</h2>`,
+    // Une question reste avec la phrase qui la suit ; le reste en petits paragraphes faciles à lire
+    ...phrases.reduce((l, p) => { if (l.length && /\?$/.test(l[l.length - 1])) l[l.length - 1] += ` ${p}`; else l.push(p); return l; }, []).map((p) => `            <p class="film__corps">${echapper(p)}</p>`),
+    signature && `            <p class="film__signature">${echapper(signature)}</p>`,
+    bouton && `            ${bouton}`,
     '          </div>',
     '        </div>',
     '      </div>',
@@ -380,7 +346,7 @@ const rendreMotion = (a, NL) => {
 // Annonce ou section ajoutée. Formats : section (image + texte), carte, encadre (texte seul), cartes (grille de 2 ou 3),
 // appel (bande sombre). Fond : clair (carte crème), transparent ou sombre. ajout = section placée dans une page.
 const rendrePromo = (a, aujourdhui, NL, ajout = false) => {
-  if (!ajout && a.motion && a.video?.src && a.image?.src && a.format === 'section') return rendreMotion(a, NL);
+  if (!ajout && a.film && a.video?.src && a.image?.src && a.format === 'section') return rendreFilm(a, NL);
   const etiquette = String(a.etiquette || '').trim();
   const sombre = a.format === 'appel' || a.fond === 'sombre';
   // Sections ajoutées : chaque texte indique son champ, pour que l'éditeur visuel le modifie sur place
@@ -848,7 +814,6 @@ export function verifierAnnonces(annonces) {
     if (a.debut && a.fin && a.fin < a.debut) erreurs.push(`Annonce « ${nom} » : la date de fin est avant la date de début.`);
     if (a.image && !/^img\/annonces\/[a-z0-9-]+$/.test(a.image.src || '')) erreurs.push(`Annonce « ${nom} » : image invalide.`);
     if (a.video && !(videoValide(a.video) && a.image?.src)) erreurs.push(`Annonce « ${nom} » : vidéo invalide.`);
-    if (a.motion && !(a.video && Array.isArray(a.motion.frappes) && a.motion.frappes.length <= 300 && a.motion.frappes.every((f) => Number.isFinite(f) && f >= 0) && Number.isFinite(a.motion.revele))) erreurs.push(`Annonce « ${nom} » : animation invalide.`);
     if (String(a.bouton?.texte || '').trim()) {
       const b = a.bouton;
       if (String(b.texte).length > 40) erreurs.push(`Annonce « ${nom} » : texte du bouton trop long (40 caractères maximum).`);
