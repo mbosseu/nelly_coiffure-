@@ -1,26 +1,5 @@
 {
-  "annonces": [
-    {
-      "id": "annonce-mw3i3iyg",
-      "active": true,
-      "format": "bandeau",
-      "etiquette": "",
-      "titre": "",
-      "texte": "Nelly sera en congés à partir du 25 décembre. Réservez vite vos coiffures pour les fêtes !",
-      "image": null,
-      "bouton": {
-        "texte": "",
-        "type": "whatsapp",
-        "valeur": ""
-      },
-      "pages": [
-        "toutes"
-      ],
-      "debut": "2026-11-05",
-      "fin": "",
-      "fond": "clair"
-    }
-  ],
+  "annonces": [],
   "reseaux": {
     "instagram": "https://www.instagram.com/nellycoiffure_?psln=NnpnYzI1N3J1cGRv&utm_source=qr",
     "tiktok": "https://www.tiktok.com/@nellycoiffure237",
