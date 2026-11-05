@@ -1363,14 +1363,10 @@ html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -
 @media (max-width: 1180px) { .promo .title--mot-long { font-size: clamp(1.7rem, 3.4vw, 2.5rem); } }
 @media (max-width: 760px) { .promo .title--mot-long { font-size: clamp(1.25rem, 6.4vw, 1.9rem); } }
 
-/* --- Section film : la vidéo et le texte côte à côte, sans effet par-dessus --- */
-.film { display: grid; grid-template-columns: auto minmax(0, 500px); justify-content: center; align-items: center; gap: clamp(36px, 6vw, 88px); padding: clamp(24px, 3.6vw, 52px); border-radius: 32px; background: #1C0F09; color: #FBF3EA; box-shadow: 0 40px 70px -46px rgba(40, 20, 10, .9); }
-.film__cadre { position: relative; height: min(78vh, 700px); aspect-ratio: 9 / 16; overflow: hidden; border-radius: 22px; background: #000; box-shadow: 0 26px 50px -24px rgba(0, 0, 0, .9); }
+/* --- Section film : la vidéo seule, centrée --- */
+.film { display: flex; justify-content: center; }
+.film__cadre { position: relative; height: min(84vh, 780px); aspect-ratio: 9 / 16; overflow: hidden; border-radius: 22px; background: #000; box-shadow: 0 34px 60px -30px rgba(40, 20, 10, .75); }
 .film__cadre video { display: block; width: 100%; height: 100%; object-fit: cover; }
-.film__surtitre { margin: 0 0 14px; font: 600 .74rem/1 var(--sans); letter-spacing: .22em; text-transform: uppercase; color: var(--copper-light); }
-.film__titre { margin: 0 0 20px; font-family: var(--serif); font-weight: 400; font-size: clamp(2rem, 3.4vw, 3.1rem); line-height: 1.1; color: #FBF3EA; overflow-wrap: normal; }
-.film__corps { margin: 0 0 12px; font-size: clamp(1rem, 1.2vw, 1.1rem); line-height: 1.7; color: rgba(251, 243, 234, .86); }
-.film__signature { margin: 20px 0 26px; padding-top: 18px; border-top: 1px solid rgba(251, 243, 234, .18); font-family: var(--serif); font-size: clamp(1.15rem, 1.6vw, 1.4rem); line-height: 1.35; color: #EDBE8F; }
 .film__commandes { display: none; }
 .film--actif .film__cadre video { cursor: pointer; }
 .film--actif .film__commandes { display: block; }
@@ -1384,12 +1380,7 @@ html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -
 .film__charge { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .2); }
 .film__charge i { display: block; height: 100%; background: var(--copper-light); transform: scaleX(0); transform-origin: 0 50%; transition: transform .25s linear; }
 @media (max-width: 860px) {
-  .film { grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 16px 16px 26px; border-radius: 24px; }
-  .film__cadre { justify-self: center; height: auto; width: min(100%, calc(84svh * 9 / 16)); }
-  .film__texte { padding-inline: 6px; }
-  .film__titre { font-size: clamp(1.35rem, 7.3vw, 2.2rem); }
-  /* Le bouton WhatsApp fixe du site suffit sur téléphone */
-  .film .btn { display: none; }
+  .film__cadre { height: auto; width: min(100%, calc(76svh * 9 / 16)); }
 }
 .promo--carte .body { font-size: .96rem; }
 .promo--encadre .promo__inner, .promo--sans-image .promo__inner { grid-template-columns: minmax(0, 1fr); max-width: 820px; margin-inline: auto; text-align: center; background: transparent; box-shadow: none; border-color: rgba(181, 122, 80, .5); }

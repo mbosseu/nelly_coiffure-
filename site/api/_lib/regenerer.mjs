@@ -313,34 +313,21 @@ const motLong = (t) => String(t).split(/\s+/).some((m) => m.replace(/[^\p{L}]/gu
 const paragraphe = (t, classe = 'body', champ = '') => (String(t || '').trim() ? `<p class="${classe}"${champ}>${echapper(t.trim()).replace(/[ \t]*\n[ \t]*/g, ' <br>')}</p>` : '');
 
 // --- Section film (annonce avec video + film: true) ---
-// Le film contient déjà toute l'animation : la page présente simplement la vidéo et le texte, resté lisible par Google.
+// Seule la vidéo est affichée : les textes sont dans le film. Le titre reste connu des lecteurs d'écran.
 const sansEmoji = (t) => String(t || '').replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}]/gu, ' ').replace(/[ \t]+/g, ' ').trim();
-const phrasesDe = (texte) => String(texte || '').split(/\n+/)
-  .flatMap((l) => sansEmoji(l).split(/(?<=[.!?…])\s+(?=\p{Lu})/u)).map((p) => p.trim()).filter((p) => /\p{L}/u.test(p));
 
 const rendreFilm = (a, NL) => {
   const v = a.video;
-  const titre = sansEmoji(a.titre).replace(/\s+([!?:;]+)/g, '\u00A0$1');
-  const phrases = phrasesDe(a.texte);
-  const signature = phrases.length > 1 ? phrases.pop() : '';
-  const bouton = String(a.bouton?.texte || '').trim() ? boutonAnnonce(a, 'btn btn--light btn--shine') : '';
+  const titre = sansEmoji(a.titre);
   return [
     `    <section class="promo promo--film" aria-label="${echapper(titre || 'Vidéo')}"${dates(a, new Date().toISOString().slice(0, 10))}>`,
     '      <div class="container">',
     '        <div class="film">',
     `          <div class="film__cadre"><video src="${v.src}.mp4"${VIDEO_SRC.test(v.leger || '') ? ` data-leger="${v.leger}"` : ''} poster="${a.image.src}-sm.jpg" width="${Number(v.largeur)}" height="${Number(v.hauteur)}" controls playsinline preload="none" controlslist="nodownload" aria-label="${echapper(a.image.alt || titre || 'Vidéo de Nelly Coiffure')}"></video></div>`,
-    '          <div class="film__texte">',
-    String(a.etiquette || '').trim() && `            <p class="film__surtitre">${echapper(a.etiquette.trim())}</p>`,
-    `            <h2 class="film__titre">${echapper(titre)}</h2>`,
-    // Une question reste avec la phrase qui la suit ; le reste en petits paragraphes faciles à lire
-    ...phrases.reduce((l, p) => { if (l.length && /\?$/.test(l[l.length - 1])) l[l.length - 1] += ` ${p}`; else l.push(p); return l; }, []).map((p) => `            <p class="film__corps">${echapper(p)}</p>`),
-    signature && `            <p class="film__signature">${echapper(signature)}</p>`,
-    bouton && `            ${bouton}`,
-    '          </div>',
     '        </div>',
     '      </div>',
     '    </section>',
-  ].filter(Boolean).join(NL);
+  ].join(NL);
 };
 
 // Annonce ou section ajoutée. Formats : section (image + texte), carte, encadre (texte seul), cartes (grille de 2 ou 3),
