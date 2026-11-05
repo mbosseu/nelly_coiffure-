@@ -323,7 +323,6 @@ const rendreFilm = (a, NL) => {
     `    <section class="promo promo--film" aria-label="${echapper(titre || 'Vidéo')}"${dates(a, new Date().toISOString().slice(0, 10))}>`,
     '      <div class="container">',
     '        <div class="film">',
-    `          <img class="film__fond" src="${a.image.src}-sm.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async">`,
     `          <div class="film__cadre"><video src="${v.src}.mp4"${VIDEO_SRC.test(v.leger || '') ? ` data-leger="${v.leger}"` : ''} poster="${a.image.src}-sm.jpg" width="${Number(v.largeur)}" height="${Number(v.hauteur)}" controls playsinline preload="none" controlslist="nodownload" aria-label="${echapper(a.image.alt || titre || 'Vidéo de Nelly Coiffure')}"></video></div>`,
     '        </div>',
     '      </div>',

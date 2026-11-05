@@ -1363,11 +1363,11 @@ html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -
 @media (max-width: 1180px) { .promo .title--mot-long { font-size: clamp(1.7rem, 3.4vw, 2.5rem); } }
 @media (max-width: 760px) { .promo .title--mot-long { font-size: clamp(1.25rem, 6.4vw, 1.9rem); } }
 
-/* --- Section film : un bloc à la largeur du site, la vidéo entière au centre, sur un fond tiré de ses couleurs --- */
-.promo--film { padding: clamp(28px, 4vw, 48px) 0 clamp(24px, 3.4vw, 40px); }
-.film { position: relative; display: flex; justify-content: center; overflow: hidden; padding: clamp(18px, 2.2vw, 28px); border-radius: 14px; background: #1C0F09; box-shadow: 0 20px 36px -28px rgba(40, 20, 10, .7); isolation: isolate; }
-.film__fond { position: absolute; inset: -12%; z-index: -1; width: 124%; max-width: none; height: 124%; object-fit: cover; filter: blur(42px) brightness(.52) saturate(1.12); pointer-events: none; }
-.film__cadre { position: relative; height: min(74vh, 660px); aspect-ratio: 9 / 16; overflow: hidden; border-radius: 10px; background: #000; box-shadow: 0 22px 44px -18px rgba(0, 0, 0, .75); }
+/* --- Section film : la vidéo posée sur le fond de la page, comme les autres sections ---
+   Sa hauteur suit l'écran : elle tient toujours en entier, sous l'en-tête du site. */
+.promo--film { padding: clamp(34px, 4.4vw, 56px) 0; }
+.film { display: flex; justify-content: center; }
+.film__cadre { position: relative; height: min(calc(100svh - 150px), 720px); max-width: 100%; aspect-ratio: 9 / 16; overflow: hidden; border-radius: 14px; background: #1C0F09; box-shadow: 0 20px 36px -28px rgba(40, 20, 10, .7); }
 .film__cadre video { display: block; width: 100%; height: 100%; object-fit: cover; }
 .film__commandes { display: none; }
 .film--actif .film__cadre video { cursor: pointer; }
@@ -1382,8 +1382,7 @@ html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -
 .film__charge { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: rgba(255, 255, 255, .2); }
 .film__charge i { display: block; height: 100%; background: var(--copper-light); transform: scaleX(0); transform-origin: 0 50%; transition: transform .25s linear; }
 @media (max-width: 860px) {
-  .film { padding: 0; }
-  .film__cadre { height: auto; width: min(100%, calc(78svh * 9 / 16)); border-radius: 0; box-shadow: none; }
+  .film__cadre { height: auto; width: min(100%, max(calc((100svh - 170px) * 9 / 16), 250px)); }
 }
 .promo--carte .body { font-size: .96rem; }
 .promo--encadre .promo__inner, .promo--sans-image .promo__inner { grid-template-columns: minmax(0, 1fr); max-width: 820px; margin-inline: auto; text-align: center; background: transparent; box-shadow: none; border-color: rgba(181, 122, 80, .5); }
