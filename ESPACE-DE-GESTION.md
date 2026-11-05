@@ -190,6 +190,8 @@ Nelly peut gérer le site en parlant à un assistant IA : « je suis en congé d
 
 **Poids** : chaque vidéo alourdit le dépôt GitHub, jusqu'à 35 Mo la minute. Préférer des vidéos courtes (15 à 30 secondes). Si les vidéos se multiplient, passer à un hébergement vidéo dédié.
 
+**Section animée au rythme de la musique** (annonce format section avec `motion: { frappes, revele }`) : le texte, resté du vrai texte dans la page, apparaît sur les temps forts mesurés dans la musique. Elle démarre quand le défilement s'arrête dessus, s'arrête dès qu'elle quitte l'écran et repart du début au retour. Elle tente de jouer avec le son ; les navigateurs le refusent tant que le visiteur n'a rien touché sur le site : elle part alors muette, et le son arrive au premier toucher ou clic. Connexion lente : `video.leger` (720p, fichier préparé à la main). Le réglage n'existe pas encore dans l'application : les temps forts sont mesurés à la main pour chaque vidéo.
+
 ## Déconnecter tous les appareils
 
 Mon compte → « Déconnecter tous les autres appareils ». Le jeton de connexion porte sa date de création ; l'action enregistre la date du moment dans `contenu/sessions.json` (hors du site public, un commit « Espace Nelly : déconnexion de tous les appareils ») et tout jeton plus ancien est refusé. L'appareil qui fait la demande reçoit un nouveau jeton et reste connecté. La date est relue au plus une fois par minute par l'API. Changer `ADMIN_SECRET` dans Vercel déconnecte aussi tout le monde.

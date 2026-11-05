@@ -139,7 +139,7 @@ export const MAX_ALBUM = 20;
 export const videosUtilisees = (c) => [...new Set([
   ...(c.services || []).flatMap((s) => suiteDe(s).map((m) => m.video?.src)),
   ...(c.photos || []).flatMap((p) => [p.video?.src, ...suiteDe(p).map((m) => m.video?.src)]),
-  ...(c.annonces || []).map((a) => a.video?.src),
+  ...(c.annonces || []).flatMap((a) => [a.video?.src, a.video?.leger]),
 ].filter(Boolean))];
 // Toutes les images d'albums (la photo principale n'en fait pas partie)
 export const imagesAlbums = (c) => [...new Set([...(c.services || []), ...(c.photos || [])].flatMap((x) => suiteDe(x).map((m) => m.image)))];
@@ -360,9 +360,9 @@ const rendreMotion = (a, NL) => {
   return [
     `    <section class="promo promo--motion" aria-label="${echapper(sansEmoji(a.titre) || 'Vidéo')}"${dates(a, new Date().toISOString().slice(0, 10))}>`,
     '      <div class="container">',
-    `        <div class="motion" data-motion="${echapper(JSON.stringify({ frappes: plan.frappes, revele: plan.revele }))}">`,
+    `        <div class="motion" data-motion="${echapper(JSON.stringify({ frappes: plan.frappes, revele: plan.revele, duree: Number(v.duree) }))}">`,
     '          <span class="motion__pouls" aria-hidden="true"></span>',
-    `          <div class="motion__cadre"><video src="${v.src}.mp4" poster="${a.image.src}-sm.jpg" width="${Number(v.largeur)}" height="${Number(v.hauteur)}" controls playsinline preload="none" controlslist="nodownload" aria-label="${echapper(a.image.alt || sansEmoji(a.titre) || 'Vidéo de Nelly Coiffure')}"></video></div>`,
+    `          <div class="motion__cadre"><video src="${v.src}.mp4"${VIDEO_SRC.test(v.leger || '') ? ` data-leger="${v.leger}"` : ''} poster="${a.image.src}-sm.jpg" width="${Number(v.largeur)}" height="${Number(v.hauteur)}" controls playsinline preload="none" controlslist="nodownload" aria-label="${echapper(a.image.alt || sansEmoji(a.titre) || 'Vidéo de Nelly Coiffure')}"></video></div>`,
     '          <div class="motion__texte">',
     `            <h2 class="motion__titre">${titre}</h2>`,
     ...plan.phrases.map((p) => `            <p class="motion__phrase" data-debut="${nb(p.debut)}" data-fin="${nb(p.fin)}">${motsAnimes(p.texte)}</p>`),
@@ -709,7 +709,7 @@ export function regenerer(fichiers, contenu, { ancien, aujourdhui = new Date().t
   return Object.fromEntries(Object.entries(sortie).filter(([f, t]) => t !== fichiers[f]));
 }
 
-const videoValide = (v) => VIDEO_SRC.test(v?.src || '') && Number.isInteger(v.largeur) && Number.isInteger(v.hauteur) && v.largeur > 0 && v.hauteur > 0;
+const videoValide = (v) => VIDEO_SRC.test(v?.src || '') && (v.leger === undefined || VIDEO_SRC.test(v.leger)) && Number.isInteger(v.largeur) && Number.isInteger(v.hauteur) && v.largeur > 0 && v.hauteur > 0;
 function verifierAlbum(x, nom) {
   if (x.suite === undefined) return [];
   if (!Array.isArray(x.suite)) return [`Album illisible pour ${nom}.`];

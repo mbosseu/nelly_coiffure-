@@ -323,15 +323,24 @@ if (lightbox && (tiles.length || gallery || albums.length)) {
 }
 
 // Section animée au rythme de la musique : le texte suit les temps forts mesurés dans la vidéo.
-// Vidéo coupée de son par défaut (règle des navigateurs), téléchargée seulement quand la section arrive à l'écran.
+// Elle démarre quand le visiteur s'arrête dessus, s'arrête dès qu'il la quitte et repart du début à son retour ;
+// rien n'est téléchargé si on ne fait que passer. Elle joue avec le son ; si le navigateur le refuse
+// (visiteur qui n'a encore rien touché sur le site), elle part muette et le son arrive au premier toucher ou clic.
+// Connexion lente : version légère de la vidéo, et le texte défile sans attendre qu'elle soit prête.
 function lancerMotion(box) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const video = box.querySelector('video');
   const cadre = box.querySelector('.motion__cadre');
   const pouls = box.querySelector('.motion__pouls');
-  const { frappes, revele } = JSON.parse(box.dataset.motion);
+  const { frappes, revele, duree } = JSON.parse(box.dataset.motion);
   const reperes = [...box.querySelectorAll('[data-debut]')].map((el) => ({ el, debut: Number(el.dataset.debut), fin: el.dataset.fin ? Number(el.dataset.fin) : Infinity }));
-  const econome = navigator.connection?.saveData === true;
+  const reseau = navigator.connection;
+  const econome = reseau?.saveData === true;
+  const lente = econome || ['slow-2g', '2g', '3g'].includes(reseau?.effectiveType) || (reseau?.downlink > 0 && reseau.downlink < 3);
+  const leger = video.dataset.leger;
+  let surLeger = false;
+  if (lente && leger) { video.src = `${leger}.mp4`; surLeger = true; }
+
   box.classList.add('motion--actif');
   // Le plus long mot du titre tient toujours en entier, quelle que soit la largeur de l'écran
   const titre = box.querySelector('.motion__titre');
@@ -356,50 +365,152 @@ function lancerMotion(box) {
   const rejouer = commandes.querySelector('.motion__rejouer');
   const barre = commandes.querySelector('.motion__barre i');
 
-  let suivante = 0;
-  let enCours = false;
+  let visible = false; // assez présente à l'écran
+  let enScene = false; // lecture demandée
+  let enCours = false; // la vidéo joue vraiment
+  let sonCoupe = false; // le visiteur a coupé le son lui-même
   let misEnPause = false;
+  let suivante = 0;
+  let boucleActive = false;
+  let departTexte = null; // horloge du texte quand la vidéo n'est pas encore prête
+  let minuteurs = [];
+
+  const majSon = () => {
+    son.querySelector('span').textContent = video.muted ? 'Activer le son' : 'Couper le son';
+    son.querySelector('.motion__son-ondes').style.opacity = video.muted ? 0.3 : 1;
+  };
   const frapper = () => {
     cadre.animate([{ transform: 'scale(1.016)' }, { transform: 'scale(1)' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' });
     pouls.animate([{ opacity: 1 }, { opacity: 0.5 }], { duration: 420, easing: 'ease-out' });
   };
-  const peindre = () => {
-    const t = video.currentTime;
+  const temps = () => (departTexte !== null ? (performance.now() - departTexte) / 1000 : video.currentTime);
+  const peindre = (t) => {
     for (const r of reperes) r.el.classList.toggle('est-la', t >= r.debut && t < r.fin);
     box.classList.toggle('motion--revele', t >= revele);
-    barre.style.transform = `scaleX(${video.duration ? t / video.duration : 0})`;
+    barre.style.transform = `scaleX(${Math.min(1, t / duree)})`;
     while (suivante < frappes.length && frappes[suivante] <= t) {
-      if (t - frappes[suivante] < 0.12) frapper();
+      if (departTexte === null && t - frappes[suivante] < 0.12) frapper();
       suivante += 1;
     }
   };
-  const boucle = () => { peindre(); if (enCours) requestAnimationFrame(boucle); };
-  video.addEventListener('playing', () => { rejouer.hidden = true; if (!enCours) { enCours = true; requestAnimationFrame(boucle); } });
-  video.addEventListener('pause', () => { enCours = false; });
-  video.addEventListener('seeked', () => { suivante = frappes.findIndex((f) => f > video.currentTime); if (suivante < 0) suivante = frappes.length; peindre(); });
-  video.addEventListener('ended', () => { enCours = false; peindre(); rejouer.querySelector('span').textContent = 'Revoir'; rejouer.hidden = false; });
+  const finTexteSeul = () => { departTexte = null; video.pause(); peindre(duree); rejouer.hidden = false; };
+  const boucle = () => {
+    if (departTexte !== null && temps() >= duree) finTexteSeul();
+    else if (enCours || departTexte !== null) peindre(temps());
+    if (enCours || departTexte !== null) requestAnimationFrame(boucle); else boucleActive = false;
+  };
+  const lancerBoucle = () => { if (!boucleActive) { boucleActive = true; requestAnimationFrame(boucle); } };
 
-  const jouer = () => video.play().catch(() => { rejouer.hidden = false; });
-  const depuisLeDebut = () => { if (video.ended || video.currentTime > 0) video.currentTime = 0; suivante = 0; };
+  const jouer = () => {
+    video.muted = sonCoupe;
+    majSon();
+    return video.play().catch((e) => {
+      if (e.name === 'AbortError' || !enScene) return;
+      if (video.muted) { rejouer.hidden = false; return; }
+      // Son refusé par le navigateur : la vidéo part muette, le son viendra au premier geste
+      video.muted = true;
+      majSon();
+      video.play().catch((e2) => { if (e2.name !== 'AbortError') rejouer.hidden = false; });
+    });
+  };
+  const basculerLeger = () => {
+    if (surLeger || !leger) return;
+    surLeger = true;
+    const t = video.currentTime;
+    video.src = `${leger}.mp4`;
+    if (t > 0) video.addEventListener('loadedmetadata', () => { video.currentTime = t; }, { once: true });
+    if (enScene && !misEnPause) jouer();
+  };
+  const annulerMinuteurs = () => { minuteurs.forEach(clearTimeout); minuteurs = []; };
+  const demarrer = () => {
+    if (enScene || video.ended) return;
+    enScene = true;
+    misEnPause = false;
+    rejouer.hidden = true;
+    // Mode économie de données : le texte seul, la vidéo reste à la demande
+    if (econome) { departTexte = performance.now(); lancerBoucle(); return; }
+    video.preload = 'auto';
+    jouer();
+    // Vidéo pas encore prête : le texte part sans elle, et la version légère prend le relais si besoin
+    minuteurs.push(setTimeout(() => { if (enScene && !enCours && departTexte === null) { departTexte = performance.now(); lancerBoucle(); } }, 700));
+    minuteurs.push(setTimeout(() => { if (enScene && !enCours) basculerLeger(); }, 2000));
+  };
+  const arreter = () => {
+    annulerMinuteurs();
+    enScene = false;
+    misEnPause = false;
+    departTexte = null;
+    video.pause();
+    if (video.readyState > 0) video.currentTime = 0;
+    suivante = 0;
+    peindre(0);
+    rejouer.hidden = true;
+    rejouer.querySelector('span').textContent = 'Lire la vidéo';
+  };
+  const relire = () => {
+    annulerMinuteurs();
+    departTexte = null;
+    misEnPause = false;
+    enScene = true;
+    rejouer.hidden = true;
+    video.preload = 'auto';
+    if (video.readyState > 0) video.currentTime = 0;
+    suivante = 0;
+    jouer();
+  };
+
+  video.addEventListener('playing', () => {
+    rejouer.hidden = true;
+    if (departTexte !== null) {
+      // La vidéo rattrape le texte déjà affiché : image, musique et texte restent ensemble
+      const t = temps();
+      departTexte = null;
+      if (t > 0.4 && t < duree - 0.4) video.currentTime = t;
+    }
+    enCours = true;
+    lancerBoucle();
+  });
+  video.addEventListener('pause', () => { enCours = false; });
+  video.addEventListener('waiting', () => { minuteurs.push(setTimeout(() => { if (enScene && video.readyState < 3) basculerLeger(); }, 2000)); });
+  video.addEventListener('seeked', () => { suivante = frappes.findIndex((f) => f > video.currentTime); if (suivante < 0) suivante = frappes.length; if (departTexte === null) peindre(video.currentTime); });
+  video.addEventListener('ended', () => { enCours = false; peindre(duree); rejouer.querySelector('span').textContent = 'Revoir'; rejouer.hidden = false; });
+
   son.addEventListener('click', () => {
-    const activer = video.muted;
-    video.muted = !activer;
-    son.querySelector('span').textContent = activer ? 'Couper le son' : 'Activer le son';
-    son.querySelector('.motion__son-ondes').style.opacity = activer ? 1 : 0.3;
-    // La première écoute repart du début : texte et musique sont vus ensemble
-    if (activer) { misEnPause = false; depuisLeDebut(); jouer(); }
+    sonCoupe = !video.muted;
+    video.muted = sonCoupe;
+    majSon();
+    if (!sonCoupe && video.paused && !video.ended) relire();
   });
-  rejouer.addEventListener('click', () => { misEnPause = false; depuisLeDebut(); jouer(); });
+  rejouer.addEventListener('click', relire);
   video.addEventListener('click', () => {
-    if (video.paused) { misEnPause = false; if (video.ended) depuisLeDebut(); jouer(); } else { misEnPause = true; video.pause(); }
+    if (video.muted && !sonCoupe) { video.muted = false; majSon(); if (video.paused && !video.ended) relire(); return; }
+    if (video.paused) { misEnPause = false; if (video.ended) relire(); else jouer(); } else { misEnPause = true; video.pause(); }
   });
-  if (econome) rejouer.hidden = false;
+  // Premier toucher ou clic ailleurs sur la page : le son arrive sans interrompre l'animation
+  const gesteVisiteur = (e) => {
+    if (!enScene || !video.muted || sonCoupe || cadre.contains(e.target)) return;
+    video.muted = false;
+    majSon();
+  };
+  document.addEventListener('click', gesteVisiteur, true);
+  document.addEventListener('keydown', gesteVisiteur, true);
+
+  // On démarre quand le défilement s'arrête sur la section ; on arrête dès qu'elle quitte l'écran
+  let attente = null;
+  const programmer = () => {
+    clearTimeout(attente);
+    attente = setTimeout(() => { if (visible && !document.hidden) demarrer(); }, 280);
+  };
   new IntersectionObserver((entrees) => {
     for (const e of entrees) {
-      if (!e.isIntersecting) { if (!video.paused) video.pause(); continue; }
-      if (!econome && !misEnPause && !video.ended) { video.preload = 'auto'; jouer(); }
+      if (e.intersectionRatio >= 0.6) { visible = true; programmer(); }
+      else if (e.intersectionRatio < 0.35) { visible = false; clearTimeout(attente); if (enScene || video.ended) arreter(); }
     }
-  }, { threshold: 0.45 }).observe(cadre);
+  }, { threshold: [0, 0.35, 0.6] }).observe(cadre);
+  window.addEventListener('scroll', () => { if (visible && !enScene) programmer(); }, { passive: true });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (enScene) arreter(); } else if (visible) programmer();
+  });
 }
 document.querySelectorAll('[data-motion]').forEach(lancerMotion);
 

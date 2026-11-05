@@ -32,7 +32,8 @@
         "src": "video/annonce-mw3z8tus",
         "largeur": 1080,
         "hauteur": 1920,
-        "duree": 17.6
+        "duree": 17.6,
+        "leger": "video/annonce-mw3z8tus-720"
       },
       "motion": {
         "frappes": [

@@ -143,6 +143,8 @@ http.createServer(async (req, res) => {
   const f = path.join(base, chemin.endsWith('/') ? `${chemin}index.html` : chemin);
   try {
     const b = await readFile(f);
+    // Essai d'une connexion lente : si site/essais/lent existe, la vidéo complète met 15 s à répondre, la légère 6 s
+    if (f.endsWith('.mp4') && await stat(path.join(racine, 'essais/lent')).then(() => true, () => false)) await new Promise((r) => setTimeout(r, f.endsWith('-720.mp4') ? 6000 : 15000));
     const plage = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
     if (plage && f.endsWith('.mp4')) {
       const debut = Number(plage[1]); const fin = plage[2] ? Math.min(Number(plage[2]), b.length - 1) : b.length - 1;
