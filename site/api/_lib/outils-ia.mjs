@@ -1,4 +1,4 @@
-import { verifierContenu, PAGES, PAGES_ANNONCES, FORMATS_ANNONCE, FONDS, THEMES, DOMAINE } from './regenerer.mjs';
+import { verifierContenu, PAGES, PAGES_ANNONCES, FORMATS_ANNONCE, FONDS, THEMES, DOMAINE, suiteDe, MAX_ALBUM } from './regenerer.mjs';
 import { structurePage } from './pages.mjs';
 import { navigationDe, RESEAUX_LISTE } from './navigation.mjs';
 import { lireTexte, lireOctets, listerDossier, historique } from './github.mjs';
@@ -109,6 +109,31 @@ async function verifierPhoto(dossier, src) {
   return trouvee;
 }
 
+// Vidéos déjà envoyées : le fichier est dans site/video, ses informations dans contenu/videos (hors du site public)
+async function videosDisponibles() {
+  let noms;
+  try { noms = await listerDossier('site/video'); } catch (e) { if (e.statut === 404) return []; throw e; }
+  return [...noms].filter((n) => n.endsWith('.mp4')).map((n) => `video/${n.replace(/\.mp4$/, '')}`).sort();
+}
+// « video/xxx » → média { image: couverture, video } ; refuse une vidéo dont l'envoi n'est pas terminé
+async function mediaVideo(src) {
+  const nom = String(src || '').replace(/\.mp4$/, '').split('/').pop();
+  let infos;
+  try { infos = JSON.parse((await lireTexte(`contenu/videos/${nom}.json`)).texte); } catch (e) {
+    if (e.statut !== 404) throw e;
+    throw new ErreurOutil(`Vidéo introuvable : « ${src} ». L’envoi n’est sans doute pas terminé : demandez à l’utilisatrice de vérifier (voir_photos liste les vidéos disponibles).`);
+  }
+  return { image: infos.image, video: { src: `video/${nom}`, largeur: infos.largeur, hauteur: infos.hauteur, duree: infos.duree } };
+}
+// Liste ordonnée de photos (img/…) et de vidéos (video/…) → album
+async function construireAlbum(liste) {
+  if (liste.length >= MAX_ALBUM) throw new ErreurOutil(`Un album contient ${MAX_ALBUM} éléments au maximum, photo principale comprise.`);
+  const album = [];
+  for (const x of liste) album.push(/^video\//.test(String(x)) ? await mediaVideo(x) : { image: await verifierPhoto('catalogue', x) });
+  return album;
+}
+const decrireAlbum = (x) => (suiteDe(x).length ? suiteDe(x).map((m) => m.video?.src || m.image).join(', ') : 'aucun');
+
 // Dimensions d'une photo JPEG du site (lues dans son en-tête) : le site adapte le cadre à son orientation
 function dimensionsJpeg(o) {
   for (let i = 2; i + 9 < o.length;) {
@@ -132,7 +157,7 @@ const dateFr = (d) => (d ? new Date(`${d}T12:00:00`).toLocaleDateString('fr-FR',
 const periodeAnnonce = (a) => (a.debut && a.fin ? `du ${dateFr(a.debut)} au ${dateFr(a.fin)}` : a.debut ? `à partir du ${dateFr(a.debut)}` : a.fin ? `jusqu’au ${dateFr(a.fin)}` : 'sans date de fin');
 const court = (t, n = 90) => { const s = String(t || '').replace(/\s+/g, ' ').trim(); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
 const decrireAnnonce = (a) => `[${a.id}] ${a.format}${a.active === false ? ' (en pause)' : ''} — ${court([a.etiquette, a.titre, a.texte].filter(Boolean).join(' · '), 120)}`
-  + `${a.cartes?.length ? ` — cartes : ${a.cartes.map((c) => c.titre).join(', ')}` : ''}${a.image?.src ? ` — photo ${a.image.src} (${decrireCadrage(a.image)})` : ''}${a.bouton?.texte ? ` — bouton « ${a.bouton.texte} » → ${decrireLien(a.bouton)}` : ''}`
+  + `${a.cartes?.length ? ` — cartes : ${a.cartes.map((c) => c.titre).join(', ')}` : ''}${a.video?.src ? ` — vidéo ${a.video.src}` : ''}${a.image?.src ? ` — photo ${a.image.src} (${decrireCadrage(a.image)})` : ''}${a.bouton?.texte ? ` — bouton « ${a.bouton.texte} » → ${decrireLien(a.bouton)}` : ''}`
   + ` — ${a.emplacement ? `section de la page ${nomPage(a.emplacement.page)} (après ${a.emplacement.apres})` : (a.pages || []).map(nomPage).join(', ')} — ${periodeAnnonce(a)}`;
 
 // Différences entre deux contenus, en phrases simples (aperçu avant publication et résumé après)
@@ -152,6 +177,7 @@ async function differences(a, b) {
     if (o.categorie !== s.categorie) l.push(`${s.nom} : catégorie ${o.categorie} → ${s.categorie}`);
     if ((o.description || '') !== (s.description || '')) l.push(`${s.nom} : description → « ${s.description} »`);
     if (o.photo !== s.photo) l.push(`${s.nom} : photo → ${s.photo}`);
+    if (JSON.stringify(suiteDe(o)) !== JSON.stringify(suiteDe(s))) l.push(`${s.nom} : album (autres photos et vidéos) → ${decrireAlbum(s)}`);
     if ((o.visible !== false) !== (s.visible !== false)) l.push(`${s.nom} : ${s.visible === false ? 'masquée du site' : 'de nouveau visible'}`);
   }
   for (const [k, s] of sa) if (!sb.has(k)) l.push(`Coiffure supprimée : ${s.nom}`);
@@ -167,7 +193,8 @@ async function differences(a, b) {
   for (const [id, x] of aa) if (!ab.has(id)) l.push(`Annonce supprimée : ${decrireAnnonce(x)}`);
 
   const ga = a.photos.map((p) => p.image); const gb = b.photos.map((p) => p.image);
-  for (const p of b.photos) if (!ga.includes(p.image)) l.push(`Galerie — photo ajoutée : ${p.image} (${sb.get(p.style)?.nom || p.style})`);
+  for (const p of b.photos) if (!ga.includes(p.image)) l.push(`Galerie — ${p.video ? `vidéo ajoutée : ${p.video.src}` : `photo ajoutée : ${p.image}`} (${sb.get(p.style)?.nom || p.style})`);
+  for (const p of b.photos) { const o = a.photos.find((x) => x.image === p.image); if (JSON.stringify(suiteDe(o)) !== JSON.stringify(suiteDe(p))) l.push(`Galerie — ${p.image} : album → ${decrireAlbum(p)}`); }
   for (const p of a.photos) if (!gb.includes(p.image)) l.push(`Galerie — photo retirée : ${p.image}`);
   for (const p of b.photos) { const o = a.photos.find((x) => x.image === p.image); if (o && o.style !== p.style) l.push(`Galerie — ${p.image} classée dans ${sb.get(p.style)?.nom || p.style}`); }
   if (ga.filter((x) => gb.includes(x)).join() !== gb.filter((x) => ga.includes(x)).join()) l.push('Galerie — nouvel ordre des photos');
@@ -273,6 +300,7 @@ const champsAnnonce = {
   fond: { type: 'string', enum: FONDS, description: 'Fond de la section.' },
   disposition: { type: 'string', enum: ['gauche', 'droite', 'dessus'], description: 'Place de la photo (format section).' },
   photo: { type: 'string', description: 'Photo déjà en ligne (img/annonces/…, voir voir_photos), ou « aucune ».' },
+  video: { type: 'string', description: 'Formats section et carte : vidéo envoyée avec preparer_envoi_video (usage annonce), « video/… », ou « aucune » pour la retirer. Sa couverture devient la photo de l’annonce.' },
   photo_description: { type: 'string', maxLength: 120, description: 'Description de la photo pour les malvoyants et Google.' },
   cadrage: null, // défini plus bas (schéma partagé avec modifier_page)
   cartes: { type: 'array', minItems: 2, maxItems: 3, items: { type: 'object', properties: { titre: { type: 'string', maxLength: 60 }, texte: { type: 'string', maxLength: 300 } }, required: ['titre'], additionalProperties: false }, description: 'Format cartes : 2 ou 3 cartes.' },
@@ -307,6 +335,18 @@ async function remplirAnnonce(a, args) {
       a.image = { src: p.src, ...cadrageDefaut(p), alt: args.photo_description ?? a.image?.alt ?? '', largeur: p.largeur, hauteur: p.hauteur };
     }
   } else if (args.photo_description !== undefined && a.image) a.image.alt = args.photo_description;
+  if (args.photo !== undefined) a.video = null;
+  if (args.video !== undefined) {
+    if (args.video === 'aucune') a.video = null;
+    else {
+      const m = await mediaVideo(args.video);
+      if (!m.image.startsWith('img/annonces/')) throw new ErreurOutil('Cette vidéo a été préparée pour une coiffure : renvoyez-la avec preparer_envoi_video, usage annonce.');
+      if (!['section', 'carte'].includes(a.format)) throw new ErreurOutil('Une vidéo s’affiche seulement dans les formats section et carte.');
+      const p = await photoAvecDimensions(m.image);
+      a.image = { src: p.src, x: 50, y: 50, zoom: 1, alt: args.photo_description ?? a.image?.alt ?? '', largeur: p.largeur, hauteur: p.hauteur };
+      a.video = m.video;
+    }
+  }
   if (args.cadrage !== undefined) {
     if (!a.image?.src) throw new ErreurOutil('Cette annonce n’a pas de photo à cadrer.');
     a.image = cadrer(a.image, args.cadrage);
@@ -326,7 +366,7 @@ export const OUTILS = [
       return [
         `Site : ${DOMAINE}`,
         `\nHoraires :\n${c.horaires.map((j) => `• ${j.jour} : ${horaire(j)}`).join('\n')}`,
-        `\nCoiffures et tarifs (${c.services.length}, dans l’ordre du site) :\n${c.services.map((s, i) => `${i + 1}. ${s.nom} [${s.cle}] — ${s.categorie} — ${s.prix} €${s.visible === false ? ' — MASQUÉE' : ''} — photo ${s.photo}${s.description ? ` — ${s.description}` : ''}`).join('\n')}`,
+        `\nCoiffures et tarifs (${c.services.length}, dans l’ordre du site) :\n${c.services.map((s, i) => `${i + 1}. ${s.nom} [${s.cle}] — ${s.categorie} — ${s.prix} €${s.visible === false ? ' — MASQUÉE' : ''} — photo ${s.photo}${suiteDe(s).length ? ` — album de ${suiteDe(s).length + 1} éléments` : ''}${s.description ? ` — ${s.description}` : ''}`).join('\n')}`,
         `\nAnnonces et sections ajoutées (${c.annonces.length}) :\n${c.annonces.length ? c.annonces.map((a) => `• ${decrireAnnonce(a)}`).join('\n') : '• aucune'}`,
         `\nGalerie des réalisations : ${c.photos.length} photos (détail : voir_photos)`,
         `Téléphones : ${c.telephones.principal} (principal, WhatsApp) · ${c.telephones.secondaire}`,
@@ -362,15 +402,17 @@ export const OUTILS = [
   },
   {
     name: 'voir_photos', annotations: lecture('Photos disponibles'),
-    description: 'Photos déjà en ligne utilisables : galerie des réalisations (dans l’ordre, avec leur coiffure), photos du catalogue (coiffures et galerie), photos d’annonces et photos de pages. Pour une nouvelle photo : preparer_envoi_photo.',
+    description: 'Photos et vidéos déjà en ligne utilisables : galerie des réalisations (dans l’ordre, avec leur coiffure et leur album), photos du catalogue (coiffures et galerie), vidéos, photos d’annonces et photos de pages. Pour une nouvelle photo : preparer_envoi_photo ; pour une vidéo : preparer_envoi_video.',
     inputSchema: objet({}),
     async executer() {
       const c = await lireContenu();
       const [catalogue, annonces, pages] = await Promise.all(['catalogue', 'annonces', 'pages'].map(photosDisponibles));
+      const videos = await videosDisponibles();
       const nom = (cle) => c.services.find((s) => s.cle === cle)?.nom || cle;
       const enGalerie = new Set(c.photos.map((p) => p.image));
       return [
-        `Galerie des réalisations (${c.photos.length}, dans l’ordre du site) :\n${c.photos.map((p, i) => `${i + 1}. ${p.image} — ${nom(p.style)}`).join('\n')}`,
+        `Galerie des réalisations (${c.photos.length}, dans l’ordre du site) :\n${c.photos.map((p, i) => `${i + 1}. ${p.image}${p.video ? ` (vidéo ${p.video.src})` : ''} — ${nom(p.style)}${suiteDe(p).length ? ` — album : ${decrireAlbum(p)}` : ''}`).join('\n')}`,
+        `\nVidéos disponibles :\n${videos.join('\n') || '(aucune)'}`,
         `\nPhotos du catalogue hors galerie (pour la galerie ou une coiffure) :\n${catalogue.filter((x) => !enGalerie.has(x)).join('\n') || '(aucune)'}`,
         `\nPhotos d’annonces (img/annonces) :\n${annonces.join('\n') || '(aucune)'}`,
         `\nPhotos de pages (img/pages, pour modifier_page et l’image de fin de page) :\n${pages.join('\n') || '(aucune)'}`,
@@ -383,6 +425,7 @@ export const OUTILS = [
     inputSchema: objet({
       usage: { type: 'string', enum: ['realisation', 'annonce', 'page'], description: 'realisation : galerie ou photo d’une coiffure (recadrée en portrait) ; annonce : photo d’annonce ou de section ; page : image d’une page ou de la bande de fin de page.' },
       coiffure: { type: 'string', description: 'Pour une réalisation : la coiffure représentée (nom ou identifiant), qui sert à nommer la photo.' },
+      plusieurs: { type: 'boolean', description: 'true : le même lien permet de choisir jusqu’à 10 photos d’un coup (pour un album, comme un post Instagram). Elles sont nommées emplacement-1, emplacement-2… dans l’ordre choisi.' },
     }, ['usage']),
     async executer(args, contexte = {}) {
       const suffixe = Date.now().toString(36);
@@ -393,9 +436,30 @@ export const OUTILS = [
         chemin = `img/realisations/catalogue/${s ? s.cle : 'realisation'}-${suffixe}`;
         u = s ? `Photo de réalisation : ${s.nom}` : 'Photo de réalisation';
       } else if (args.usage === 'annonce') { chemin = `img/annonces/annonce-${suffixe}`; u = 'Photo pour une annonce'; } else { chemin = `img/pages/page-${suffixe}`; u = 'Photo pour une page du site'; }
-      const jeton = signerJeton('envoi', { c: chemin, f: args.usage === 'realisation' ? 'portrait' : 'libre', u, k: suffixe }, 20 * 60);
+      const jeton = signerJeton('envoi', { c: chemin, f: args.usage === 'realisation' ? 'portrait' : 'libre', u, k: suffixe, ...(args.plusieurs ? { m: 10 } : {}) }, 20 * 60);
       const lienEnvoi = `${contexte.base || DOMAINE}/envoi?j=${jeton}`;
+      if (args.plusieurs) return `Lien d’envoi de plusieurs photos (à usage unique, valable 20 minutes) — donnez-le tel quel à l’utilisatrice :\n${lienEnvoi}\n\nEmplacements prévus : ${chemin}-1, ${chemin}-2, … dans l’ordre où elle les choisit (10 au maximum). Quand elle confirme l’envoi, voir_photos donne les photos réellement arrivées ; utilisez-les ensuite avec modifier_coiffure ou modifier_galerie (paramètre album), aperçu puis confirmation.`;
       return `Lien d’envoi (à usage unique, valable 20 minutes) — donnez-le tel quel à l’utilisatrice :\n${lienEnvoi}\n\nEmplacement prévu de la photo : ${chemin}\nQuand elle confirme l’envoi, utilisez cet emplacement dans l’outil voulu (aperçu puis confirmation). Si l’outil répond « Photo introuvable », l’envoi n’est pas terminé : demandez-lui de vérifier.`;
+    },
+  },
+  {
+    name: 'preparer_envoi_video', annotations: ecriture('Préparer l’envoi d’une vidéo', false, false),
+    description: 'Quand Nelly veut mettre une vidéo sur son site (l’assistant ne peut pas transmettre de fichier) : crée un lien à usage unique, valable 20 minutes, qu’elle ouvre sur son téléphone pour choisir la vidéo. Le téléphone la prépare automatiquement (1080p, une minute au plus, image nette et légère) et lui fait choisir l’image de couverture. Une fois envoyée : pour une coiffure, modifier_coiffure avec album ; pour la galerie, modifier_galerie avec ajouter (video) ; pour une section de page, ajouter_annonce ou modifier_annonce avec video (aperçu puis confirmation). Ne publie rien sur le site.',
+    inputSchema: objet({
+      usage: { type: 'string', enum: ['realisation', 'annonce'], description: 'realisation : vidéo d’une coiffure ou de la galerie (couverture au format portrait) ; annonce : vidéo dans une annonce ou une section de page (image entière).' },
+      coiffure: { type: 'string', description: 'Pour une réalisation : la coiffure montrée (nom ou identifiant).' },
+    }, ['usage']),
+    async executer(args, contexte = {}) {
+      const suffixe = Date.now().toString(36);
+      let prefixe = 'annonce'; let dossier = 'img/annonces'; let u = 'Vidéo pour une annonce';
+      if (args.usage === 'realisation') {
+        const c = await lireContenu();
+        const s = args.coiffure ? trouverCoiffure(c, args.coiffure) : null;
+        prefixe = s ? s.cle : 'realisation'; dossier = 'img/realisations/catalogue'; u = s ? `Vidéo : ${s.nom}` : 'Vidéo de réalisation';
+      }
+      const nom = `${prefixe}-${suffixe}`;
+      const jeton = signerJeton('envoi', { c: `video/${nom}`, p: `${dossier}/${nom}`, f: 'video', r: args.usage === 'realisation' ? 1 : 0, u, k: suffixe }, 20 * 60);
+      return `Lien d’envoi de la vidéo (à usage unique, valable 20 minutes) — donnez-le tel quel à l’utilisatrice :\n${contexte.base || DOMAINE}/envoi?j=${jeton}\n\nEmplacement prévu : video/${nom}\nPrévenez-la de garder la page ouverte pendant la préparation (une à deux minutes). Quand elle confirme l’envoi, utilisez cet emplacement dans l’outil voulu (aperçu puis confirmation).`;
     },
   },
   {
@@ -498,7 +562,7 @@ export const OUTILS = [
   },
   {
     name: 'modifier_coiffure', annotations: ecriture('Modifier une coiffure'),
-    description: 'Quand Nelly annonce un nouveau prix (« les knotless c’est 65 maintenant »), renomme, décrit ou ne propose plus une coiffure. Change une coiffure existante : prix, nom, catégorie, description, photo (déjà en ligne, voir voir_photos), visibilité, ou sa position dans la liste. Deux temps : aperçu, puis confirmer: true après accord.',
+    description: 'Quand Nelly annonce un nouveau prix (« les knotless c’est 65 maintenant »), renomme, décrit ou ne propose plus une coiffure, ou veut plusieurs photos ou une vidéo pour une coiffure (album, comme un post Instagram). Change une coiffure existante : prix, nom, catégorie, description, photo (déjà en ligne, voir voir_photos), album, visibilité, ou sa position dans la liste. Deux temps : aperçu, puis confirmer: true après accord.',
     inputSchema: objet({
       coiffure: { type: 'string', description: 'Nom ou identifiant (voir_site).' },
       prix: { type: 'integer', minimum: 1, maximum: 2000 },
@@ -506,6 +570,7 @@ export const OUTILS = [
       categorie: { type: 'string', maxLength: 40, description: 'Ex. Tresses, Twists et locks, Tissage, Homme, Enfant.' },
       description: { type: 'string', maxLength: 160 },
       photo: { type: 'string', description: 'Photo du catalogue (img/realisations/catalogue/…).' },
+      album: { type: 'array', items: { type: 'string' }, description: 'Liste complète et ordonnée des autres photos (img/realisations/catalogue/…) et vidéos (video/…) affichées après la photo principale ; remplace l’album actuel (voir_site, voir_photos). [] pour le vider.' },
       visible: { type: 'boolean', description: 'false : masquée du site sans être supprimée.' },
       position: { type: 'integer', minimum: 1, description: 'Nouvelle place dans la liste (1 = première).' },
       confirmer,
@@ -518,6 +583,7 @@ export const OUTILS = [
         if (args.categorie !== undefined) s.categorie = args.categorie.trim();
         if (args.description !== undefined) s.description = args.description.trim();
         if (args.photo !== undefined) s.photo = await verifierPhoto('catalogue', args.photo);
+        if (args.album !== undefined) { const anciens = new Map(suiteDe(s).filter((m) => m.video).map((m) => [m.video.src, m])); s.suite = []; for (const x of args.album) s.suite.push(anciens.get(String(x)) || (await construireAlbum([x]))[0]); }
         if (args.visible !== undefined) s.visible = Boolean(args.visible);
         if (args.position !== undefined) deplacer(c.services, s, args.position);
       });
@@ -558,9 +624,10 @@ export const OUTILS = [
   },
   {
     name: 'modifier_galerie', annotations: ecriture('Modifier la galerie des réalisations'),
-    description: 'Galerie de la page Réalisations : ajouter des photos du catalogue, en retirer, les déplacer ou changer leur coiffure. Deux temps : aperçu, puis confirmer: true après accord.',
+    description: 'Galerie de la page Réalisations : ajouter des photos du catalogue ou des vidéos, en retirer, les déplacer, changer leur coiffure, ou regrouper plusieurs photos et vidéos dans une même publication (album, comme un post Instagram). Deux temps : aperçu, puis confirmer: true après accord.',
     inputSchema: objet({
-      ajouter: { type: 'array', items: objet({ photo: { type: 'string' }, coiffure: { type: 'string', description: 'Coiffure représentée (nom ou identifiant).' } }, ['photo', 'coiffure']), description: 'Ajoutées en tête de galerie.' },
+      ajouter: { type: 'array', items: objet({ photo: { type: 'string', description: 'Photo du catalogue, ou vidéo (video/…).' }, coiffure: { type: 'string', description: 'Coiffure représentée (nom ou identifiant).' }, album: { type: 'array', items: { type: 'string' }, description: 'Autres photos et vidéos de cette même publication.' } }, ['photo', 'coiffure']), description: 'Ajoutées en tête de galerie.' },
+      albums: { type: 'array', items: objet({ photo: { type: 'string', description: 'Publication existante (sa photo).' }, album: { type: 'array', items: { type: 'string' }, description: 'Liste complète et ordonnée des autres photos et vidéos ; [] pour la vider.' } }, ['photo', 'album']), description: 'Change l’album d’une publication existante.' },
       retirer: { type: 'array', items: { type: 'string' }, description: 'Photos à retirer de la galerie (le fichier reste disponible).' },
       deplacer: { type: 'array', items: objet({ photo: { type: 'string' }, position: { type: 'integer', minimum: 1 } }, ['photo', 'position']) },
       classer: { type: 'array', items: objet({ photo: { type: 'string' }, coiffure: { type: 'string' } }, ['photo', 'coiffure']), description: 'Changer la coiffure associée à une photo.' },
@@ -576,10 +643,12 @@ export const OUTILS = [
         };
         for (const x of args.retirer || []) c.photos = c.photos.filter((p) => p !== trouver(x));
         for (const x of [...(args.ajouter || [])].reverse()) {
-          const image = await verifierPhoto('catalogue', x.photo);
-          if (c.photos.some((p) => p.image === image)) throw new ErreurOutil(`Cette photo est déjà dans la galerie : ${image}.`);
-          c.photos.unshift({ style: trouverCoiffure(c, x.coiffure).cle, image });
+          const media = /^video\//.test(String(x.photo)) ? await mediaVideo(x.photo) : { image: await verifierPhoto('catalogue', x.photo) };
+          if (c.photos.some((p) => p.image === media.image)) throw new ErreurOutil(`Cette photo est déjà dans la galerie : ${media.image}.`);
+          const suite = x.album?.length ? { suite: await construireAlbum(x.album) } : {};
+          c.photos.unshift({ style: trouverCoiffure(c, x.coiffure).cle, ...media, ...suite });
         }
+        for (const x of args.albums || []) trouver(x.photo).suite = await construireAlbum(x.album);
         for (const x of args.classer || []) trouver(x.photo).style = trouverCoiffure(c, x.coiffure).cle;
         for (const x of args.deplacer || []) deplacer(c.photos, trouver(x.photo), x.position);
       });

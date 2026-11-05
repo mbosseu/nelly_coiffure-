@@ -178,6 +178,18 @@ Nelly peut gérer le site en parlant à un assistant IA : « je suis en congé d
 
 **Essai local** : `outils/essai-gestion.mjs` sert aussi `/api/mcp` et les adresses OAuth (mot de passe d'essai : essai).
 
+## Vidéos et albums (5 novembre 2026)
+
+**Album** (plusieurs photos et vidéos, comme un post Instagram) : champ `suite` d'une coiffure (`services[]`) ou d'une publication de la galerie (`photos[]`), 20 éléments au plus. Un élément vaut `{ image }` ou `{ image, video: { src, largeur, hauteur, duree } }`. Une publication de la galerie peut aussi commencer par une vidéo (`photos[].video`). Sur le site, la vignette porte une pastille ; la touche ouvre la visionneuse (`js/main.js`), où l'on fait glisser les éléments. Une annonce au format section ou carte peut afficher une vidéo (`annonces[].video`, `image` = couverture).
+
+**Préparation de la vidéo** (`admin/video.js`, bibliothèque `admin/vendor/mediabunny.min.mjs`, licence MPL-2.0, chargée seulement à l'ajout d'une vidéo) : conversion dans le navigateur en MP4 H.264, 1080p et 30 images/s au plus, 4,5 Mbit/s au plus, soit environ 35 Mo la minute ; 60 secondes gardées au plus. Sans encodeur vidéo dans le navigateur, le fichier d'origine est accepté s'il est déjà en MP4 H.264 et assez léger, sinon un message demande de changer de navigateur.
+
+**Envoi** : une requête Vercel est limitée à 4,5 Mo. La vidéo part donc par morceaux de 2,7 Mo, déposés comme contenus Git sans publication (`api/_lib/video.mjs`), puis réunis à la fin. Les fichiers vont dans `site/video/`, avec cache de 30 jours. Le même mécanisme dépose les photos une à une lorsqu'une publication dépasse une requête.
+
+**Connecteur** : `preparer_envoi_video` (lien à usage unique ; informations de la vidéo dans `contenu/videos/`), `preparer_envoi_photo` avec `plusieurs: true`, paramètre `album` de `modifier_coiffure`, `album` et `albums` de `modifier_galerie`, `video` de `ajouter_annonce` et `modifier_annonce`.
+
+**Poids** : chaque vidéo alourdit le dépôt GitHub, jusqu'à 35 Mo la minute. Préférer des vidéos courtes (15 à 30 secondes). Si les vidéos se multiplient, passer à un hébergement vidéo dédié.
+
 ## Déconnecter tous les appareils
 
 Mon compte → « Déconnecter tous les autres appareils ». Le jeton de connexion porte sa date de création ; l'action enregistre la date du moment dans `contenu/sessions.json` (hors du site public, un commit « Espace Nelly : déconnexion de tous les appareils ») et tout jeton plus ancien est refusé. L'appareil qui fait la demande reçoit un nouveau jeton et reste connecté. La date est relue au plus une fois par minute par l'API. Changer `ADMIN_SECRET` dans Vercel déconnecte aussi tout le monde.

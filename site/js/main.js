@@ -191,43 +191,133 @@ if (gallery) {
   if (requestedStyle) chips.find((chip) => chip.dataset.filter === requestedStyle)?.click();
 }
 
-// Visionneuse, partagée par la mosaïque et la galerie
-const lightbox = document.getElementById('lightbox');
-if (lightbox && (tiles.length || gallery)) {
-  const lbImg = document.getElementById('lightbox-img');
+// Visionneuse, partagée par la mosaïque, la galerie et les albums des coiffures.
+// Une réalisation peut contenir plusieurs photos et vidéos : on les fait glisser, comme un post Instagram.
+const albums = [...document.querySelectorAll('[data-album]')];
+function creerVisionneuse() {
+  const d = document.createElement('dialog');
+  d.className = 'lightbox'; d.id = 'lightbox'; d.setAttribute('aria-label', 'Réalisation agrandie');
+  d.innerHTML = `<button class="lightbox__close" data-close aria-label="Fermer"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="1.5"/></svg></button>
+    <button class="lightbox__nav lightbox__nav--prev" data-prev aria-label="Précédente"><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <figure class="lightbox__fig"><img id="lightbox-img" src="" alt=""><figcaption><span id="lightbox-label"></span>
+      <a class="btn btn--light" id="lightbox-wa" href="contact.html"><svg class="icon" aria-hidden="true"><use href="#i-whatsapp"/></svg> Je veux ce style</a></figcaption></figure>
+    <button class="lightbox__nav lightbox__nav--next" data-next aria-label="Suivante"><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>`;
+  document.body.append(d);
+  return d;
+}
+const lightbox = document.getElementById('lightbox') || (albums.length ? creerVisionneuse() : null);
+if (lightbox && (tiles.length || gallery || albums.length)) {
   const lbLabel = document.getElementById('lightbox-label');
   const lbWa = document.getElementById('lightbox-wa');
-  const items = () => (gallery ? [...gallery.querySelectorAll('.gallery__item:not(.is-hidden)')] : tiles);
+  const piste = document.createElement('div');
+  piste.className = 'lb-piste';
+  document.getElementById('lightbox-img').replaceWith(piste);
+  const points = document.createElement('div');
+  points.className = 'lb-points';
+  points.setAttribute('aria-hidden', 'true');
+  piste.after(points);
+
+  let liste = [];
   let current = 0;
-  const show = (i) => {
-    const list = items();
-    current = (i + list.length) % list.length;
-    const t = list[current];
+  let medias = [];
+  let rang = 0;
+
+  const videos = () => [...piste.querySelectorAll('video')];
+  const arreterVideos = () => videos().forEach((v) => v.pause());
+  // Seul l'élément affiché joue ; le son est coupé si le navigateur refuse la lecture sonore automatique
+  const jouerRang = () => {
+    const diapos = [...piste.children];
+    diapos.forEach((d, i) => {
+      const v = d.querySelector('video');
+      if (!v) return;
+      if (i !== rang) { v.pause(); return; }
+      v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
+    });
+    [...points.children].forEach((p, i) => p.classList.toggle('est-actif', i === rang));
+  };
+  const allerRang = (i, doux = true) => {
+    rang = i;
+    piste.scrollTo({ left: piste.clientWidth * i, behavior: doux ? 'smooth' : 'auto' });
+    jouerRang();
+  };
+  let attente = null;
+  piste.addEventListener('scroll', () => {
+    clearTimeout(attente);
+    attente = setTimeout(() => {
+      const i = Math.round(piste.scrollLeft / Math.max(1, piste.clientWidth));
+      if (i !== rang && i >= 0 && i < medias.length) { rang = i; jouerRang(); }
+    }, 90);
+  }, { passive: true });
+
+  const mediasDe = (t) => {
     const img = t.querySelector('img');
-    lbImg.src = img.currentSrc || img.src; lbImg.alt = img.alt;
+    const dom = t.dataset.medias ? JSON.parse(t.dataset.medias) : null;
+    if (dom) return dom.map((m, i) => ({ ...m, alt: `${t.dataset.label}, ${m.v ? 'vidéo' : 'photo'} ${i + 1} sur ${dom.length}`, s: m.v ? '' : `${m.i}.jpg` }));
+    return [{ s: img.currentSrc || img.src, alt: img.alt, ratio: img.naturalWidth / img.naturalHeight || 0.8 }];
+  };
+  const diapo = (m) => {
+    const d = document.createElement('div');
+    d.className = 'lb-diapo';
+    if (m.v) {
+      const v = document.createElement('video');
+      v.src = `${m.v}.mp4`;
+      v.poster = `${m.i}.jpg`;
+      v.controls = true; v.playsInline = true; v.preload = 'metadata'; v.loop = true;
+      v.setAttribute('controlslist', 'nodownload');
+      v.setAttribute('aria-label', m.alt);
+      d.append(v);
+    } else {
+      const img = document.createElement('img');
+      img.src = m.s; img.alt = m.alt; img.decoding = 'async';
+      d.append(img);
+    }
+    return d;
+  };
+  const afficher = (i, depuisFin = false) => {
+    current = (i + liste.length) % liste.length;
+    const t = liste[current];
+    arreterVideos();
+    medias = mediasDe(t);
+    piste.replaceChildren(...medias.map(diapo));
+    points.replaceChildren(...(medias.length > 1 ? medias.map(() => document.createElement('span')) : []));
+    // La piste s'adapte à l'élément le plus large et au plus haut de l'album : rien n'est coupé, tout reste grand
+    const ratios = medias.map((m) => (m.v ? m.l / m.h : m.ratio || 0.8));
+    piste.style.setProperty('--ratio-max', String(Math.max(...ratios)));
+    piste.style.setProperty('--ratio-min', String(Math.min(...ratios)));
     lbLabel.textContent = t.dataset.label;
     setWa(lbWa, `Bonjour Nelly, j'ai vu ce style sur votre site : « ${t.dataset.label} ». Je voudrais le même, pouvez-vous me donner un tarif ?`);
+    allerRang(depuisFin ? medias.length - 1 : 0, false);
+  };
+  // Les flèches parcourent l'album, puis passent à la réalisation suivante
+  const avancer = (sens) => {
+    const suivant = rang + sens;
+    if (suivant >= 0 && suivant < medias.length) return allerRang(suivant);
+    if (liste.length > 1) return afficher(current + sens, sens < 0);
+    return allerRang(sens > 0 ? 0 : medias.length - 1);
   };
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('.mosaic__item, .gallery__item');
+    const t = e.target.closest('.mosaic__item, .gallery__item, [data-album]');
     if (!t) return;
-    show(items().indexOf(t));
+    liste = t.matches('[data-album]') ? [t] : (gallery ? [...gallery.querySelectorAll('.gallery__item:not(.is-hidden)')] : tiles);
     lightbox.showModal();
+    afficher(liste.indexOf(t));
   });
+  lightbox.addEventListener('close', () => { arreterVideos(); piste.replaceChildren(); });
   lightbox.querySelector('[data-close]').addEventListener('click', () => lightbox.close());
-  lightbox.querySelector('[data-prev]').addEventListener('click', () => show(current - 1));
-  lightbox.querySelector('[data-next]').addEventListener('click', () => show(current + 1));
+  lightbox.querySelector('[data-prev]').addEventListener('click', () => avancer(-1));
+  lightbox.querySelector('[data-next]').addEventListener('click', () => avancer(1));
   lightbox.addEventListener('click', (e) => { if (e.target === lightbox) lightbox.close(); });
   lightbox.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowLeft') show(current - 1);
-    if (e.key === 'ArrowRight') show(current + 1);
+    if (e.key === 'ArrowLeft') avancer(-1);
+    if (e.key === 'ArrowRight') avancer(1);
   });
+  // Glisser passe à la réalisation suivante quand il n'y a qu'un élément (sinon la piste défile d'elle-même)
   let touchX = null;
   lightbox.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
   lightbox.addEventListener('touchend', (e) => {
     if (touchX === null) return;
     const dx = e.changedTouches[0].clientX - touchX;
-    if (Math.abs(dx) > 50) show(current + (dx < 0 ? 1 : -1));
+    if (medias.length === 1 && liste.length > 1 && Math.abs(dx) > 50) afficher(current + (dx < 0 ? 1 : -1));
     touchX = null;
   });
 }

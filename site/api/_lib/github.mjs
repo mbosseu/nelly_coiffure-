@@ -48,9 +48,18 @@ export async function listerDossier(chemin) {
   return new Set(liste.map((f) => f.name));
 }
 
+// Dépose un contenu sur GitHub sans rien publier (renvoie son empreinte) : gros fichiers envoyés en plusieurs fois
+export async function creerBlob(base64) {
+  return (await gh(`/repos/${depot()}/git/blobs`, { method: 'POST', body: JSON.stringify({ content: base64, encoding: 'base64' }) })).sha;
+}
+export async function lireBlob(sha) {
+  const b = await gh(`/repos/${depot()}/git/blobs/${sha}`);
+  return Buffer.from(b.content || '', 'base64');
+}
+
 /**
  * Publie plusieurs fichiers en un seul commit sur la branche.
- * @param {Array<{chemin:string, texte?:string, base64?:string}>} fichiers
+ * @param {Array<{chemin:string, texte?:string, base64?:string, sha?:string}>} fichiers (sha : contenu déjà envoyé avec creerBlob)
  */
 export async function publier(fichiers, message) {
   for (let essai = 0; essai < 2; essai++) {
@@ -58,6 +67,7 @@ export async function publier(fichiers, message) {
     const parent = await gh(`/repos/${depot()}/git/commits/${ref.object.sha}`);
     const arbre = [];
     for (const f of fichiers) {
+      if (f.sha) { arbre.push({ path: f.chemin, mode: '100644', type: 'blob', sha: f.sha }); continue; }
       const blob = await gh(`/repos/${depot()}/git/blobs`, {
         method: 'POST',
         body: JSON.stringify(f.base64 !== undefined ? { content: f.base64, encoding: 'base64' } : { content: f.texte, encoding: 'utf-8' }),

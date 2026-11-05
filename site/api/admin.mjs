@@ -1,10 +1,11 @@
-import { regenerer, verifierContenu, PAGES } from './_lib/regenerer.mjs';
+import { regenerer, verifierContenu, PAGES, suiteDe, imagesAlbums, videosUtilisees } from './_lib/regenerer.mjs';
 import { structurePage } from './_lib/pages.mjs';
 import { NAVIGATION_DEFAUT } from './_lib/navigation.mjs';
 import { direct, statsActives, tableauDeBord } from './_lib/stats.mjs';
 import { lireTexte, listerDossier, publier, historique, ErreurGithub } from './_lib/github.mjs';
 import { CONTENU, SESSIONS, revoqueesAvant, noterRevocation, lireFichiersSite, publierContenuVerifie } from './_lib/publication.mjs';
 import { motDePasseValide, ouvrirSession, fermerSession, sessionEmise } from './_lib/session.mjs';
+import { stockerMorceau, assemblerVideo, SHA, CHEMIN_VIDEO } from './_lib/video.mjs';
 
 // API de l'espace de gestion de Nelly (/admin). Une seule fonction, l'action est passée dans ?action=
 // connexion, deconnexion, deconnecter-partout, contenu, historique, version, publier, apercu.
@@ -85,11 +86,15 @@ export default async function handler(req, res) {
       return json(res, 200, { contenu: JSON.parse(texte) });
     }
     if (action === 'publier' && req.method === 'POST') return await publierContenu(req, res);
+    // Gros envois (vidéos, nombreuses photos) : déposés morceau par morceau, puis référencés à la publication
+    if (action === 'morceau' && req.method === 'POST') return json(res, 200, { sha: await stockerMorceau(req.body?.base64) });
+    if (action === 'video-assembler' && req.method === 'POST') return json(res, 200, await assemblerVideo(req.body?.morceaux));
     if (action === 'apercu' && req.method === 'POST') return await apercu(req, res);
 
     return json(res, 404, { erreur: 'Action inconnue.' });
   } catch (e) {
     console.error(e);
+    if (e.invalide) return json(res, 400, { erreur: e.message });
     const message = e instanceof ErreurGithub ? 'Le site n’a pas pu être mis à jour (GitHub). Réessayez dans un instant.' : 'Erreur inattendue. Réessayez dans un instant.';
     return json(res, 500, { erreur: message });
   }
@@ -107,15 +112,19 @@ async function apercu(req, res) {
 }
 
 async function publierContenu(req, res) {
-  const { contenu, photos = [], version, resume } = req.body || {};
+  const { contenu, photos = [], videos = [], version, resume } = req.body || {};
   const erreurs = verifierContenu(contenu);
   if (erreurs.length) return json(res, 400, { erreur: erreurs.join(' ') });
 
   // Nouvelles photos : chemins et tailles contrôlés
   for (const p of photos) {
-    if (!PHOTO.test(p.chemin || '') || typeof p.base64 !== 'string' || p.base64.length * 0.75 > MAX_PHOTO) {
+    const contenuValide = p.sha ? SHA.test(p.sha) : (typeof p.base64 === 'string' && p.base64.length * 0.75 <= MAX_PHOTO);
+    if (!PHOTO.test(p.chemin || '') || !contenuValide) {
       return json(res, 400, { erreur: 'Une photo est invalide ou trop lourde.' });
     }
+  }
+  for (const v of videos) {
+    if (!CHEMIN_VIDEO.test(v.chemin || '') || !SHA.test(v.sha || '')) return json(res, 400, { erreur: 'Une vidéo est invalide. Ajoutez-la de nouveau.' });
   }
 
   // Version de départ : si le contenu a été publié ailleurs entre-temps, on ne l'écrase pas
@@ -126,11 +135,12 @@ async function publierContenu(req, res) {
   const ancien = JSON.parse(actuel.texte);
 
   // Nouvelles photos dont le nom existe déjà sur le site : renommées pour ne jamais écraser une photo en ligne
-  const [enLigne, imagesAnnonces, imagesPages, imagesMarque] = await Promise.all([
+  const [enLigne, imagesAnnonces, imagesPages, imagesMarque, videosEnLigne] = await Promise.all([
     listerDossier('site/img/realisations/catalogue'),
     listerDossier('site/img/annonces').catch((e) => { if (e.statut === 404) return new Set(); throw e; }),
     listerDossier('site/img/pages').catch((e) => { if (e.statut === 404) return new Set(); throw e; }),
     listerDossier('site/img/marque'),
+    listerDossier('site/video').catch((e) => { if (e.statut === 404) return new Set(); throw e; }),
   ]);
   const base = (chemin) => chemin.replace(/(-sm)?\.jpg$/, '');
   const nomsEnLigne = new Set([...enLigne].map((n) => n.replace(/(-sm)?\.jpg$/, '')));
@@ -150,15 +160,20 @@ async function publierContenu(req, res) {
     for (const p of photos) { const b = base(p.chemin); if (renommer.has(b)) p.chemin = p.chemin.replace(b, renommer.get(b)); }
     for (const s of contenu.services) if (renommer.has(s.photo)) s.photo = renommer.get(s.photo);
     for (const p of contenu.photos) if (renommer.has(p.image)) p.image = renommer.get(p.image);
+    for (const x of [...contenu.services, ...contenu.photos]) for (const m of suiteDe(x)) if (renommer.has(m.image)) m.image = renommer.get(m.image);
   }
 
   // Toutes les photos utilisées doivent exister (déjà en ligne ou envoyées maintenant)
   const envoyees = new Set(photos.map((p) => p.chemin));
-  const utilisees = new Set([...contenu.services.map((s) => s.photo), ...contenu.photos.map((p) => p.image)]);
+  const utilisees = new Set([...contenu.services.map((s) => s.photo), ...contenu.photos.map((p) => p.image), ...imagesAlbums(contenu)]);
   for (const img of utilisees) {
     const nom = img.split('/').pop();
     const present = (envoyees.has(`${img}.jpg`) || enLigne.has(`${nom}.jpg`)) && (envoyees.has(`${img}-sm.jpg`) || enLigne.has(`${nom}-sm.jpg`));
     if (!present) return json(res, 400, { erreur: 'Une photo utilisée est introuvable. Ajoutez-la de nouveau.' });
+  }
+  const videosEnvoyees = new Set(videos.map((v) => v.chemin));
+  for (const src of videosUtilisees(contenu)) {
+    if (!videosEnvoyees.has(`${src}.mp4`) && !videosEnLigne.has(`${src.split('/').pop()}.mp4`)) return json(res, 400, { erreur: 'Une vidéo utilisée est introuvable. Ajoutez-la de nouveau.' });
   }
   for (const a of contenu.annonces || []) {
     if (!a.image?.src) continue;
@@ -185,6 +200,6 @@ async function publierContenu(req, res) {
     return json(res, 400, { erreur: 'L’image de fond est introuvable. Ajoutez-la de nouveau.' });
   }
 
-  const { commit, version: nouvelleVersion } = await publierContenuVerifie(contenu, ancien, { photos, resume });
+  const { commit, version: nouvelleVersion } = await publierContenuVerifie(contenu, ancien, { photos, videos, resume });
   return json(res, 200, { ok: true, commit, version: nouvelleVersion, contenu, renommees: Object.fromEntries(renommer) });
 }

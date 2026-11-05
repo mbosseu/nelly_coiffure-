@@ -5,7 +5,8 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const DOSSIER = 'img/realisations/catalogue';
-const MAX_ENVOI = 3.6 * 1024 * 1024; // marge sous la limite de 4,5 Mo d'une requête Vercel
+const MAX_REQUETE = 3.6 * 1024 * 1024; // marge sous la limite de 4,5 Mo d'une requête Vercel
+const MAX_ENVOI = 80 * 1024 * 1024; // au-delà d'une requête, les photos sont déposées une à une avant la publication
 const CLE_BROUILLON = 'nc_brouillon';
 const TEL = /^0[1-9](?:[ .]?\d{2}){4}$/;
 const RESEAUX = { instagram: 'Instagram', tiktok: 'TikTok', facebook: 'Facebook', snapchat: 'Snapchat', youtube: 'YouTube' };
@@ -24,6 +25,7 @@ const etat = {
   contenu: null, // contenu en cours de modification
   version: null, // empreinte du contenu publié, pour ne pas écraser une publication faite ailleurs
   nouvelles: new Map(), // image → { grand, petit (base64), apercu (URL), largeur, hauteur } pas encore publiées
+  videos: new Map(), // vidéo (sans extension) → { sha, url } envoyée mais pas encore publiée
   onglet: 'annonces',
   defaire: [], // états précédents (annuler / rétablir)
   refaire: [],
@@ -143,7 +145,14 @@ function normaliser(c) {
 function retirerImagesPerdues() {
   const connues = new Set(imagesUtilisees(etat.base));
   const perdues = imagesUtilisees(etat.contenu).filter((img) => !connues.has(img) && !etat.nouvelles.has(img));
-  if (!perdues.length) return false;
+  const videosConnues = new Set(videosDe(etat.base));
+  const videoPerdue = (v) => v?.src && !videosConnues.has(v.src) && !etat.videos.has(v.src);
+  const nettoyerAlbum = (x) => { if (x.suite) x.suite = x.suite.filter((m) => !perdues.includes(m.image) && !videoPerdue(m.video)); };
+  const videosPerdues = videosDe(etat.contenu).some((src) => !videosConnues.has(src) && !etat.videos.has(src));
+  if (!perdues.length && !videosPerdues) return false;
+  [...etat.contenu.services, ...etat.contenu.photos].forEach(nettoyerAlbum);
+  etat.contenu.photos = etat.contenu.photos.filter((p) => !videoPerdue(p.video));
+  etat.contenu.annonces.forEach((a) => { if (videoPerdue(a.video)) a.video = null; });
   etat.contenu.photos = etat.contenu.photos.filter((p) => !perdues.includes(p.image));
   etat.contenu.services = etat.contenu.services.filter((s) => !perdues.includes(s.photo));
   etat.contenu.annonces.forEach((a) => { if (a.image && perdues.includes(a.image.src)) a.image = null; (a.cartes || []).forEach((x) => { if (x.image && perdues.includes(x.image.src)) x.image = null; }); });
@@ -274,11 +283,14 @@ function resumeModifications() {
   }
   for (const s of a.services) if (!b.services.some((x) => x.cle === s.cle)) lignes.push(`Coiffure supprimée : ${s.nom}`);
   if (a.services.map((s) => s.cle).join() !== b.services.map((s) => s.cle).join() && !lignes.some((l) => l.includes('oiffure'))) lignes.push('Ordre des coiffures');
-  const ajoutees = b.photos.filter((p) => !a.photos.some((x) => x.image === p.image)).length;
-  const retirees = a.photos.filter((p) => !b.photos.some((x) => x.image === p.image)).length;
+  const imagesGalerie = (c) => c.photos.flatMap((p) => [p.image, ...albumDe(p).map((m) => m.image)]);
+  const ajoutees = imagesGalerie(b).filter((i) => !imagesGalerie(a).includes(i)).length;
+  const retirees = imagesGalerie(a).filter((i) => !imagesGalerie(b).includes(i)).length;
   if (ajoutees) lignes.push(`${ajoutees} photo${ajoutees > 1 ? 's' : ''} ajoutée${ajoutees > 1 ? 's' : ''}`);
   if (retirees) lignes.push(`${retirees} photo${retirees > 1 ? 's' : ''} retirée${retirees > 1 ? 's' : ''}`);
   if (!ajoutees && !retirees && JSON.stringify(a.photos) !== JSON.stringify(b.photos)) lignes.push('Photos réorganisées');
+  const nouvellesVideos = videosDe(b).filter((v) => !videosDe(a).includes(v)).length;
+  if (nouvellesVideos) lignes.push(`${nouvellesVideos} vidéo${nouvellesVideos > 1 ? 's' : ''} ajoutée${nouvellesVideos > 1 ? 's' : ''}`);
   return lignes;
 }
 
@@ -320,7 +332,9 @@ function toutAfficher({ garderPile = false } = {}) {
 // --- Outils ----------------------------------------------------------------------
 
 const urlImage = (img, petit = true) => etat.nouvelles.get(img)?.apercu || `/${img}${petit ? '-sm' : ''}.jpg`;
-const imagesUtilisees = (c) => [...new Set([...c.services.map((s) => s.photo), ...c.photos.map((p) => p.image), ...(c.annonces || []).flatMap((a) => [a.image?.src, ...(a.cartes || []).map((x) => x.image?.src)]).filter(Boolean), ...Object.values(c.pages || {}).flatMap((p) => Object.values(p.images || {}).map((im) => im.src)), c.marque?.logo?.src, c.fonds?.cta].filter(Boolean))];
+const albumDe = (x) => (Array.isArray(x?.suite) ? x.suite : []);
+const videosDe = (c) => [...new Set([...c.services.flatMap((s) => albumDe(s).map((m) => m.video?.src)), ...c.photos.flatMap((p) => [p.video?.src, ...albumDe(p).map((m) => m.video?.src)]), ...(c.annonces || []).map((a) => a.video?.src)].filter(Boolean))];
+const imagesUtilisees = (c) => [...new Set([...c.services.flatMap((s) => [s.photo, ...albumDe(s).map((m) => m.image)]), ...c.photos.flatMap((p) => [p.image, ...albumDe(p).map((m) => m.image)]), ...(c.annonces || []).flatMap((a) => [a.image?.src, ...(a.cartes || []).map((x) => x.image?.src)]).filter(Boolean), ...Object.values(c.pages || {}).flatMap((p) => Object.values(p.images || {}).map((im) => im.src)), c.marque?.logo?.src, c.fonds?.cta].filter(Boolean))];
 const echapper = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const versCle = (nom) => nom.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'element';
 const urlValide = (u) => { try { const x = new URL(String(u || '').trim()); return x.protocol === 'https:' || x.protocol === 'http:'; } catch { return false; } };
@@ -518,9 +532,12 @@ function majFicheAnnonce() {
   $('#a-pages').hidden = $('#a-toutes').checked;
   // Image et cadrage
   const img = a.image;
-  $('#a-cadreur').hidden = !img;
+  $('#a-cadreur').hidden = !img || Boolean(a.video);
   $('#a-image-retirer').hidden = !img;
   $('#a-image-bouton').firstChild.textContent = img ? 'Remplacer l’image' : 'Ajouter une image';
+  $('#a-video-bouton').hidden = !['section', 'carte'].includes(a.format);
+  $('#a-video-bouton').firstChild.textContent = a.video ? 'Remplacer la vidéo' : 'Ajouter une vidéo';
+  $('#a-image-retirer').textContent = a.video ? 'Retirer la vidéo' : 'Retirer l’image';
   if (img) {
     const ratios = a.disposition === 'dessus' ? ['16 / 7', '4 / 3'] : a.format === 'carte' ? ['1 / 1', '16 / 10'] : ['4 / 5', '4 / 3'];
     $$('.cadreur__cadre').forEach((cadre, i) => {
@@ -637,13 +654,25 @@ $('#a-image').addEventListener('change', async (e) => {
     const src = nouveauNom('img/annonces', versCle($('#a-titre').value || 'annonce').slice(0, 30));
     etat.nouvelles.set(src, image);
     ficheAnnonce.a.image = { src, x: 50, y: 50, zoom: 1, largeur: image.largeur, hauteur: image.hauteur, alt: $('#a-alt').value };
+    ficheAnnonce.a.video = null;
     majFicheAnnonce();
   } catch (err) {
     erreur.textContent = err.message;
     erreur.hidden = false;
   }
 });
-$('#a-image-retirer').addEventListener('click', () => { ficheAnnonce.a.image = null; majFicheAnnonce(); });
+$('#a-video').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const m = await preparerVideo(f, { dossier: 'img/annonces', prefixe: versCle($('#a-titre').value || 'annonce').slice(0, 30), recadrer: false });
+  if (!m) return;
+  const image = etat.nouvelles.get(m.image);
+  ficheAnnonce.a.image = { src: m.image, x: 50, y: 50, zoom: 1, largeur: image.largeur, hauteur: image.hauteur, alt: $('#a-alt').value };
+  ficheAnnonce.a.video = m.video;
+  majFicheAnnonce();
+});
+$('#a-image-retirer').addEventListener('click', () => { ficheAnnonce.a.image = null; ficheAnnonce.a.video = null; majFicheAnnonce(); });
 
 // Cadrage : faire glisser l'image, agrandir, réduire, recentrer
 $$('[data-cadrage]').forEach((b) => b.addEventListener('click', () => {
@@ -789,6 +818,7 @@ function ouvrirCoiffure(index) {
   $('#c-supprimer').hidden = index < 0;
   $('#c-erreur').hidden = true;
   afficherChoixPhoto();
+  afficherBande($('#c-album'), fiche.brouillon);
   $('#fiche-coiffure').showModal();
 }
 
@@ -821,6 +851,142 @@ $('#c-fichier').addEventListener('change', async (e) => {
     $('#c-erreur').textContent = err.message;
     $('#c-erreur').hidden = false;
   }
+});
+
+// --- Albums : plusieurs photos et vidéos pour une coiffure (comme un post Instagram) ---------
+
+function afficherBande(conteneur, porteur) {
+  const liste = albumDe(porteur);
+  conteneur.innerHTML = liste.map((m, i) => `
+    <div class="bande__item">
+      <img src="${urlImage(m.image)}" alt="">${m.video ? '<span class="bande__jeu" aria-label="Vidéo">▶</span>' : ''}
+      <div class="bande__actions">
+        <button type="button" data-avant="${i}" aria-label="Déplacer avant" ${i === 0 ? 'disabled' : ''}>◀</button>
+        <button type="button" data-apres="${i}" aria-label="Déplacer après" ${i === liste.length - 1 ? 'disabled' : ''}>▶</button>
+        <button type="button" data-retirer="${i}" aria-label="Retirer">✕</button>
+      </div>
+    </div>`).join('');
+}
+function actionBande(e, porteur, apres) {
+  const b = e.target.closest('button');
+  if (!b) return;
+  const l = albumDe(porteur);
+  if (b.dataset.retirer !== undefined) l.splice(Number(b.dataset.retirer), 1);
+  else {
+    const i = Number(b.dataset.avant ?? b.dataset.apres);
+    const j = b.dataset.avant !== undefined ? i - 1 : i + 1;
+    [l[i], l[j]] = [l[j], l[i]];
+  }
+  apres();
+}
+async function ajouterPhotosAlbum(porteur, fichiers, style) {
+  porteur.suite = albumDe(porteur);
+  for (const f of fichiers) {
+    if (porteur.suite.length >= 19) throw new Error('Un album peut contenir 20 photos et vidéos au maximum.');
+    const img = nouveauNom(DOSSIER, style);
+    etat.nouvelles.set(img, await preparerPhoto(f));
+    porteur.suite.push({ image: img });
+  }
+}
+
+// Vidéo : conversion sur l'appareil, choix de la couverture, envoi par morceaux. Renvoie { image, video } ou null.
+let videoOutil = null;
+const outilVideo = async () => { videoOutil = videoOutil || await import('/admin/video.js'); return videoOutil; };
+function preparerVideo(fichier, { dossier = DOSSIER, prefixe = 'video', recadrer = true } = {}) {
+  return new Promise((resoudre) => {
+    const dlg = $('#fiche-video');
+    const video = $('#v-video');
+    let annule = false; let termine = false;
+    let conversion = null;
+    let cadrage = { x: 50, y: 35 };
+    const etape = (texte, valeur) => { $('#v-etat').textContent = texte; $('#v-progres').value = valeur; };
+    const montrerErreur = (m) => { $('#v-erreur').textContent = m; $('#v-erreur').hidden = false; $('#v-travail').hidden = true; $('#v-valider').hidden = true; };
+    const finir = (r) => { if (termine) return; termine = true; dlg.close(); video.removeAttribute('src'); video.load(); resoudre(r); };
+
+    $('#v-erreur').hidden = true; $('#v-travail').hidden = false; $('#v-reglage').hidden = true; $('#v-valider').hidden = true; $('#v-note').hidden = true;
+    $('#v-cadre').style.aspectRatio = '4 / 5';
+    $('#v-consigne').hidden = !recadrer;
+    etape('Préparation de la vidéo…', 0);
+    $('#v-annuler').onclick = () => { annule = true; finir(null); };
+    dlg.oncancel = (e) => { e.preventDefault(); annule = true; finir(null); };
+    dlg.onclose = () => { if (!termine) { annule = true; finir(null); } };
+    dlg.showModal();
+
+    const placer = () => { video.style.objectPosition = `${cadrage.x}% ${cadrage.y}%`; };
+    const allerCouverture = async () => { const { allerA } = await outilVideo(); await allerA(video, (Number($('#v-moment').value) / 100) * (video.duration || 0)); };
+    $('#v-moment').oninput = allerCouverture;
+    let depart = null;
+    const cadre = $('#v-cadre');
+    cadre.onpointerdown = (e) => { if (!recadrer) return; depart = { px: e.clientX, py: e.clientY, x: cadrage.x, y: cadrage.y }; cadre.setPointerCapture(e.pointerId); };
+    cadre.onpointermove = (e) => {
+      if (!depart) return;
+      const r = cadre.getBoundingClientRect();
+      // Glisser vers le bas montre le haut de l'image : le point de cadrage recule
+      cadrage = { x: Math.min(100, Math.max(0, depart.x - ((e.clientX - depart.px) / r.width) * 100)), y: Math.min(100, Math.max(0, depart.y - ((e.clientY - depart.py) / r.height) * 100)) };
+      placer();
+    };
+    cadre.onpointerup = () => { depart = null; };
+    cadre.onpointercancel = () => { depart = null; };
+
+    (async () => {
+      const { convertirVideo, chargerDansElement, DUREE_MAX } = await outilVideo();
+      conversion = await convertirVideo(fichier, (p) => { if (!annule) etape(`Préparation de la vidéo… ${Math.round(p * 100)} %`, p * 100); });
+      if (annule) return;
+      await chargerDansElement(video, conversion.blob);
+      if (annule) return;
+      if (!recadrer) cadre.style.aspectRatio = `${conversion.largeur} / ${conversion.hauteur}`;
+      $('#v-moment').value = 10;
+      await allerCouverture();
+      placer();
+      if (conversion.coupee) { $('#v-note').textContent = `Cette vidéo dure plus d’une minute : seules les ${DUREE_MAX} premières secondes sont gardées.`; $('#v-note').hidden = false; }
+      $('#v-travail').hidden = true; $('#v-reglage').hidden = false; $('#v-valider').hidden = false;
+    })().catch((err) => { if (!annule) montrerErreur(err.message || 'Cette vidéo n’a pas pu être préparée.'); });
+
+    $('#v-valider').onclick = async () => {
+      $('#v-erreur').hidden = true;
+      $('#v-valider').hidden = true; $('#v-reglage').hidden = true; $('#v-travail').hidden = false;
+      try {
+        const { imageCouverture, envoyerParMorceaux } = await outilVideo();
+        const couverture = imageCouverture(video, { recadrer, ...cadrage });
+        etape('Envoi de la vidéo… 0 %', 0);
+        const morceaux = await envoyerParMorceaux(conversion.blob, async (base64) => (await api('morceau', { methode: 'POST', corps: { base64 } })).sha, (p) => { if (!annule) etape(`Envoi de la vidéo… ${Math.round(p * 95)} %`, p * 95); });
+        if (annule) return;
+        etape('Enregistrement de la vidéo…', 97);
+        const { sha } = await api('video-assembler', { methode: 'POST', corps: { morceaux } });
+        if (annule) return;
+        const image = nouveauNom(dossier, prefixe);
+        const src = `video/${image.split('/').pop()}`;
+        etat.nouvelles.set(image, couverture);
+        etat.videos.set(src, { sha, url: URL.createObjectURL(conversion.blob) });
+        finir({ image, video: { src, largeur: conversion.largeur, hauteur: conversion.hauteur, duree: conversion.duree } });
+      } catch (err) {
+        if (annule) return;
+        montrerErreur(`${err.message} Réessayez : rien n’a été publié.`);
+        $('#v-travail').hidden = true; $('#v-reglage').hidden = false; $('#v-valider').hidden = false;
+      }
+    };
+  });
+}
+
+$('#c-album').addEventListener('click', (e) => actionBande(e, fiche.brouillon, () => afficherBande($('#c-album'), fiche.brouillon)));
+$('#c-album-photos').addEventListener('change', async (e) => {
+  const fichiers = [...e.target.files];
+  e.target.value = '';
+  if (!fichiers.length) return;
+  $('#c-erreur').hidden = true;
+  try {
+    await ajouterPhotosAlbum(fiche.brouillon, fichiers, fiche.brouillon.cle || versCle($('#c-nom').value.trim() || 'coiffure'));
+  } catch (err) { $('#c-erreur').textContent = err.message; $('#c-erreur').hidden = false; }
+  afficherBande($('#c-album'), fiche.brouillon);
+});
+$('#c-album-video').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const m = await preparerVideo(f, { prefixe: fiche.brouillon.cle || versCle($('#c-nom').value.trim() || 'coiffure') });
+  if (!m) return;
+  fiche.brouillon.suite = [...albumDe(fiche.brouillon), m];
+  afficherBande($('#c-album'), fiche.brouillon);
 });
 
 $('#form-coiffure').addEventListener('submit', (e) => {
@@ -886,11 +1052,26 @@ function afficherPhotos() {
   const filtre = $('#photo-filtre').value;
   $('#grille-photos').innerHTML = etat.contenu.photos.map((p, i) => ({ p, i })).filter(({ p }) => !filtre || p.style === filtre).map(({ p, i }) => {
     const s = services.find((x) => x.cle === p.style);
-    return `<button type="button" data-photo="${i}" aria-label="Photo ${echapper(s ? s.nom : p.style)}"><img src="${urlImage(p.image)}" alt="" loading="lazy">${etat.nouvelles.get(p.image)?.grand ? '<span class="badge">nouvelle</span>' : ''}<small>${echapper(s ? s.nom : p.style)}</small></button>`;
+    return `<button type="button" data-photo="${i}" aria-label="Photo ${echapper(s ? s.nom : p.style)}"><img src="${urlImage(p.image)}" alt="" loading="lazy">${p.video ? '<span class="bande__jeu" aria-label="Vidéo">▶</span>' : ''}${etat.nouvelles.get(p.image)?.grand ? '<span class="badge">nouvelle</span>' : ''}<small>${echapper(s ? s.nom : p.style)}${albumDe(p).length ? ` · ${albumDe(p).length + 1} éléments` : ''}</small></button>`;
   }).join('');
 }
 
 $('#photo-filtre').addEventListener('change', afficherPhotos);
+
+$('#photo-video').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  const style = $('#photo-style').value;
+  if (!f || !style) return;
+  const m = await preparerVideo(f, { prefixe: style });
+  if (!m) return;
+  etat.contenu.photos.unshift({ style, image: m.image, video: m.video });
+  const msg = $('#photo-message');
+  msg.className = 'message message--ok'; msg.hidden = false;
+  msg.textContent = 'Vidéo prête. Appuyez sur « Publier » pour la mettre en ligne.';
+  afficherPhotos();
+  changement();
+});
 
 $('#photo-fichiers').addEventListener('change', async (e) => {
   const fichiers = [...e.target.files];
@@ -902,6 +1083,8 @@ $('#photo-fichiers').addEventListener('change', async (e) => {
   msg.innerHTML = '<span class="chargement"></span> Préparation des photos…';
   let ajoutees = 0;
   let probleme = '';
+  const ensemble = $('#photo-ensemble').checked && fichiers.length > 1;
+  let publication = null;
   for (const f of fichiers) {
     try {
       const photo = await preparerPhoto(f);
@@ -911,7 +1094,12 @@ $('#photo-fichiers').addEventListener('change', async (e) => {
       }
       const img = nouveauNom(DOSSIER, style);
       etat.nouvelles.set(img, photo);
-      etat.contenu.photos.unshift({ style, image: img });
+      if (ensemble && publication) publication.suite.push({ image: img });
+      else {
+        const nouvelle = { style, image: img };
+        if (ensemble) { nouvelle.suite = []; publication = nouvelle; }
+        etat.contenu.photos.unshift(nouvelle);
+      }
       ajoutees += 1;
     } catch (err) {
       probleme = err.message;
@@ -933,7 +1121,32 @@ $('#grille-photos').addEventListener('click', (e) => {
   $('#p-image').src = etat.nouvelles.get(p.image)?.apercu || `/${p.image}.jpg`;
   $('#p-style').innerHTML = etat.contenu.services.map((s) => `<option value="${s.cle}">${echapper(s.nom)}</option>`).join('');
   $('#p-style').value = p.style;
+  $('#p-erreur').hidden = true;
+  afficherBande($('#p-album'), p);
   $('#fiche-photo').showModal();
+});
+const publicationOuverte = () => etat.contenu.photos[photoOuverte];
+const apresAlbumPhoto = () => { afficherBande($('#p-album'), publicationOuverte()); afficherPhotos(); changement(); };
+$('#p-album').addEventListener('click', (e) => actionBande(e, publicationOuverte(), apresAlbumPhoto));
+$('#p-album-photos').addEventListener('change', async (e) => {
+  const fichiers = [...e.target.files];
+  e.target.value = '';
+  if (!fichiers.length) return;
+  $('#p-erreur').hidden = true;
+  try {
+    await ajouterPhotosAlbum(publicationOuverte(), fichiers, publicationOuverte().style);
+  } catch (err) { $('#p-erreur').textContent = err.message; $('#p-erreur').hidden = false; }
+  apresAlbumPhoto();
+});
+$('#p-album-video').addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const p = publicationOuverte();
+  const m = await preparerVideo(f, { prefixe: p.style });
+  if (!m) return;
+  p.suite = [...albumDe(p), m];
+  apresAlbumPhoto();
 });
 $('#p-style').addEventListener('change', (e) => {
   etat.contenu.photos[photoOuverte].style = e.target.value;
@@ -1728,6 +1941,7 @@ function preparerPage(html, extra = '') {
     const clair = p.apercuClair ? adresseBlob(p.apercuClair) : a;
     page = page.split(`${img}-sm.jpg`).join(a).split(`${img}.jpg`).join(a).split(`${img}-clair.png`).join(clair).split(`${img}.png`).join(a);
   }
+  for (const [src, v] of etat.videos) if (v.url) page = page.split(`${src}.mp4`).join(v.url);
   return page;
 }
 
@@ -1823,8 +2037,19 @@ $('#fiche-publier').addEventListener('click', async (e) => {
     .flatMap(([img, p]) => (p.ext === 'png'
       ? [{ chemin: `${img}.png`, base64: p.grand }, { chemin: `${img}-clair.png`, base64: p.petit }]
       : [{ chemin: `${img}.jpg`, base64: p.grand }, { chemin: `${img}-sm.jpg`, base64: p.petit }]));
+  const videosUtilisees = videosDe(etat.contenu);
+  const videos = [...etat.videos.entries()].filter(([src, v]) => v.sha && videosUtilisees.includes(src)).map(([src, v]) => ({ chemin: `${src}.mp4`, sha: v.sha }));
   try {
-    const r = await api('publier', { methode: 'POST', corps: { contenu: etat.contenu, photos, version: etat.version, resume: resumeModifications().join(', ') } });
+    // Trop de photos pour une seule requête : elles sont déposées une à une avant la publication
+    if (photos.reduce((t, p) => t + (p.base64?.length || 0), 0) > MAX_REQUETE) {
+      for (const [i, p] of photos.entries()) {
+        bouton.innerHTML = `<span class="chargement"></span> Envoi des photos… ${Math.round(((i + 1) / photos.length) * 100)} %`;
+        p.sha = (await api('morceau', { methode: 'POST', corps: { base64: p.base64 } })).sha;
+        delete p.base64;
+      }
+      bouton.innerHTML = '<span class="chargement"></span> Publication…';
+    }
+    const r = await api('publier', { methode: 'POST', corps: { contenu: etat.contenu, photos, videos, version: etat.version, resume: resumeModifications().join(', ') } });
     etat.base = normaliser(r.contenu || structuredClone(etat.contenu));
     etat.contenu = structuredClone(etat.base);
     etat.version = r.version;
@@ -1833,6 +2058,7 @@ $('#fiche-publier').addEventListener('click', async (e) => {
       if (etat.nouvelles.has(avant)) { etat.nouvelles.set(apres, etat.nouvelles.get(avant)); etat.nouvelles.delete(avant); }
     }
     for (const [img, p] of etat.nouvelles) etat.nouvelles.set(img, { apercu: p.apercu, apercuClair: p.apercuClair });
+    for (const [src, v] of etat.videos) etat.videos.set(src, { url: v.url });
     try { localStorage.removeItem(CLE_BROUILLON); } catch { /* sans effet */ }
     etat.defaire = [];
     etat.refaire = [];
@@ -2831,7 +3057,7 @@ function reprendreApresMaj() {
 }
 
 // Prévenir avant de quitter avec des images non publiées (elles ne sont pas gardées sur l'appareil)
-window.addEventListener('beforeunload', (e) => { if (modifie() && [...etat.nouvelles.values()].some((p) => p.grand)) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', (e) => { if (modifie() && ([...etat.nouvelles.values()].some((p) => p.grand) || [...etat.videos.values()].some((v) => v.sha))) { e.preventDefault(); e.returnValue = ''; } });
 
 // Application installable (Android) et ouverture sans réseau de l'écran de démarrage
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/admin/sw.js', { scope: '/admin/' }).catch(() => {});

@@ -95,6 +95,11 @@
             📷 Ajouter des photos
             <input type="file" id="photo-fichiers" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple>
           </label>
+          <label class="interrupteur"><input type="checkbox" id="photo-ensemble"><span>Mettre ces photos ensemble, comme un post Instagram</span></label>
+          <label class="bouton bouton--contour bouton--large bouton--fichier">
+            🎬 Ajouter une vidéo
+            <input type="file" id="photo-video" accept="video/*">
+          </label>
           <p class="message" id="photo-message" hidden></p>
         </div>
         <label for="photo-filtre" class="etiquette">Afficher</label>
@@ -293,6 +298,7 @@
         </div>
         <div class="ligne-boutons">
           <label class="bouton bouton--contour bouton--fichier" id="a-image-bouton">Ajouter une image<input type="file" id="a-image" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"></label>
+          <label class="bouton bouton--contour bouton--fichier" id="a-video-bouton">Ajouter une vidéo<input type="file" id="a-video" accept="video/*"></label>
           <button type="button" class="bouton bouton--danger" id="a-image-retirer" hidden>Retirer l’image</button>
         </div>
       </div>
@@ -412,6 +418,13 @@
       <p class="etiquette">Photo de la carte</p>
       <div class="choix-photo" id="c-photos"></div>
       <label class="bouton bouton--contour bouton--fichier">Nouvelle photo<input type="file" id="c-fichier" accept="image/jpeg,image/png,image/webp,image/heic,image/heif"></label>
+      <p class="etiquette">Autres photos et vidéos</p>
+      <p class="aide">Comme un post Instagram : en touchant la photo de la coiffure, vos clientes font glisser toutes ces images.</p>
+      <div class="bande" id="c-album"></div>
+      <div class="ligne-boutons">
+        <label class="bouton bouton--contour bouton--fichier">＋ Photos<input type="file" id="c-album-photos" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple></label>
+        <label class="bouton bouton--contour bouton--fichier">＋ Vidéo<input type="file" id="c-album-video" accept="video/*"></label>
+      </div>
       <label class="interrupteur"><input type="checkbox" id="c-visible"><span>Visible sur le site</span></label>
       <p class="message message--erreur" id="c-erreur" hidden></p>
       <div class="fiche__actions">
@@ -429,12 +442,44 @@
       <img class="fiche__image" id="p-image" alt="">
       <label for="p-style">Coiffure</label>
       <select id="p-style"></select>
+      <p class="etiquette">Autres photos et vidéos de cette publication</p>
+      <div class="bande" id="p-album"></div>
+      <div class="ligne-boutons">
+        <label class="bouton bouton--contour bouton--fichier">＋ Photos<input type="file" id="p-album-photos" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" multiple></label>
+        <label class="bouton bouton--contour bouton--fichier">＋ Vidéo<input type="file" id="p-album-video" accept="video/*"></label>
+      </div>
+      <p class="message message--erreur" id="p-erreur" hidden></p>
       <div class="fiche__actions">
         <button class="bouton bouton--danger" id="p-supprimer" type="button">Retirer du site</button>
         <span></span>
         <button class="bouton bouton--plein" value="valider">OK</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Préparation d'une vidéo : conversion, cadrage de la couverture, envoi -->
+  <dialog class="fiche" id="fiche-video">
+    <div>
+      <h2>Ajouter une vidéo</h2>
+      <div id="v-travail">
+        <p class="aide" id="v-etat">Préparation de la vidéo…</p>
+        <progress class="progres" id="v-progres" max="100" value="0"></progress>
+        <p class="aide">Vous pouvez poser le téléphone, mais gardez cette page ouverte.</p>
+      </div>
+      <div id="v-reglage" hidden>
+        <div class="v-cadre" id="v-cadre"><video id="v-video" muted playsinline></video></div>
+        <p class="aide" id="v-consigne">Faites glisser l’image pour bien cadrer la coiffure : c’est la couverture que verront vos clientes. La vidéo complète reste visible en grand.</p>
+        <label for="v-moment">Moment choisi pour la couverture</label>
+        <input type="range" id="v-moment" min="0" max="100" value="10">
+        <p class="message" id="v-note" hidden></p>
+      </div>
+      <p class="message message--erreur" id="v-erreur" hidden></p>
+      <div class="fiche__actions">
+        <span></span>
+        <button class="bouton bouton--discret" id="v-annuler" type="button">Annuler</button>
+        <button class="bouton bouton--plein" id="v-valider" type="button" hidden>Utiliser cette vidéo</button>
+      </div>
+    </div>
   </dialog>
 
   <!-- Plan de la page (liste des sections, glisser-déposer) -->

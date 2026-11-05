@@ -128,13 +128,46 @@ const zone = (h, nom, rendu) => {
 
 const avecPhotos = (contenu, cle) => contenu.photos.some((p) => p.style === cle);
 
+// --- Albums (plusieurs photos et vidéos pour une coiffure, comme un post Instagram) ---
+// Un média : { image: 'img/realisations/catalogue/…', video?: { src: 'video/…', largeur, hauteur, duree } }.
+// Coiffure : photo (première image de l'album) + suite[]. Galerie : image, video éventuelle + suite[].
+export const suiteDe = (x) => (Array.isArray(x?.suite) ? x.suite : []);
+export const IMAGE_CATALOGUE = /^img\/realisations\/catalogue\/[a-z0-9-]+$/;
+export const VIDEO_SRC = /^video\/[a-z0-9-]+$/;
+export const MAX_ALBUM = 20;
+// Toutes les vidéos utilisées par le contenu (sans extension)
+export const videosUtilisees = (c) => [...new Set([
+  ...(c.services || []).flatMap((s) => suiteDe(s).map((m) => m.video?.src)),
+  ...(c.photos || []).flatMap((p) => [p.video?.src, ...suiteDe(p).map((m) => m.video?.src)]),
+  ...(c.annonces || []).map((a) => a.video?.src),
+].filter(Boolean))];
+// Toutes les images d'albums (la photo principale n'en fait pas partie)
+export const imagesAlbums = (c) => [...new Set([...(c.services || []), ...(c.photos || [])].flatMap((x) => suiteDe(x).map((m) => m.image)))];
+
+const mediaPublic = (m) => (m.video
+  ? { i: m.image, v: m.video.src, l: Number(m.video.largeur), h: Number(m.video.hauteur) }
+  : { i: m.image });
+// Attribut lu par la visionneuse (js/main.js)
+const attributMedias = (medias) => ` data-medias="${echapper(JSON.stringify(medias.map(mediaPublic)))}"`;
+const ICONE_ALBUM = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="14" height="14" rx="2.5" fill="currentColor"/><path d="M8 3.5h9.5A3 3 0 0 1 20.5 6.5V16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+const ICONE_LECTURE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.2v13.6a1 1 0 0 0 1.5.86l11.2-6.8a1 1 0 0 0 0-1.72L9.5 4.34A1 1 0 0 0 8 5.2z" fill="currentColor"/></svg>';
+// Pastilles posées sur la vignette : vidéo et nombre d'éléments de l'album
+const pastilles = (medias) => {
+  const avecVideo = medias.some((m) => m.video);
+  if (medias.length < 2 && !avecVideo) return '';
+  return `<span class="album-pastilles">${avecVideo ? `<span class="album-pastille" title="Vidéo">${ICONE_LECTURE}</span>` : ''}${medias.length > 1 ? `<span class="album-pastille">${ICONE_ALBUM}<b>${medias.length}</b></span>` : ''}</span>`;
+};
+
 const carteCoiffure = (s, contenu, NL) => {
   const nom = echapper(s.nom);
   const img = `<img src="${s.photo}.jpg" srcset="${s.photo}-sm.jpg 500w, ${s.photo}.jpg 1000w" sizes="(min-width: 1025px) 30vw, 46vw" width="1000" height="1250" loading="lazy" alt="${echapper(s.alt || `${s.nom}, exemple de coiffure`)}">`;
   const galerie = avecPhotos(contenu, s.cle);
+  const medias = [{ image: s.photo }, ...suiteDe(s)];
   const lignes = [
     `          <article class="service-card reveal" id="${s.ancre}">`,
-    galerie
+    medias.length > 1
+      ? `            <button type="button" class="service-card__media service-card__media--album" data-album${attributMedias(medias)} data-label="${nom} (${Number(s.prix)} €)" aria-label="Voir les ${medias.length} photos et vidéos : ${nom}">${img}${pastilles(medias)}</button>`
+      : galerie
       ? `            <a class="service-card__media" href="realisations.html?style=${s.cle}#galerie" aria-label="Voir les réalisations : ${nom}">${img}</a>`
       : `            <div class="service-card__media">${img}</div>`,
     '            <div class="service-card__body">',
@@ -168,9 +201,12 @@ const numeroPhoto = (photos, i) => {
 
 const rendreGalerie = (contenu, NL) => {
   const photos = photosAffichees(contenu);
-  return photos.map(({ image, style, service: s }, i) => {
+  return photos.map((p, i) => {
+    const { image, style, service: s } = p;
     const nom = echapper(s.nom);
-    return `          <button type="button" class="gallery__item reveal" data-cat="${style}" data-label="${nom} (${Number(s.prix)} €)"><img src="${image}.jpg" srcset="${image}-sm.jpg 500w, ${image}.jpg 1000w" sizes="(min-width: 1025px) 33vw, 50vw" width="1000" height="1250" loading="lazy" alt="${nom} par Nelly Coiffure à Marseille, photo ${numeroPhoto(photos, i)}"><span class="gallery__cap"><b>${nom}</b><span>${Number(s.prix)} €</span></span></button>`;
+    const medias = [{ image, ...(p.video ? { video: p.video } : {}) }, ...suiteDe(p)];
+    const album = medias.length > 1 || p.video ? attributMedias(medias) : '';
+    return `          <button type="button" class="gallery__item reveal" data-cat="${style}" data-label="${nom} (${Number(s.prix)} €)"${album}><img src="${image}.jpg" srcset="${image}-sm.jpg 500w, ${image}.jpg 1000w" sizes="(min-width: 1025px) 33vw, 50vw" width="1000" height="1250" loading="lazy" alt="${nom} par Nelly Coiffure à Marseille, photo ${numeroPhoto(photos, i)}">${pastilles(medias)}<span class="gallery__cap"><b>${nom}</b><span>${Number(s.prix)} €</span></span></button>`;
   }).join(NL);
 };
 
@@ -254,6 +290,12 @@ const dates = (a, aujourdhui) => `${a.debut ? ` data-debut="${a.debut}"` : ''}${
 // Cadre adapté à l'orientation de la photo : une photo en largeur n'est pas rognée dans un cadre en hauteur
 const classeMedia = (img) => `promo__media${Number(img?.largeur) > Number(img?.hauteur) * 1.1 ? ' promo__media--paysage' : ''}`;
 
+// Vidéo d'une annonce : le cadre prend la forme de la vidéo (rien n'est coupé) ; rien n'est téléchargé avant la lecture
+const videoAnnonce = (a) => {
+  const img = a.image; const v = a.video;
+  return `<video src="${v.src}.mp4" poster="${img.src}.jpg" width="${Number(v.largeur)}" height="${Number(v.hauteur)}" controls playsinline preload="none" controlslist="nodownload" aria-label="${echapper(img.alt || a.titre || 'Vidéo de Nelly Coiffure')}"></video>`;
+};
+
 const imageAnnonce = (img, tailles) => {
   if (!img?.src) return '';
   const x = Number(img.x ?? 50); const y = Number(img.y ?? 50); const z = Number(img.zoom ?? 1);
@@ -291,7 +333,9 @@ const rendrePromo = (a, aujourdhui, NL, ajout = false) => {
     `    <section class="${classes}" aria-label="${echapper(a.titre || etiquette || 'Annonce')}"${attributs}${dates(a, aujourdhui)}>`,
     '      <div class="container">',
     '        <div class="promo__inner reveal">',
-    avecImage && `          <div class="${classeMedia(a.image)}">${imageAnnonce(a.image, tailles)}</div>`,
+    avecImage && (a.video?.src
+      ? `          <div class="${classeMedia(a.video)} promo__media--video" style="aspect-ratio: ${Number(a.video.largeur)} / ${Number(a.video.hauteur)}">${videoAnnonce(a)}</div>`
+      : `          <div class="${classeMedia(a.image)}">${imageAnnonce(a.image, tailles)}</div>`),
     textes.length && '          <div class="promo__texte">',
     ...textes.map((t) => `            ${t}`),
     textes.length && '          </div>',
@@ -596,6 +640,19 @@ export function regenerer(fichiers, contenu, { ancien, aujourdhui = new Date().t
   return Object.fromEntries(Object.entries(sortie).filter(([f, t]) => t !== fichiers[f]));
 }
 
+const videoValide = (v) => VIDEO_SRC.test(v?.src || '') && Number.isInteger(v.largeur) && Number.isInteger(v.hauteur) && v.largeur > 0 && v.hauteur > 0;
+function verifierAlbum(x, nom) {
+  if (x.suite === undefined) return [];
+  if (!Array.isArray(x.suite)) return [`Album illisible pour ${nom}.`];
+  const erreurs = [];
+  if (x.suite.length >= MAX_ALBUM) erreurs.push(`Album trop grand pour ${nom} (${MAX_ALBUM} éléments maximum).`);
+  for (const m of x.suite) {
+    if (!IMAGE_CATALOGUE.test(m?.image || '')) erreurs.push(`Photo d’album invalide pour ${nom}.`);
+    if (m?.video && !videoValide(m.video)) erreurs.push(`Vidéo invalide pour ${nom}.`);
+  }
+  return erreurs;
+}
+
 // Vérifie un contenu reçu de l'espace de gestion avant de publier (renvoie la liste des problèmes)
 export function verifierContenu(c) {
   const erreurs = [];
@@ -620,10 +677,15 @@ export function verifierContenu(c) {
       if (String(s.description || '').length > 160) erreurs.push(`Description trop longue pour ${s.nom} (160 caractères maximum).`);
       if (!Number.isInteger(Number(s.prix)) || Number(s.prix) < 1 || Number(s.prix) > 2000) erreurs.push(`Prix invalide pour ${s.nom}.`);
       if (!/^img\/realisations\/catalogue\/[a-z0-9-]+$/.test(s.photo || '')) erreurs.push(`Photo manquante pour ${s.nom}.`);
+      erreurs.push(...verifierAlbum(s, s.nom));
     });
   }
   if (!Array.isArray(c.photos)) erreurs.push('Liste de photos illisible.');
-  else c.photos.forEach((p) => { if (!/^img\/realisations\/catalogue\/[a-z0-9-]+$/.test(p.image || '')) erreurs.push('Photo invalide.'); });
+  else c.photos.forEach((p) => {
+    if (!/^img\/realisations\/catalogue\/[a-z0-9-]+$/.test(p.image || '')) erreurs.push('Photo invalide.');
+    if (p.video && !videoValide(p.video)) erreurs.push('Vidéo invalide dans la galerie.');
+    erreurs.push(...verifierAlbum(p, 'la galerie'));
+  });
   if (String(c.annonce?.texte || '').length > 160) erreurs.push('L’annonce est trop longue (160 caractères maximum).');
   erreurs.push(...verifierAnnonces(c.annonces));
   erreurs.push(...verifierPages(c.pages));
@@ -716,6 +778,7 @@ export function verifierAnnonces(annonces) {
     if ((a.debut && !date.test(a.debut)) || (a.fin && !date.test(a.fin))) erreurs.push(`Annonce « ${nom} » : date invalide.`);
     if (a.debut && a.fin && a.fin < a.debut) erreurs.push(`Annonce « ${nom} » : la date de fin est avant la date de début.`);
     if (a.image && !/^img\/annonces\/[a-z0-9-]+$/.test(a.image.src || '')) erreurs.push(`Annonce « ${nom} » : image invalide.`);
+    if (a.video && !(videoValide(a.video) && a.image?.src)) erreurs.push(`Annonce « ${nom} » : vidéo invalide.`);
     if (String(a.bouton?.texte || '').trim()) {
       const b = a.bouton;
       if (String(b.texte).length > 40) erreurs.push(`Annonce « ${nom} » : texte du bouton trop long (40 caractères maximum).`);

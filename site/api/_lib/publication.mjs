@@ -39,7 +39,7 @@ export async function lireFichiersSite({ frais = true } = {}) {
  * Publie un contenu déjà vérifié : pages régénérées, contenu et photos envoyés en un commit.
  * Renvoie le commit et la nouvelle version (empreinte Git) du contenu.
  */
-export async function publierContenuVerifie(contenu, ancien, { photos = [], resume = '' } = {}) {
+export async function publierContenuVerifie(contenu, ancien, { photos = [], videos = [], resume = '' } = {}) {
   // Régénération des pages à partir de la dernière version en ligne
   const fichiers = await lireFichiersSite();
   const modifies = regenerer(fichiers, contenu, { ancien });
@@ -50,7 +50,8 @@ export async function publierContenuVerifie(contenu, ancien, { photos = [], resu
   const aPublier = [
     { chemin: CONTENU, texte: texteContenu },
     ...Object.entries(modifies).map(([f, texte]) => ({ chemin: `site/${f}`, texte })),
-    ...photos.map((p) => ({ chemin: `site/${p.chemin}`, base64: p.base64 })),
+    ...photos.map((p) => (p.sha ? { chemin: `site/${p.chemin}`, sha: p.sha } : { chemin: `site/${p.chemin}`, base64: p.base64 })),
+    ...videos.map((v) => ({ chemin: `site/${v.chemin}`, sha: v.sha })),
   ];
   const message = `Espace Nelly : ${String(resume || 'mise à jour du contenu').replace(/\s+/g, ' ').slice(0, 120)}`;
   const commit = await publier(aPublier, message);

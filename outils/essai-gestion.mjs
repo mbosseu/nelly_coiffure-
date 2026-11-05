@@ -80,6 +80,7 @@ globalThis.fetch = async (url, options = {}) => {
   if (m === 'GET' && p === '/git/ref/heads/main') return reponse({ object: { sha: commits.at(-1).sha } });
   if (m === 'GET' && p.startsWith('/git/commits/')) { const c = commits.find((x) => x.sha === p.split('/').pop()); return reponse({ sha: c.sha, tree: { sha: c.tree } }); }
   if (m === 'POST' && p === '/git/blobs') { const b = Buffer.from(corps.content, corps.encoding === 'base64' ? 'base64' : 'utf8'); const s = blobSha(b); blobs.set(s, b); return reponse({ sha: s }); }
+  if (m === 'GET' && p.startsWith('/git/blobs/')) { const b = blobs.get(p.split('/').pop()); return b ? reponse({ content: b.toString('base64'), encoding: 'base64' }) : reponse({ message: 'Not Found' }, 404); }
   if (m === 'POST' && p === '/git/trees') { const s = sha1(JSON.stringify(corps) + Math.random()); arbres.set(s, corps.tree); return reponse({ sha: s }); }
   if (m === 'POST' && p === '/git/commits') { const s = sha1(corps.message + Math.random()); commits.push({ sha: s, tree: corps.tree, message: corps.message, date: new Date().toISOString(), enAttente: true }); return reponse({ sha: s }); }
   if (m === 'PATCH' && p === '/git/refs/heads/main') {
@@ -102,7 +103,7 @@ globalThis.fetch = async (url, options = {}) => {
 // --- Serveur : site publié (copie) + API ----------------------------------------------
 const { default: handler } = await import('../site/api/admin.mjs');
 const { default: handlerStats } = await import('../site/api/stats.mjs');
-const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.xml': 'application/xml', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon' };
+const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.mjs': 'text/javascript', '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.xml': 'application/xml', '.webmanifest': 'application/manifest+json', '.ico': 'image/x-icon', '.mp4': 'video/mp4' };
 
 const { default: handlerMcp } = await import('../site/api/mcp.mjs');
 const { default: handlerOAuth } = await import('../site/api/oauth.mjs');
@@ -142,6 +143,11 @@ http.createServer(async (req, res) => {
   const f = path.join(base, chemin.endsWith('/') ? `${chemin}index.html` : chemin);
   try {
     const b = await readFile(f);
+    const plage = /^bytes=(\d+)-(\d*)$/.exec(req.headers.range || '');
+    if (plage && f.endsWith('.mp4')) {
+      const debut = Number(plage[1]); const fin = plage[2] ? Math.min(Number(plage[2]), b.length - 1) : b.length - 1;
+      return res.writeHead(206, { 'Content-Type': 'video/mp4', 'Accept-Ranges': 'bytes', 'Content-Range': `bytes ${debut}-${fin}/${b.length}`, 'Content-Length': fin - debut + 1 }).end(b.subarray(debut, fin + 1));
+    }
     // Date de modification : permet de tester l'actualisation automatique de l'application
     const modif = (await stat(f)).mtime.toUTCString();
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream', 'Cache-Control': 'no-store', 'Last-Modified': modif }).end(req.method === 'HEAD' ? undefined : b);
