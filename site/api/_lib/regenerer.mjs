@@ -307,6 +307,9 @@ const boutonAnnonce = (a, classe) => (String(a.bouton?.texte || '').trim()
   ? `<a class="${classe}" ${attributsLien(a.bouton)}>${a.bouton.type === 'whatsapp' ? '<svg class="icon" aria-hidden="true"><use href="#i-whatsapp"/></svg> ' : ''}${echapper(a.bouton.texte.trim())} <svg class="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></a>`
   : '');
 
+// Un titre avec un très long mot s'écrit un peu plus petit sur téléphone, pour que le mot ne soit pas coupé
+const motLong = (t) => String(t).split(/\s+/).some((m) => m.replace(/[^\p{L}]/gu, '').length >= 12);
+
 const paragraphe = (t, classe = 'body', champ = '') => (String(t || '').trim() ? `<p class="${classe}"${champ}>${echapper(t.trim()).replace(/[ \t]*\n[ \t]*/g, ' <br>')}</p>` : '');
 
 // Annonce ou section ajoutée. Formats : section (image + texte), carte, encadre (texte seul), cartes (grille de 2 ou 3),
@@ -318,7 +321,7 @@ const rendrePromo = (a, aujourdhui, NL, ajout = false) => {
   const champ = (nom) => (ajout ? ` data-champ="${nom}"` : '');
   const textes = [
     etiquette && `<p class="eyebrow eyebrow--copper"${champ('etiquette')}>${echapper(etiquette)}</p>`,
-    String(a.titre || '').trim() && `<h2 class="title${sombre ? ' title--light' : ''}"${champ('titre')}>${echapper(a.titre.trim())}</h2>`,
+    String(a.titre || '').trim() && `<h2 class="title${sombre ? ' title--light' : ''}${motLong(a.titre) ? ' title--mot-long' : ''}"${champ('titre')}>${echapper(a.titre.trim())}</h2>`,
     paragraphe(a.texte, sombre ? 'body body--light' : 'body', champ('texte')),
     boutonAnnonce(a, sombre ? 'btn btn--light btn--shine' : 'btn btn--dark btn--shine'),
   ].filter(Boolean);
