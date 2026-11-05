@@ -176,6 +176,17 @@
       "photo": "img/realisations/catalogue/twists-homme-1",
       "alt": "Twists homme, exemple de coiffure",
       "visible": true
+    },
+    {
+      "cle": "fulani-braids",
+      "ancre": "fulani-braids",
+      "nom": "Fulani Braids",
+      "categorie": "Tresses",
+      "description": "Fulani braids (tresses africaines fines) ombré blond miel / doré, aussi appelées micro box braids longues dégradées. Prix variable selon la longueur. 💛",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/realisation-mw3x1ryx",
+      "alt": "Fulani Braids, exemple de coiffure",
+      "visible": true
     }
   ],
   "photos": [
