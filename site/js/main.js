@@ -322,6 +322,87 @@ if (lightbox && (tiles.length || gallery || albums.length)) {
   });
 }
 
+// Section animée au rythme de la musique : le texte suit les temps forts mesurés dans la vidéo.
+// Vidéo coupée de son par défaut (règle des navigateurs), téléchargée seulement quand la section arrive à l'écran.
+function lancerMotion(box) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const video = box.querySelector('video');
+  const cadre = box.querySelector('.motion__cadre');
+  const pouls = box.querySelector('.motion__pouls');
+  const { frappes, revele } = JSON.parse(box.dataset.motion);
+  const reperes = [...box.querySelectorAll('[data-debut]')].map((el) => ({ el, debut: Number(el.dataset.debut), fin: el.dataset.fin ? Number(el.dataset.fin) : Infinity }));
+  const econome = navigator.connection?.saveData === true;
+  box.classList.add('motion--actif');
+  // Le plus long mot du titre tient toujours en entier, quelle que soit la largeur de l'écran
+  const titre = box.querySelector('.motion__titre');
+  const ajusterTitre = () => {
+    titre.style.fontSize = '';
+    const plusLong = Math.max(...[...titre.children].map((m) => m.offsetWidth));
+    if (plusLong > titre.clientWidth) titre.style.fontSize = `${(parseFloat(getComputedStyle(titre).fontSize) * titre.clientWidth * 0.98) / plusLong}px`;
+  };
+  ajusterTitre();
+  document.fonts?.ready.then(ajusterTitre);
+  window.addEventListener('resize', ajusterTitre, { passive: true });
+  video.controls = false;
+  video.muted = true;
+
+  const commandes = document.createElement('div');
+  commandes.className = 'motion__commandes';
+  commandes.innerHTML = `<button type="button" class="motion__bouton motion__son"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/><path class="motion__son-ondes" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg><span>Activer le son</span></button>
+    <button type="button" class="motion__bouton motion__rejouer" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M8 5.2v13.6a1 1 0 0 0 1.5.86l11.2-6.8a1 1 0 0 0 0-1.72L9.5 4.34A1 1 0 0 0 8 5.2z"/></svg><span>Lire la vidéo</span></button>
+    <div class="motion__barre" aria-hidden="true"><i></i></div>`;
+  cadre.append(commandes);
+  const son = commandes.querySelector('.motion__son');
+  const rejouer = commandes.querySelector('.motion__rejouer');
+  const barre = commandes.querySelector('.motion__barre i');
+
+  let suivante = 0;
+  let enCours = false;
+  let misEnPause = false;
+  const frapper = () => {
+    cadre.animate([{ transform: 'scale(1.016)' }, { transform: 'scale(1)' }], { duration: 300, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    pouls.animate([{ opacity: 1 }, { opacity: 0.5 }], { duration: 420, easing: 'ease-out' });
+  };
+  const peindre = () => {
+    const t = video.currentTime;
+    for (const r of reperes) r.el.classList.toggle('est-la', t >= r.debut && t < r.fin);
+    box.classList.toggle('motion--revele', t >= revele);
+    barre.style.transform = `scaleX(${video.duration ? t / video.duration : 0})`;
+    while (suivante < frappes.length && frappes[suivante] <= t) {
+      if (t - frappes[suivante] < 0.12) frapper();
+      suivante += 1;
+    }
+  };
+  const boucle = () => { peindre(); if (enCours) requestAnimationFrame(boucle); };
+  video.addEventListener('playing', () => { rejouer.hidden = true; if (!enCours) { enCours = true; requestAnimationFrame(boucle); } });
+  video.addEventListener('pause', () => { enCours = false; });
+  video.addEventListener('seeked', () => { suivante = frappes.findIndex((f) => f > video.currentTime); if (suivante < 0) suivante = frappes.length; peindre(); });
+  video.addEventListener('ended', () => { enCours = false; peindre(); rejouer.querySelector('span').textContent = 'Revoir'; rejouer.hidden = false; });
+
+  const jouer = () => video.play().catch(() => { rejouer.hidden = false; });
+  const depuisLeDebut = () => { if (video.ended || video.currentTime > 0) video.currentTime = 0; suivante = 0; };
+  son.addEventListener('click', () => {
+    const activer = video.muted;
+    video.muted = !activer;
+    son.querySelector('span').textContent = activer ? 'Couper le son' : 'Activer le son';
+    son.querySelector('.motion__son-ondes').style.opacity = activer ? 1 : 0.3;
+    // La première écoute repart du début : texte et musique sont vus ensemble
+    if (activer) { misEnPause = false; depuisLeDebut(); jouer(); }
+  });
+  rejouer.addEventListener('click', () => { misEnPause = false; depuisLeDebut(); jouer(); });
+  video.addEventListener('click', () => {
+    if (video.paused) { misEnPause = false; if (video.ended) depuisLeDebut(); jouer(); } else { misEnPause = true; video.pause(); }
+  });
+  if (econome) rejouer.hidden = false;
+  new IntersectionObserver((entrees) => {
+    for (const e of entrees) {
+      if (!e.isIntersecting) { if (!video.paused) video.pause(); continue; }
+      if (!econome && !misEnPause && !video.ended) { video.preload = 'auto'; jouer(); }
+    }
+  }, { threshold: 0.45 }).observe(cadre);
+}
+document.querySelectorAll('[data-motion]').forEach(lancerMotion);
+
 // Coiffures : puce active selon la section visible
 const styleNav = document.querySelector('.style-nav');
 if (styleNav) {
