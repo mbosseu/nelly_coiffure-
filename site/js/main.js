@@ -376,7 +376,10 @@ function lancerFilm(box) {
     let recu = 0;
     const debut = performance.now();
     for (;;) {
-      const { done, value } = await lecteur.read();
+      // Téléchargement bloqué : on n'attend pas, la lecture directe de la vidéo prend le relais
+      let minuteur;
+      const bloque = new Promise((_, ko) => { minuteur = setTimeout(() => ko(new Error('bloque')), 4000); });
+      const { done, value } = await Promise.race([lecteur.read(), bloque]).finally(() => clearTimeout(minuteur));
       if (done) break;
       morceaux.push(value);
       recu += value.length;
