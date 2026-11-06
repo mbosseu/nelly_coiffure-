@@ -660,12 +660,24 @@ ${indexables.map(([f, P]) => [`  <url><loc>${DOMAINE}${P.chemin}</loc><lastmod>$
  * @param {{ancien?: object, aujourdhui?: string}} options ancien : contenu précédent (pour remplacer les téléphones)
  * @returns {Record<string,string>} fichiers à jour (seulement ceux qui ont changé)
  */
+// Le préchargement désigne la photo principale réellement affichée, y compris après un changement de photo dans /admin
+function prechargerImage(page) {
+  const img = /<img\b[^>]*\bfetchpriority="high"[^>]*>/.exec(page)?.[0];
+  const src = img && /\ssrc="([^"]*)"/.exec(img)?.[1];
+  if (!src || !/<link rel="preload" as="image"[^>]*>/.test(page)) return page;
+  const srcset = /\ssrcset="([^"]*)"/.exec(img)?.[1];
+  const tailles = /\ssizes="([^"]*)"/.exec(img)?.[1];
+  const lien = `<link rel="preload" as="image" href="${src}"${srcset ? ` imagesrcset="${srcset}"` : ''}${tailles ? ` imagesizes="${tailles}"` : ''} fetchpriority="high">`;
+  return page.replace(/<link rel="preload" as="image"[^>]*>/, () => lien);
+}
+
 export function regenerer(fichiers, contenu, { ancien, aujourdhui = new Date().toISOString().slice(0, 10) } = {}) {
   const sortie = { ...fichiers };
   for (const f of [...Object.keys(PAGES), 'tarifs.html']) {
     if (sortie[f] === undefined) continue;
     sortie[f] = appliquerContenu(sortie[f], f, contenu, ancien, aujourdhui);
     if (PAGES[f]) sortie[f] = appliquerSeo(sortie[f], f, contenu, aujourdhui);
+    sortie[f] = prechargerImage(sortie[f]);
   }
   if (sortie['js/main.js'] !== undefined) sortie['js/main.js'] = remplacerReseaux(remplacerTelephones(sortie['js/main.js'], contenu, ancien), contenu, ancien);
 

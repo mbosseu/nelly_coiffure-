@@ -46,7 +46,8 @@ function head({ title, desc, preload, ld = '', bodyClass = 'page' }) {
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Poppins:wght@300;400;500;600&family=Sacramento&display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Poppins:wght@300;400;500;600&family=Sacramento&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gilda+Display&family=Poppins:wght@300;400;500;600&family=Sacramento&display=swap"></noscript>
 ${preload ? `  <link rel="preload" as="image" href="${preload}">\n` : ''}  <link rel="stylesheet" href="css/style.css">
 ${ld}</head>
 <body class="${bodyClass}">
