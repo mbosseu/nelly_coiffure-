@@ -20,9 +20,9 @@ document.querySelectorAll('[data-debut], [data-fin]').forEach((el) => {
   el.hidden = Boolean((el.dataset.debut && today < el.dataset.debut) || (el.dataset.fin && today > el.dataset.fin));
 });
 
-// Entrée du hero une fois les polices prêtes (évite le saut de typo pendant l'animation)
+// Entrée du hero dès que les polices sont prêtes, sans jamais faire attendre la page plus de 0,35 s
 const start = () => requestAnimationFrame(() => document.body.classList.add('is-loaded'));
-Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 900))]).then(start);
+Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 350))]).then(start);
 
 // Transition douce entre les pages du site (le voile du logo revient avant de changer de page)
 document.addEventListener('click', (e) => {
