@@ -27,7 +27,7 @@ const RESEAUX = [
   'https://snapchat.com/t/rsEMEsWo',
 ];
 // Lien de la fiche Google Business Profile, à coller ici dès qu'elle existe (ex. https://maps.app.goo.gl/…)
-const FICHE_GOOGLE = '';
+const FICHE_GOOGLE = 'https://www.google.com/maps?cid=3752189097885765897';
 
 const NOM = 'Nelly Coiffure';
 const IMAGE = `${DOMAINE}/img/marque/partage.jpg`;
