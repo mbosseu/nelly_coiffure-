@@ -312,28 +312,51 @@ const motLong = (t) => String(t).split(/\s+/).some((m) => m.replace(/[^\p{L}]/gu
 
 const paragraphe = (t, classe = 'body', champ = '') => (String(t || '').trim() ? `<p class="${classe}"${champ}>${echapper(t.trim()).replace(/[ \t]*\n[ \t]*/g, ' <br>')}</p>` : '');
 
-// --- Section film (annonce avec video + film: true) ---
-// Seule la vidéo est affichée : les textes sont dans le film. Le titre reste connu des lecteurs d'écran.
+// --- Section film (annonce avec video + film: { accroche, atouts, lire }) ---
+// Vraie section du site : titre et texte lisibles par Google, décor dessiné (net à toute taille), vidéo dans un cadre doré.
 const sansEmoji = (t) => String(t || '').replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F3FB}-\u{1F3FF}]/gu, ' ').replace(/[ \t]+/g, ' ').trim();
-
+const ICONES_ATOUTS = [
+  '<path d="M6 3h12l4 6-10 12L2 9l4-6zM2 9h20M8.5 3 7 9l5 12 5-12-1.500-6"/>',
+  '<circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.300 8 20 19M8.300 16 20 5"/>',
+  '<path d="M12 21C5 15.500 2.500 12 2.500 8.300A5 5 0 0 1 12 6a5 5 0 0 1 9.500 2.300C21.500 12 19 15.500 12 21z"/>',
+];
+const PINCEAU = '<path d="M2 118C20 92 38 72 62 50 78 36 96 20 118 6c-8 14-12 22-24 34 12-8 18-10 26-14-12 16-22 26-36 38 8-3 14-5 20-6-22 18-44 32-68 44 6-1 10-1 14 0-22 8-34 12-50 16z"/>';
 const rendreFilm = (a, NL) => {
-  const v = a.video;
+  const v = a.video; const f = a.film;
   const titre = sansEmoji(a.titre);
+  const accroche = sansEmoji(f.accroche);
+  const nom = [titre, accroche].filter(Boolean).join(' ');
+  const atouts = (f.atouts || []).slice(0, 3).map((t, i) => `<li><svg viewBox="0 0 24 24" aria-hidden="true">${ICONES_ATOUTS[i]}</svg><span>${echapper(t)}</span></li>`).join('');
   return [
-    `    <section class="promo promo--film" aria-label="${echapper(titre || 'Vidéo')}"${dates(a, new Date().toISOString().slice(0, 10))}>`,
-    '      <div class="container">',
-    '        <div class="film">',
-    `          <div class="film__cadre"><video src="${v.src}.mp4"${VIDEO_SRC.test(v.leger || '') ? ` data-leger="${v.leger}"` : ''} poster="${a.image.src}-sm.jpg" width="${Number(v.largeur)}" height="${Number(v.hauteur)}" controls playsinline preload="none" controlslist="nodownload" aria-label="${echapper(a.image.alt || titre || 'Vidéo de Nelly Coiffure')}"></video></div>`,
+    `    <section class="promo promo--film" aria-label="${echapper(nom || 'Vidéo')}"${dates(a, new Date().toISOString().slice(0, 10))}>`,
+    '      <div class="film">',
+    '        <svg class="film__decor" viewBox="0 0 1440 800" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="film-sombre" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2B170D"/><stop offset="1" stop-color="#120804"/></linearGradient><linearGradient id="film-or" x1="0" x2="1"><stop offset="0" stop-color="#F7D9A8" stop-opacity="0"/><stop offset=".45" stop-color="#F2C07C"/><stop offset="1" stop-color="#FFF0D6"/></linearGradient></defs><path fill="url(#film-sombre)" d="M1010 0c-46 120 16 214 110 300 112 102 96 262 320 372V0z"/><path class="film__vague" fill="url(#film-sombre)" d="M0 716c190-24 420 10 690 84H0z"/><path class="film__fil" fill="none" stroke="url(#film-or)" stroke-width="3" d="M0 706c196-26 430 8 704 90"/></svg>',
+    `        <img class="film__filigrane" src="${a.image.src}-sm.jpg" alt="" aria-hidden="true" loading="lazy" decoding="async">`,
+    '        <div class="container film__grille">',
+    '          <div class="film__texte">',
+    String(a.etiquette || '').trim() && `            <p class="film__surtitre">${echapper(a.etiquette.trim())}</p>`,
+    `            <h2 class="film__titre">${echapper(titre)}${accroche ? ` <em>${echapper(accroche)}<svg viewBox="0 0 400 18" preserveAspectRatio="none" aria-hidden="true"><path d="M3 12C110 2 280 2 397 8 280 7 130 10 40 16z"/></svg></em>` : ''}</h2>`,
+    `            <p class="film__corps">${echapper(sansEmoji(a.texte))}</p>`,
+    f.lire && `            <button type="button" class="film__lire"><i aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5.200v13.600a1 1 0 0 0 1.500.86l11.200-6.800a1 1 0 0 0 0-1.720L9.500 4.340A1 1 0 0 0 8 5.200z"/></svg></i>${echapper(f.lire)}<svg class="arrow" aria-hidden="true"><use href="#i-arrow"/></svg></button>`,
+    atouts && `            <ul class="film__atouts">${atouts}</ul>`,
+    '          </div>',
+    '          <div class="film__scene">',
+    `            <svg class="film__pinceau film__pinceau--haut" viewBox="0 0 122 122" aria-hidden="true">${PINCEAU}</svg>`,
+    `            <svg class="film__pinceau film__pinceau--bas" viewBox="0 0 122 122" aria-hidden="true">${PINCEAU}</svg>`,
+    '            <svg class="film__eclat" viewBox="0 0 60 60" aria-hidden="true"><path d="M8 52 2 22M28 40l18-26M36 56l22-8"/></svg>',
+    '            <i class="film__scintille film__scintille--a" aria-hidden="true"></i><i class="film__scintille film__scintille--b" aria-hidden="true"></i><i class="film__scintille film__scintille--c" aria-hidden="true"></i>',
+    `            <div class="film__bord"><div class="film__cadre"><video src="${v.src}.mp4"${VIDEO_SRC.test(v.leger || '') ? ` data-leger="${v.leger}"` : ''} poster="${a.image.src}-sm.jpg" width="${Number(v.largeur)}" height="${Number(v.hauteur)}" controls playsinline preload="none" controlslist="nodownload" aria-label="${echapper(a.image.alt || nom || 'Vidéo de Nelly Coiffure')}"></video></div></div>`,
+    '          </div>',
     '        </div>',
     '      </div>',
     '    </section>',
-  ].join(NL);
+  ].filter(Boolean).join(NL);
 };
 
 // Annonce ou section ajoutée. Formats : section (image + texte), carte, encadre (texte seul), cartes (grille de 2 ou 3),
 // appel (bande sombre). Fond : clair (carte crème), transparent ou sombre. ajout = section placée dans une page.
 const rendrePromo = (a, aujourdhui, NL, ajout = false) => {
-  if (!ajout && a.film && a.video?.src && a.image?.src && a.format === 'section') return rendreFilm(a, NL);
+  if (!ajout && a.film && typeof a.film === 'object' && a.video?.src && a.image?.src && a.format === 'section') return rendreFilm(a, NL);
   const etiquette = String(a.etiquette || '').trim();
   const sombre = a.format === 'appel' || a.fond === 'sombre';
   // Sections ajoutées : chaque texte indique son champ, pour que l'éditeur visuel le modifie sur place

@@ -340,7 +340,8 @@ function lancerFilm(box) {
   video.loop = true;
   const commandes = document.createElement('div');
   commandes.className = 'film__commandes';
-  commandes.innerHTML = `<span class="film__indice" hidden>Touchez pour le son</span>
+  commandes.innerHTML = `<div class="film__infos"><span class="film__badge"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v2.500l5-3v11l-5-3V17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>TRANSFORMATION</span><button type="button" class="film__jouer" aria-label="Lire la vidéo avec le son"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.200v13.600a1 1 0 0 0 1.500.86l11.200-6.800a1 1 0 0 0 0-1.720L9.500 4.340A1 1 0 0 0 8 5.200z"/></svg></button><span class="film__duree">0:${String(Math.round(video.duration || 18)).padStart(2, '0')}</span></div>
+    <span class="film__indice" hidden>Touchez pour le son</span>
     <button type="button" class="film__son" aria-label="Son de la vidéo" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9H4z"/><path class="film__son-ondes" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/><path class="film__son-coupe" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg></button>
     <div class="film__charge" hidden><i></i></div>`;
   cadre.append(commandes);
@@ -365,8 +366,8 @@ function lancerFilm(box) {
       video.play().catch(() => {});
     });
   }
-  video.addEventListener('playing', () => { enLecture = true; majSon(); });
-  video.addEventListener('pause', () => { enLecture = false; if (enScene && !document.hidden) setTimeout(() => { if (enScene && video.paused) jouer(); }, 300); });
+  video.addEventListener('playing', () => { enLecture = true; box.classList.add('film--joue'); majSon(); });
+  video.addEventListener('pause', () => { enLecture = false; box.classList.remove('film--joue'); if (enScene && !document.hidden) setTimeout(() => { if (enScene && video.paused) jouer(); }, 300); });
   async function telecharger(adresse, signal) {
     const r = await fetch(adresse, { signal });
     if (!r.ok || !r.body) throw new Error('video');
@@ -420,10 +421,22 @@ function lancerFilm(box) {
     majSon();
     if (!enScene) demarrer(); else if (pret && video.paused) jouer();
   };
+  // Bouton « Voir la transformation » et bouton central : le film repart du début, avec le son
+  const lireAvecSon = () => {
+    sonCoupe = false;
+    enScene = true;
+    video.muted = false;
+    majSon();
+    if (pret) { video.currentTime = 0; jouer(); } else preparer();
+    const r = cadre.getBoundingClientRect();
+    if (r.top < 0 || r.bottom > window.innerHeight) cadre.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  };
+  box.querySelector('.film__lire')?.addEventListener('click', lireAvecSon);
+  commandes.querySelector('.film__jouer').addEventListener('click', lireAvecSon);
   son.addEventListener('click', (e) => { e.stopPropagation(); basculerSon(); });
   video.addEventListener('click', basculerSon);
   const gesteVisiteur = (e) => {
-    if (!enLecture || !video.muted || sonCoupe || cadre.contains(e.target)) return;
+    if (!enLecture || !video.muted || sonCoupe || cadre.contains(e.target) || e.target.closest?.('.film__lire')) return;
     video.muted = false;
     majSon();
   };

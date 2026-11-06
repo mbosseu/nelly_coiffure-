@@ -4,22 +4,22 @@
       "id": "annonce-mw3zd75k",
       "active": true,
       "format": "section",
-      "etiquette": "",
-      "titre": "🚨 ALERTE TRANSFORMATION ! 😍🔥",
-      "texte": "Encore une magnifique réalisation signée Nelly Coiffure ! 💇🏽‍♀️✨\n\nDes braids élégantes, longues et soigneusement réalisées pour un résultat juste magnifique. 🥰\n\nEnvie de sublimer vos cheveux ? Prenez vite votre rendez-vous ! ❤️\n\n📩 Contactez Nelly Coiffure pour vos réservations.\n\nNelly Coiffure, votre beauté est notre priorité ! 💕",
+      "etiquette": "L’excellence de la coiffure",
+      "titre": "Chaque coiffure",
+      "texte": "Découvrez une transformation signée Nelly Coiffure. Des gestes précis, des finitions soignées et un résultat pensé pour révéler votre beauté.",
       "image": {
-        "src": "img/annonces/annonce-film-nelly",
+        "src": "img/annonces/annonce-film-couverture",
         "x": 50,
         "y": 50,
         "zoom": 1,
-        "alt": "",
+        "alt": "Transformation signée Nelly Coiffure : longues braids dégradées",
         "largeur": 900,
         "hauteur": 1600
       },
       "bouton": {
-        "texte": "Réserver sur WhatsApp",
+        "texte": "",
         "type": "whatsapp",
-        "valeur": "Bonjour Nelly, j’ai vu votre vidéo sur le site. Je voudrais prendre rendez-vous."
+        "valeur": ""
       },
       "pages": [
         "index.html",
@@ -35,7 +35,15 @@
         "hauteur": 1920,
         "duree": 17.6
       },
-      "film": true
+      "film": {
+        "accroche": "raconte une histoire.",
+        "atouts": [
+          "Qualité professionnelle",
+          "Finitions soignées",
+          "Résultat sur-mesure"
+        ],
+        "lire": "Voir la transformation"
+      }
     }
   ],
   "reseaux": {
