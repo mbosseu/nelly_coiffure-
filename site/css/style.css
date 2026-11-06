@@ -1377,7 +1377,7 @@ html:not(.no-js) .is-loaded .medallion__sign { clip-path: inset(-10% -10% -10% -
 .film__titre { margin: 0 0 24px; font-family: var(--serif); font-weight: 400; font-size: clamp(2.3rem, 4.6vw, 4.5rem); line-height: 1.08; letter-spacing: -.012em; color: #1C0F09; }
 .film__titre em { position: relative; display: inline-block; font-style: italic; padding: 0 .1em .12em 0; background: linear-gradient(100deg, #8A5426, #C98A48 45%, #9A6230); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .film__titre em svg { position: absolute; left: 0; right: 0; bottom: -.02em; width: 100%; height: .2em; fill: #B97A3F; }
-.film__corps { max-width: 520px; margin: 0 0 30px; font-size: clamp(1rem, 1.2vw, 1.14rem); line-height: 1.68; color: #3A2619; }
+.film__corps { max-width: 520px; margin: 0; font-size: clamp(1rem, 1.2vw, 1.14rem); line-height: 1.68; color: #3A2619; }
 .film__lire { display: inline-flex; align-items: center; gap: 14px; padding: 10px 26px 10px 10px; border: 0; border-radius: 99px; background: linear-gradient(100deg, #E8B678, #D79A58 55%, #EBC088); color: #1C0F09; font: 600 clamp(.92rem, 1.05vw, 1.02rem)/1 var(--sans); cursor: pointer; box-shadow: 0 16px 28px -14px rgba(150, 92, 40, .9); transition: transform .3s var(--ease-out), box-shadow .3s; }
 .film__lire:hover { transform: translateY(-2px); box-shadow: 0 22px 34px -14px rgba(150, 92, 40, 1); }
 .film__lire i { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #1C0F09; }

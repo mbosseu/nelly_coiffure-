@@ -37,12 +37,8 @@
       },
       "film": {
         "accroche": "raconte une histoire.",
-        "atouts": [
-          "Qualité professionnelle",
-          "Finitions soignées",
-          "Résultat sur-mesure"
-        ],
-        "lire": "Voir la transformation"
+        "atouts": [],
+        "lire": ""
       }
     }
   ],
