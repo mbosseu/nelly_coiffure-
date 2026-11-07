@@ -1078,6 +1078,8 @@ body:not(:has(.cta)) .site-footer__curve { display: block; }
 .site-footer__bottom ul { display: flex; gap: 26px; }
 .site-footer__bottom a { transition: color .3s; }
 .site-footer__bottom a:hover { color: var(--copper-light); }
+.site-footer__credit a { color: var(--copper-light); text-decoration: underline; text-underline-offset: 3px; }
+.site-footer__credit a:hover { color: #FBF3EA; }
 
 /* Pages légales */
 .legal-hero { padding-bottom: 20px; }
