@@ -239,7 +239,12 @@
       "prix": 60,
       "photo": "img/realisations/catalogue/realisation-mw7rduee-1",
       "alt": "Afro bouclé avec mèche curly et dégradé bas, exemple de coiffure",
-      "visible": true
+      "visible": true,
+      "suite": [
+        {
+          "image": "img/realisations/catalogue/realisation-mw7rgqxq"
+        }
+      ]
     }
   ],
   "photos": [
