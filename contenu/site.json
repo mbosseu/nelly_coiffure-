@@ -229,6 +229,17 @@
       "photo": "img/realisations/catalogue/realisation-mw3x1ryx",
       "alt": "Fulani Braids, exemple de coiffure",
       "visible": true
+    },
+    {
+      "cle": "afro-boucle-avec-meche-curly-et-degrade-bas",
+      "ancre": "afro-boucle-avec-meche-curly-et-degrade-bas",
+      "nom": "Afro bouclé avec mèche curly et dégradé bas",
+      "categorie": "Coupe & boucles",
+      "description": "Afro bouclé avec mèche curly sur le devant pour du volume et du caractère. Boucles bien définies et joli dégradé sur les côtés et la nuque.",
+      "prix": 60,
+      "photo": "img/realisations/catalogue/realisation-mw7rduee-1",
+      "alt": "Afro bouclé avec mèche curly et dégradé bas, exemple de coiffure",
+      "visible": true
     }
   ],
   "photos": [
