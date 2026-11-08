@@ -228,7 +228,18 @@
       "prix": 50,
       "photo": "img/realisations/catalogue/realisation-mw3x1ryx",
       "alt": "Fulani Braids, exemple de coiffure",
-      "visible": true
+      "visible": true,
+      "suite": [
+        {
+          "image": "img/realisations/catalogue/fulani-braids-mw7rp83z-1"
+        },
+        {
+          "image": "img/realisations/catalogue/fulani-braids-mw7rp83z-2"
+        },
+        {
+          "image": "img/realisations/catalogue/fulani-braids-mw7rp83z-3"
+        }
+      ]
     },
     {
       "cle": "afro-boucle-avec-meche-curly-et-degrade-bas",
