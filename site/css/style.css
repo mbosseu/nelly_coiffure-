@@ -1174,6 +1174,18 @@ main:has(.cta) + .site-footer .site-footer__grid { border-top: 1px solid rgba(22
 .hero__img img { object-position: 50% 6%; }
 @media (max-width: 1024px) { .hero__media::after { background: radial-gradient(ellipse 50% 22% at 75% 20%, rgba(26, 13, 6, .5), transparent 75%); } }
 .univers__media::after { background: radial-gradient(ellipse 40% 60% at 92% 24%, rgba(20, 10, 5, .85), transparent 75%); }
+/* Liste « Expertise, Écoute… » : lisible quelle que soit la photo posée derrière */
+.univers__list li { color: #FBF3EA; font-weight: 500; text-shadow: 0 1px 6px rgba(20, 10, 5, .9); }
+.univers__list li:hover { color: #F3CDA9; }
+@media (min-width: 1025px) {
+  .univers__list { padding: 12px 26px 12px 22px; border-radius: 0 16px 16px 0; background: rgba(20, 10, 5, .68); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); }
+  .univers__list li { font-size: .84rem; }
+  .univers__list li::before { background: var(--copper-light); }
+  .univers__list li::after { background: var(--copper-light); }
+}
+@media (max-width: 1024px) {
+  .univers__list li { background: rgba(20, 10, 5, .8); border-color: rgba(243, 205, 169, .7); }
+}
 /* Rideau de la galerie sur la photo et non sur la case observée (sinon l'apparition ne se déclenche jamais) */
 .gallery__item.reveal, .gallery__item.reveal.is-in { clip-path: none; }
 .gallery__item.reveal img { clip-path: inset(0 0 100% 0); transition: clip-path 1.4s var(--ease-out) var(--delay, 0s), transform 1.1s var(--ease); }
@@ -1546,3 +1558,4 @@ main > section[hidden] { display: none !important; }
   .experience[data-inverse] .experience__script { transform: scaleX(-1) rotate(-9deg); }
   .experience[data-inverse] .experience__inner { justify-content: flex-start; }
 }
+.reviews-google { margin: 34px 0 0; }

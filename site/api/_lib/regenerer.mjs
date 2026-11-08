@@ -38,7 +38,7 @@ const VILLES = ['Marseille', 'Aubagne', 'Allauch', 'Plan-de-Cuques', 'Les Pennes
 export const PAGES = {
   'index.html': {
     chemin: '/', priorite: '1.0',
-    titre: 'Tresses africaines à Marseille, à domicile | Nelly Coiffure',
+    titre: 'Nelly Coiffure Marseille | Tresses africaines, à domicile',
     description: 'Coiffeuse afro à Marseille : knotless braids, tresses couchées, twists, locks, tissage, dès {min} €. Chez moi ou à votre domicile, rendez-vous sur WhatsApp.',
     h1: 'Coiffeuse tresses africaines <br>à Marseille',
   },
@@ -490,6 +490,7 @@ const salonGoogle = (contenu) => ({
   '@type': 'HairSalon',
   '@id': `${DOMAINE}/#salon`,
   name: NOM,
+  alternateName: 'Nelly Coiffure Marseille',
   description: 'Coiffeuse spécialisée en tresses africaines à Marseille : knotless braids, tresses couchées, nattes collées, twists, locks et tissage, chez elle ou à domicile.',
   url: `${DOMAINE}/`,
   logo: `${DOMAINE}/${logoDe(contenu)?.src || 'img/marque/logo'}.png`,
