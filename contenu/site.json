@@ -266,7 +266,18 @@
       "prix": 60,
       "photo": "img/realisations/catalogue/realisation-mwvs6u2d-1",
       "alt": "Passes-mèches avec motifs courbés, exemple de coiffure",
-      "visible": true
+      "visible": true,
+      "suite": [
+        {
+          "image": "img/realisations/catalogue/realisation-mwvs6v06",
+          "video": {
+            "src": "video/realisation-mwvs6v06",
+            "largeur": 576,
+            "hauteur": 1024,
+            "duree": 10.9
+          }
+        }
+      ]
     },
     {
       "cle": "ponytail-tressee-tribal-braids-effet-dessin-artistique",
