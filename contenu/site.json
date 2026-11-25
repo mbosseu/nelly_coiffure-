@@ -319,6 +319,51 @@
   ],
   "photos": [
     {
+      "style": "ponytail-tressee-tribal-braids-effet-dessin-artistique",
+      "image": "img/realisations/catalogue/realisation-mwvsehnm-1",
+      "suite": [
+        {
+          "image": "img/realisations/catalogue/realisation-mwvshyzq-1"
+        },
+        {
+          "image": "img/realisations/catalogue/realisation-mwvshyzq-2"
+        },
+        {
+          "image": "img/realisations/catalogue/realisation-mwvseioq",
+          "video": {
+            "src": "video/realisation-mwvseioq",
+            "largeur": 576,
+            "hauteur": 1024,
+            "duree": 17.3
+          }
+        },
+        {
+          "image": "img/realisations/catalogue/realisation-mwvsejr5",
+          "video": {
+            "src": "video/realisation-mwvsejr5",
+            "largeur": 576,
+            "hauteur": 1024,
+            "duree": 19.3
+          }
+        }
+      ]
+    },
+    {
+      "style": "passes-meches-avec-motifs-courbes",
+      "image": "img/realisations/catalogue/realisation-mwvs6u2d-1",
+      "suite": [
+        {
+          "image": "img/realisations/catalogue/realisation-mwvs6v06",
+          "video": {
+            "src": "video/realisation-mwvs6v06",
+            "largeur": 576,
+            "hauteur": 1024,
+            "duree": 10.9
+          }
+        }
+      ]
+    },
+    {
       "style": "fulani-braids",
       "image": "img/realisations/catalogue/realisation-mw3x1ryx"
     },
