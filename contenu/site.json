@@ -121,6 +121,43 @@
       ]
     },
     {
+      "cle": "ponytail-tressee-tribal-braids-effet-dessin-artistique",
+      "ancre": "ponytail-tressee-tribal-braids-effet-dessin-artistique",
+      "nom": "Ponytail tressée Tribal Braids – effet dessin artistique",
+      "categorie": "Tresses",
+      "description": "Cornrows fins aux motifs ondulés et géométriques, remontés en longue queue-de-cheval avec chignon haut aux reflets dorés et cuivrés ✨",
+      "prix": 50,
+      "photo": "img/realisations/catalogue/realisation-mwvsehnm-1",
+      "alt": "Ponytail tressée Tribal Braids – effet dessin artistique, exemple de coiffure",
+      "visible": true,
+      "suite": [
+        {
+          "image": "img/realisations/catalogue/realisation-mwvshyzq-1"
+        },
+        {
+          "image": "img/realisations/catalogue/realisation-mwvshyzq-2"
+        },
+        {
+          "image": "img/realisations/catalogue/realisation-mwvseioq",
+          "video": {
+            "src": "video/realisation-mwvseioq",
+            "largeur": 576,
+            "hauteur": 1024,
+            "duree": 17.3
+          }
+        },
+        {
+          "image": "img/realisations/catalogue/realisation-mwvsejr5",
+          "video": {
+            "src": "video/realisation-mwvsejr5",
+            "largeur": 576,
+            "hauteur": 1024,
+            "duree": 19.3
+          }
+        }
+      ]
+    },
+    {
       "cle": "knotless-braids",
       "ancre": "knotless",
       "nom": "Knotless braids",
@@ -276,43 +313,6 @@
       "suite": [
         {
           "image": "img/realisations/catalogue/realisation-mw7rgqxq"
-        }
-      ]
-    },
-    {
-      "cle": "ponytail-tressee-tribal-braids-effet-dessin-artistique",
-      "ancre": "ponytail-tressee-tribal-braids-effet-dessin-artistique",
-      "nom": "Ponytail tressée Tribal Braids – effet dessin artistique",
-      "categorie": "Tresses",
-      "description": "Cornrows fins aux motifs ondulés et géométriques, remontés en longue queue-de-cheval avec chignon haut aux reflets dorés et cuivrés ✨",
-      "prix": 50,
-      "photo": "img/realisations/catalogue/realisation-mwvsehnm-1",
-      "alt": "Ponytail tressée Tribal Braids – effet dessin artistique, exemple de coiffure",
-      "visible": true,
-      "suite": [
-        {
-          "image": "img/realisations/catalogue/realisation-mwvshyzq-1"
-        },
-        {
-          "image": "img/realisations/catalogue/realisation-mwvshyzq-2"
-        },
-        {
-          "image": "img/realisations/catalogue/realisation-mwvseioq",
-          "video": {
-            "src": "video/realisation-mwvseioq",
-            "largeur": 576,
-            "hauteur": 1024,
-            "duree": 17.3
-          }
-        },
-        {
-          "image": "img/realisations/catalogue/realisation-mwvsejr5",
-          "video": {
-            "src": "video/realisation-mwvsejr5",
-            "largeur": 576,
-            "hauteur": 1024,
-            "duree": 19.3
-          }
         }
       ]
     }
