@@ -2,9 +2,11 @@
 // Variables d'environnement Vercel : GITHUB_TOKEN (jeton « fine-grained », droit Contents en écriture sur ce seul dépôt),
 // GITHUB_REPO (ex. mbosseu/nelly_coiffure-), GITHUB_BRANCH (main par défaut).
 
+import { env } from './env.mjs';
+
 const API = 'https://api.github.com';
-const depot = () => process.env.GITHUB_REPO;
-const branche = () => process.env.GITHUB_BRANCH || 'main';
+const depot = () => env('GITHUB_REPO');
+const branche = () => env('GITHUB_BRANCH') || 'main';
 
 export class ErreurGithub extends Error {
   constructor(message, statut) { super(message); this.statut = statut; }
@@ -15,7 +17,7 @@ async function gh(chemin, options = {}) {
     ...options,
     headers: {
       Accept: 'application/vnd.github+json',
-      Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+      Authorization: `Bearer ${env('GITHUB_TOKEN')}`,
       'X-GitHub-Api-Version': '2022-11-28',
       'User-Agent': 'nelly-coiffure-admin',
       ...(options.body ? { 'Content-Type': 'application/json' } : {}),

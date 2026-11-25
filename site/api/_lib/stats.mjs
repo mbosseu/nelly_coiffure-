@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import { env } from './env.mjs';
 
 // Statistiques de visite du site, anonymes et sans cookie (exemptées de consentement selon la CNIL :
 // mesure d'audience strictement limitée au site, pas de suivi d'un site à l'autre, pas d'identification).
@@ -9,8 +10,8 @@ import { createHash, randomBytes } from 'node:crypto';
 // Stockage : base Redis Upstash (intégration Vercel), variables KV_REST_API_URL / KV_REST_API_TOKEN
 // ou UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN.
 
-const URL_BASE = () => process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
-const JETON = () => process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
+const URL_BASE = () => env('KV_REST_API_URL') || env('UPSTASH_REDIS_REST_URL');
+const JETON = () => env('KV_REST_API_TOKEN') || env('UPSTASH_REDIS_REST_TOKEN');
 export const statsActives = () => Boolean(URL_BASE() && JETON());
 
 const DUREE_JOURS = 400 * 86400; // compteurs quotidiens gardés environ 13 mois (recommandation CNIL : 13 mois maximum)
